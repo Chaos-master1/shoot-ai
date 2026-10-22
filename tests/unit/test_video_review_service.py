@@ -10,7 +10,6 @@ from kawkab.services.video_review_service import (  # noqa: E402
     Annotation,
     AnnotationKind,
     Clip,
-    ClipTag,
     ReviewSession,
     VideoReviewService,
 )
@@ -92,7 +91,10 @@ class TestAddAnnotation:
         svc = VideoReviewService()
         session = svc.create_session(match_id=1, total_frames=1000)
         ann = svc.add_annotation(
-            session.session_id, AnnotationKind.ARROW, 50, {"x1": 0, "y1": 0, "x2": 100, "y2": 100},
+            session.session_id,
+            AnnotationKind.ARROW,
+            50,
+            {"x1": 0, "y1": 0, "x2": 100, "y2": 100},
         )
         assert isinstance(ann, Annotation)
         assert ann.kind == AnnotationKind.ARROW
@@ -109,7 +111,10 @@ class TestAddAnnotation:
         session = svc.create_session(match_id=1, total_frames=1000)
         clip = svc.add_clip(session.session_id, "Clip", 0, 100)
         ann = svc.add_annotation(
-            session.session_id, AnnotationKind.TEXT, 25, {"text": "hello"},
+            session.session_id,
+            AnnotationKind.TEXT,
+            25,
+            {"text": "hello"},
             clip_id=clip.clip_id,
         )
         assert ann in clip.annotations
@@ -118,7 +123,10 @@ class TestAddAnnotation:
         svc = VideoReviewService(default_fps=25.0)
         session = svc.create_session(match_id=1, total_frames=1000)
         ann = svc.add_annotation(
-            session.session_id, AnnotationKind.CIRCLE, 100, {"r": 10},
+            session.session_id,
+            AnnotationKind.CIRCLE,
+            100,
+            {"r": 10},
         )
         assert ann.timestamp_s == 4.0
 
@@ -154,7 +162,11 @@ class TestRemoveAnnotation:
         session = svc.create_session(match_id=1, total_frames=1000)
         clip = svc.add_clip(session.session_id, "C", 0, 100)
         ann = svc.add_annotation(
-            session.session_id, AnnotationKind.CIRCLE, 10, {}, clip_id=clip.clip_id,
+            session.session_id,
+            AnnotationKind.CIRCLE,
+            10,
+            {},
+            clip_id=clip.clip_id,
         )
         svc.remove_annotation(session.session_id, ann.annotation_id)
         assert ann not in clip.annotations
@@ -203,7 +215,11 @@ class TestExportSession:
         session = svc.create_session(match_id=1, total_frames=1000)
         clip = svc.add_clip(session.session_id, "C", 0, 100)
         ann = svc.add_annotation(
-            session.session_id, AnnotationKind.ARROW, 50, {}, clip_id=clip.clip_id,
+            session.session_id,
+            AnnotationKind.ARROW,
+            50,
+            {},
+            clip_id=clip.clip_id,
         )
         data = svc.export_session(session.session_id)
         assert ann.annotation_id in data["clips"][0]["annotations"]

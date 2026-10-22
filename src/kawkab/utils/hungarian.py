@@ -14,6 +14,8 @@ algorithm for dense and sparse linear assignment problems". Computing, 38(4).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 
 
@@ -91,7 +93,10 @@ def hungarian(cost_matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
 
 
 def hungarian_match(
-    predictions: np.ndarray, detections: np.ndarray, cost_fn, max_cost: float = np.inf
+    predictions: np.ndarray,
+    detections: np.ndarray,
+    cost_fn: Callable[[np.ndarray, np.ndarray], float],
+    max_cost: float = np.inf,
 ) -> list[tuple[int, int]]:
     """Match predictions to detections using Hungarian assignment.
 
@@ -114,7 +119,7 @@ def hungarian_match(
             cost[i, j] = cost_fn(pred, det)
     row_ind, col_ind, _ = hungarian(cost)
     matches = []
-    for r, c in zip(row_ind, col_ind):
+    for r, c in zip(row_ind, col_ind, strict=False):
         if cost[r, c] <= max_cost:
             matches.append((int(r), int(c)))
     return matches

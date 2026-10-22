@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from kawkab.core.logging import get_logger
-from kawkab.services.llm_service import LLMService, LLMConfig
+from kawkab.services.llm_service import LLMConfig, LLMService
 
 logger = get_logger(__name__)
 
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 class ConversationMessage:
     role: Literal["user", "assistant"]
     content: str
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 @dataclass
@@ -27,12 +27,12 @@ class Conversation:
     match_id: int | None
     title: str
     messages: list[ConversationMessage] = field(default_factory=list)
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def add_message(self, role: Literal["user", "assistant"], content: str) -> None:
         self.messages.append(ConversationMessage(role=role, content=content))
-        self.updated_at = datetime.utcnow().isoformat()
+        self.updated_at = datetime.now(UTC).isoformat()
 
 
 TACTICAL_PROMPTS = {
@@ -75,16 +75,14 @@ class AIAssistantV2Service:
         self._load_conversations()
 
     def _conversations_path(self) -> str:
-        return os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "data")
-        )
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
 
     def _load_conversations(self) -> None:
         path = self._conversations_path()
         filepath = os.path.join(path, "ai_conversations.json")
         try:
             if os.path.exists(filepath):
-                with open(filepath, "r", encoding="utf-8") as f:
+                with open(filepath, encoding="utf-8") as f:
                     data = json.load(f)
                 for conv_data in data:
                     conv = Conversation(
@@ -113,17 +111,19 @@ class AIAssistantV2Service:
         try:
             data = []
             for conv in self.conversations.values():
-                data.append({
-                    "id": conv.id,
-                    "match_id": conv.match_id,
-                    "title": conv.title,
-                    "created_at": conv.created_at,
-                    "updated_at": conv.updated_at,
-                    "messages": [
-                        {"role": m.role, "content": m.content, "timestamp": m.timestamp}
-                        for m in conv.messages
-                    ],
-                })
+                data.append(
+                    {
+                        "id": conv.id,
+                        "match_id": conv.match_id,
+                        "title": conv.title,
+                        "created_at": conv.created_at,
+                        "updated_at": conv.updated_at,
+                        "messages": [
+                            {"role": m.role, "content": m.content, "timestamp": m.timestamp}
+                            for m in conv.messages
+                        ],
+                    }
+                )
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as e:
@@ -131,6 +131,7 @@ class AIAssistantV2Service:
 
     def create_conversation(self, match_id: int | None, title: str = "New Chat") -> Conversation:
         import uuid
+
         conv_id = str(uuid.uuid4())[:8]
         conv = Conversation(id=conv_id, match_id=match_id, title=title)
         self.conversations[conv_id] = conv
@@ -145,14 +146,16 @@ class AIAssistantV2Service:
         for conv in self.conversations.values():
             if match_id is not None and conv.match_id != match_id:
                 continue
-            results.append({
-                "id": conv.id,
-                "match_id": conv.match_id,
-                "title": conv.title,
-                "message_count": len(conv.messages),
-                "updated_at": conv.updated_at,
-            })
-        results.sort(key=lambda x: x["updated_at"], reverse=True)
+            results.append(
+                {
+                    "id": conv.id,
+                    "match_id": conv.match_id,
+                    "title": conv.title,
+                    "message_count": len(conv.messages),
+                    "updated_at": conv.updated_at,
+                }
+            )
+        results.sort(key=lambda x: str(x["updated_at"]), reverse=True)  # type: ignore[arg-type,return-value]
         return results
 
     def delete_conversation(self, conv_id: str) -> bool:
@@ -178,8 +181,7 @@ class AIAssistantV2Service:
         system = SYSTEM_PROMPT_TACTICAL
         if language == "ar":
             system = system.replace(
-                "You are an elite football tactical analyst",
-                "أنت محلل تكتيكي كرة قدم نخبة"
+                "You are an elite football tactical analyst", "أنت محلل تكتيكي كرة قدم نخبة"
             )
 
         context_block = f"\n\nMatch Context:\n{match_context}\n\n" if match_context else "\n\n"
@@ -214,8 +216,10 @@ Be specific and actionable."""
 
         system = SYSTEM_PROMPT_TACTICAL
         if language == "ar":
-            system = ("أنت محلل تكتيكي كرة قدم. مهمتك إنشاء تقرير شامل بعد المباراة "
-                      "للمدربين. كن دقيقاً وموضوعياً.")
+            system = (
+                "أنت محلل تكتيكي كرة قدم. مهمتك إنشاء تقرير شامل بعد المباراة "
+                "للمدربين. كن دقيقاً وموضوعياً."
+            )
 
         summary = json.dumps(match_data, indent=2, ensure_ascii=False)
 

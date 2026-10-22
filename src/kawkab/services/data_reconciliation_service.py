@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
 
 from kawkab.core.logging import get_logger
 
@@ -47,11 +46,15 @@ class DataReconciliationService:
         data: list[dict],
     ) -> None:
         if source_type not in SOURCE_PRIORITY:
-            logger.warning(f"Unknown source_type '{source_type}' for source '{source_id}' — will be treated lowest priority")
+            logger.warning(
+                f"Unknown source_type '{source_type}' for source '{source_id}' — will be treated lowest priority"
+            )
 
         if match_id not in self._matches:
             self._matches[match_id] = ReconciliationMatch(
-                match_id=match_id, home_team="", away_team="",
+                match_id=match_id,
+                home_team="",
+                away_team="",
             )
 
         existing = [s for s in self._matches[match_id].sources if s.source_id == source_id]
@@ -81,7 +84,9 @@ class DataReconciliationService:
         all_events: list[dict] = []
         for src in match.sources:
             for ev in src.data:
-                all_events.append({**ev, "_source_id": src.source_id, "_source_type": src.source_type})
+                all_events.append(
+                    {**ev, "_source_id": src.source_id, "_source_type": src.source_type}
+                )
 
         time_tolerance_s = time_tolerance_ms / 1000.0
         reconciled: list[dict] = []
@@ -98,15 +103,23 @@ class DataReconciliationService:
             while i < len(all_events):
                 other = all_events[i]
                 other_ts = self._extract_time(other)
-                if other_ts is not None and anchor_ts is not None and abs(other_ts - anchor_ts) > time_tolerance_s:
+                if (
+                    other_ts is not None
+                    and anchor_ts is not None
+                    and abs(other_ts - anchor_ts) > time_tolerance_s
+                ):
                     i += 1
                     continue
 
                 other_type = self._extract_type(other)
-                types_match = other_type is not None and anchor_type is not None and other_type == anchor_type
+                types_match = (
+                    other_type is not None and anchor_type is not None and other_type == anchor_type
+                )
 
                 other_team = self._extract_team(other)
-                teams_match = other_team is not None and anchor_team is not None and other_team == anchor_team
+                teams_match = (
+                    other_team is not None and anchor_team is not None and other_team == anchor_team
+                )
 
                 if types_match and teams_match:
                     self._merge_events(merged, other)
@@ -130,7 +143,10 @@ class DataReconciliationService:
         max_count = max((len(s.data) for s in match.sources), default=0)
         denominator = max(total, max_count)
         if denominator == 0:
-            return {s.source_id: {"event_count": 0, "coverage_pct": 0.0, "source_type": s.source_type} for s in match.sources}
+            return {
+                s.source_id: {"event_count": 0, "coverage_pct": 0.0, "source_type": s.source_type}
+                for s in match.sources
+            }
 
         coverage = {}
         for src in match.sources:
@@ -150,7 +166,9 @@ class DataReconciliationService:
         all_events: list[dict] = []
         for src in match.sources:
             for ev in src.data:
-                all_events.append({**ev, "_source_id": src.source_id, "_source_type": src.source_type})
+                all_events.append(
+                    {**ev, "_source_id": src.source_id, "_source_type": src.source_type}
+                )
 
         time_tolerance_s = 2.0
         conflicts = []
@@ -176,13 +194,15 @@ class DataReconciliationService:
                 team_conflict = a_team is not None and b_team is not None and a_team != b_team
 
                 if type_conflict or team_conflict:
-                    conflicts.append({
-                        "anchor_event": a,
-                        "conflicting_event": b,
-                        "type_conflict": type_conflict,
-                        "team_conflict": team_conflict,
-                        "time_delta_ms": round(abs(a_ts - b_ts) * 1000, 1),
-                    })
+                    conflicts.append(
+                        {
+                            "anchor_event": a,
+                            "conflicting_event": b,
+                            "type_conflict": type_conflict,
+                            "team_conflict": team_conflict,
+                            "time_delta_ms": round(abs(a_ts - b_ts) * 1000, 1),
+                        }
+                    )
 
         return conflicts
 

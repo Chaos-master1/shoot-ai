@@ -5,18 +5,14 @@ from __future__ import annotations
 import json
 
 from kawkab.core.logging import get_logger
-from kawkab.core.security import SecurityValidator, ErrorSanitizer
+from kawkab.core.security import ErrorSanitizer
+from kawkab.ui.bridge_handlers.base import BridgeHandlerBase
 
 logger = get_logger(__name__)
 
 
-class StorageHandler:
+class StorageHandler(BridgeHandlerBase):
     """Handles CRUD storage operations for Bridge."""
-
-    def __init__(self, bridge, services, rate_limiter=None):
-        self._bridge = bridge
-        self._services = services
-        self._rate_limiter = rate_limiter
 
     @property
     def storage_service(self):
@@ -26,15 +22,11 @@ class StorageHandler:
     def feedback_service(self):
         return self._services.get("feedback_service")
 
-    def _check_rate_limit(self, category: str = "analysis") -> None:
-        if self._rate_limiter is not None and not self._rate_limiter.acquire(category):
-            raise RuntimeError(f"Rate limit exceeded for {category}")
-
     # ── Event CRUD ───────────────────────────────────────────────
 
     async def update_event(self, event_id, updates_json):
-        self._check_rate_limit()
         try:
+            self._check_rate_limit()
             updates = json.loads(updates_json)
             ok = await self.storage_service.update_event(event_id, updates)
             return json.dumps({"success": ok})
@@ -43,8 +35,8 @@ class StorageHandler:
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})
 
     async def delete_event(self, event_id):
-        self._check_rate_limit()
         try:
+            self._check_rate_limit()
             ok = await self.storage_service.delete_event(event_id)
             return json.dumps({"success": ok})
         except Exception as e:

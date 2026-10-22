@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -11,26 +10,28 @@ import pytest
 
 try:
     from kawkab.core.database_sharding import SeasonShardManager, get_season_key
+
     HAS_SHARDING = True
 except ImportError:
     SeasonShardManager = None  # type: ignore
     get_season_key = None  # type: ignore
     HAS_SHARDING = False
 from kawkab.core.mot_metrics import compute_mot_metrics
+from kawkab.core.pressing_traps import PressingTrap
+from kawkab.core.transitions import PhaseTransition
 from kawkab.core.trap_transition_linkage import (
     TrapTransitionAnalysis,
     TrapTransitionLink,
     analyze_trap_transitions,
     summarize_trap_transition,
 )
-from kawkab.core.transitions import PhaseTransition
-from kawkab.core.pressing_traps import PressingTrap
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # database_sharding
 # ═════════════════════════════════════════════════════════════════════════════
 
+
+@pytest.mark.skipif(not HAS_SHARDING, reason="database_sharding module archived")
 class TestGetSeasonKey:
     def test_current_season(self):
         key = get_season_key()
@@ -162,6 +163,7 @@ class TestSeasonShardManager:
 # mot_metrics
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestComputeMotMetrics:
     def test_perfect_tracking(self):
         gt = {1: [(0, 10, 10), (1, 11, 10), (2, 12, 10)]}
@@ -235,12 +237,16 @@ class TestComputeMotMetrics:
 # trap_transition_linkage
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class TestTrapTransitionLink:
     def test_create_link(self):
         link = TrapTransitionLink(
-            trap_index=0, transition_index=1,
-            time_delta=1.5, spatial_distance=10.0,
-            goal_scored=False, shot_created=True,
+            trap_index=0,
+            transition_index=1,
+            time_delta=1.5,
+            spatial_distance=10.0,
+            goal_scored=False,
+            shot_created=True,
         )
         assert link.trap_index == 0
         assert link.transition_index == 1
@@ -253,8 +259,10 @@ class TestTrapTransitionLink:
 class TestTrapTransitionAnalysis:
     def test_create_analysis(self):
         a = TrapTransitionAnalysis(
-            total_traps=5, successful_traps=3,
-            conversion_rate=0.6, goal_conversion_rate=0.2,
+            total_traps=5,
+            successful_traps=3,
+            conversion_rate=0.6,
+            goal_conversion_rate=0.2,
             avg_transition_time=2.1,
         )
         assert a.total_traps == 5
@@ -278,18 +286,26 @@ class TestAnalyzeTrapTransitions:
 
     def make_transition(self, timestamp, team="home", start_x=50, start_y=34):
         return PhaseTransition(
-            timestamp=timestamp, team=team,
-            start_x=start_x, start_y=start_y,
+            timestamp=timestamp,
+            team=team,
+            start_x=start_x,
+            start_y=start_y,
         )
 
     def test_with_valid_traps_and_transitions(self):
         trap = self.make_trap("central_mid", regains=1)
         trans = self.make_transition(timestamp=15.0, team="home")
         events = [
-            {"type": "tackle", "team": "home", "timestamp": 10.0,
-             "x": 50, "y": 34, "start_x": 50, "start_y": 34},
-            {"type": "pass", "team": "home", "timestamp": 12.0,
-             "x": 55, "y": 34},
+            {
+                "type": "tackle",
+                "team": "home",
+                "timestamp": 10.0,
+                "x": 50,
+                "y": 34,
+                "start_x": 50,
+                "start_y": 34,
+            },
+            {"type": "pass", "team": "home", "timestamp": 12.0, "x": 55, "y": 34},
         ]
         result = analyze_trap_transitions([trap], [trans], events)
         assert result.total_traps == 1
@@ -303,10 +319,16 @@ class TestAnalyzeTrapTransitions:
     def test_with_no_transitions_still_processes(self):
         trap = self.make_trap("central_mid", regains=1)
         events = [
-            {"type": "tackle", "team": "home", "timestamp": 10.0,
-             "x": 50, "y": 34, "start_x": 50, "start_y": 34},
-            {"type": "pass", "team": "home", "timestamp": 12.0,
-             "x": 55, "y": 34},
+            {
+                "type": "tackle",
+                "team": "home",
+                "timestamp": 10.0,
+                "x": 50,
+                "y": 34,
+                "start_x": 50,
+                "start_y": 34,
+            },
+            {"type": "pass", "team": "home", "timestamp": 12.0, "x": 55, "y": 34},
         ]
         result = analyze_trap_transitions([trap], [], events)
         assert result.total_traps == 1
@@ -317,10 +339,16 @@ class TestAnalyzeTrapTransitions:
         trap = self.make_trap("central_mid", regains=1)
         trans = self.make_transition(timestamp=100.0, team="home")
         events = [
-            {"type": "tackle", "team": "home", "timestamp": 10.0,
-             "x": 50, "y": 34, "start_x": 50, "start_y": 34},
-            {"type": "pass", "team": "home", "timestamp": 12.0,
-             "x": 55, "y": 34},
+            {
+                "type": "tackle",
+                "team": "home",
+                "timestamp": 10.0,
+                "x": 50,
+                "y": 34,
+                "start_x": 50,
+                "start_y": 34,
+            },
+            {"type": "pass", "team": "home", "timestamp": 12.0, "x": 55, "y": 34},
         ]
         result = analyze_trap_transitions([trap], [trans], events)
         assert result.transitions_from_traps == []
@@ -329,11 +357,13 @@ class TestAnalyzeTrapTransitions:
 class TestSummarizeTrapTransition:
     def test_with_valid_data(self):
         a = TrapTransitionAnalysis(
-            total_traps=10, successful_traps=5,
+            total_traps=10,
+            successful_traps=5,
             transitions_from_traps=[
                 TrapTransitionLink(0, 0, 1.5, 5.0, False, True),
             ],
-            conversion_rate=0.5, goal_conversion_rate=0.1,
+            conversion_rate=0.5,
+            goal_conversion_rate=0.1,
             avg_transition_time=1.5,
         )
         s = summarize_trap_transition(a)
@@ -352,8 +382,10 @@ class TestSummarizeTrapTransition:
 
     def test_no_links(self):
         a = TrapTransitionAnalysis(
-            total_traps=5, successful_traps=2,
-            conversion_rate=0.0, goal_conversion_rate=0.0,
+            total_traps=5,
+            successful_traps=2,
+            conversion_rate=0.0,
+            goal_conversion_rate=0.0,
             avg_transition_time=0.0,
         )
         s = summarize_trap_transition(a)

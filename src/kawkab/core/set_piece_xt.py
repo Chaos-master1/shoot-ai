@@ -98,10 +98,12 @@ def compute_set_piece_xt(
         except (IndexError, TypeError):
             xt_val = 0.0
 
-        by_type_data[norm_type].append({
-            "zone": z,
-            "xT": xt_val,
-        })
+        by_type_data[norm_type].append(
+            {
+                "zone": z,
+                "xT": xt_val,
+            }
+        )
 
     report = SetPieceXTReport()
     most_dangerous: tuple[float, str, tuple[int, int]] = (0.0, "", (0, 0))

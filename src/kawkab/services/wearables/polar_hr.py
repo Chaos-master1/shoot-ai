@@ -19,10 +19,8 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime
-from typing import Optional
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.base import BaseWearableParser
 from kawkab.services.wearables.models import WearableDataPoint, WearableSession
 
@@ -89,7 +87,7 @@ class PolarHrCsvParser(BaseWearableParser):
 
     def _row_to_datapoint(
         self, row: list[str], col_index: dict[str, int]
-    ) -> Optional[WearableDataPoint]:
+    ) -> WearableDataPoint | None:
         if not row:
             return None
 
@@ -116,8 +114,8 @@ class PolarHrCsvParser(BaseWearableParser):
         row: list[str],
         col_index: dict[str, int],
         names: tuple[str, ...],
-        positional_fallback: Optional[int],
-    ) -> Optional[str]:
+        positional_fallback: int | None,
+    ) -> str | None:
         for name in names:
             if name in col_index and col_index[name] < len(row):
                 return row[col_index[name]].strip()
@@ -126,7 +124,7 @@ class PolarHrCsvParser(BaseWearableParser):
         return None
 
     @staticmethod
-    def _parse_timestamp(val: Optional[str]) -> Optional[float]:
+    def _parse_timestamp(val: str | None) -> float | None:
         if not val:
             return None
         val = val.strip()

@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-
 # =============================================================================
 # Helpers
 # =============================================================================
@@ -95,38 +94,49 @@ class TestKawkabOfflineFunctionality:
         return results
 
     def test_save_get_matches_roundtrip(self):
-        r = self._simulate_offline([
-            {"type": "save_matches", "matches": [{"id": 1, "home": "A"}, {"id": 2, "home": "B"}]},
-            {"type": "get_matches"},
-        ])
+        r = self._simulate_offline(
+            [
+                {
+                    "type": "save_matches",
+                    "matches": [{"id": 1, "home": "A"}, {"id": 2, "home": "B"}],
+                },
+                {"type": "get_matches"},
+            ]
+        )
         assert r[0] == 2
         assert len(r[1]) == 2
         ids = {m["id"] for m in r[1]}
         assert ids == {1, 2}
 
     def test_enqueue_and_get_sync(self):
-        r = self._simulate_offline([
-            {"type": "enqueue_sync", "action": {"type": "create", "data": {}}},
-            {"type": "enqueue_sync", "action": {"type": "delete", "event_id": 5}},
-            {"type": "get_pending_sync"},
-        ])
+        r = self._simulate_offline(
+            [
+                {"type": "enqueue_sync", "action": {"type": "create", "data": {}}},
+                {"type": "enqueue_sync", "action": {"type": "delete", "event_id": 5}},
+                {"type": "get_pending_sync"},
+            ]
+        )
         assert len(r[2]) == 2
         assert r[2][0]["type"] == "create"
 
     def test_process_sync_clears_queue(self):
-        r = self._simulate_offline([
-            {"type": "enqueue_sync", "action": {"type": "update"}},
-            {"type": "enqueue_sync", "action": {"type": "delete"}},
-            {"type": "process_sync"},
-            {"type": "get_pending_sync"},
-        ])
+        r = self._simulate_offline(
+            [
+                {"type": "enqueue_sync", "action": {"type": "update"}},
+                {"type": "enqueue_sync", "action": {"type": "delete"}},
+                {"type": "process_sync"},
+                {"type": "get_pending_sync"},
+            ]
+        )
         assert r[2] == 2
         assert len(r[3]) == 0
 
     def test_empty_queue_process(self):
-        r = self._simulate_offline([
-            {"type": "process_sync"},
-        ])
+        r = self._simulate_offline(
+            [
+                {"type": "process_sync"},
+            ]
+        )
         assert r[0] == 0
 
     def test_reconnect_triggers_sync(self):
@@ -172,10 +182,25 @@ class TestServiceWorkerCacheStrategy:
 class TestSWStrategyBehavior:
     """Verify the three cache strategy patterns produce correct responses."""
 
-    STATIC_EXTENSIONS = {".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".woff2", ".ttf", ".eot", ".ico"}
+    STATIC_EXTENSIONS = {
+        ".css",
+        ".js",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".woff2",
+        ".ttf",
+        ".eot",
+        ".ico",
+    }
 
     def test_cache_first_detection(self):
-        assert re.search(r'\.\(css\|js\|png\|jpg\|jpeg\|gif\|svg\|woff2\?\|ttf\|eot\|ico\)', _SW_JS) is not None
+        assert (
+            re.search(r"\.\(css\|js\|png\|jpg\|jpeg\|gif\|svg\|woff2\?\|ttf\|eot\|ico\)", _SW_JS)
+            is not None
+        )
 
     def test_network_first_detection(self):
         assert "/bridge/" in _SW_JS or "/api/" in _SW_JS
@@ -192,6 +217,7 @@ class TestSWStrategyBehavior:
 # Config Validation — 3 tests (plus extra) = 7 total
 # =============================================================================
 
+
 class TestWorkflowConfigValidation:
     """Validate YAML syntax and required fields in CI/CD configs."""
 
@@ -201,7 +227,7 @@ class TestWorkflowConfigValidation:
         return path
 
     def _load_yaml(self, path: Path):
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return yaml.safe_load(f)
 
     def test_workflow_yaml_syntax(self, workflow_file):
@@ -240,8 +266,14 @@ class TestWorkflowConfigValidation:
         steps = jobs["build-wheel"]["steps"]
         step_names = [s.get("name", "") for s in steps]
         assert any("Build wheel" in n or "build" in n.lower() for n in step_names)
-        # Verify GitHub Release is configured
-        assert any("softprops/action-gh-release" in str(s) for s in steps)
+        # GitHub Release publishing must be configured somewhere in the
+        # workflow, in a dedicated publish job that gates on the build jobs
+        # (desktop artifacts + wheel) so a green release implies green builds.
+        assert "publish" in jobs
+        publish_steps = jobs["publish"]["steps"]
+        assert any("softprops/action-gh-release" in str(s) for s in publish_steps)
+        publish_needs = jobs["publish"].get("needs", [])
+        assert "build-wheel" in publish_needs
 
     def test_pre_commit_config_valid(self):
         path = REPO_ROOT / ".pre-commit-config.yaml"
@@ -250,5 +282,10 @@ class TestWorkflowConfigValidation:
         assert "repos" in data
         repo_urls = [r["repo"] for r in data["repos"]]
         assert any("ruff" in r for r in repo_urls)
-        assert any("black" in r for r in repo_urls)
         assert any("mypy" in r for r in repo_urls)
+        # ruff-format replaces black (both reformat code; running both
+        # fought each other every commit) -- assert the hook is present
+        # rather than requiring the black repo specifically.
+        ruff_repo = next(r for r in data["repos"] if "ruff" in r["repo"])
+        hook_ids = [h["id"] for h in ruff_repo["hooks"]]
+        assert "ruff-format" in hook_ids

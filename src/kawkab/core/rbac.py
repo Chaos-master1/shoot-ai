@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     ADMIN = "admin"
     COACH = "coach"
     ANALYST = "analyst"
@@ -73,15 +72,18 @@ class RBACMiddleware:
         if required_role is None:
             return False
         if user["role_level"] >= ROLE_HIERARCHY.get(required_role, 0):
-            if resource_team and user["team"] and user["team"] != resource_team:
-                if user["role_level"] < ROLE_HIERARCHY[Role.ADMIN]:
-                    return False
-            return True
+            return not (
+                resource_team
+                and user["team"]
+                and user["team"] != resource_team
+                and user["role_level"] < ROLE_HIERARCHY[Role.ADMIN]
+            )
         return False
 
     def require_permission(self, user_id: int, permission: str, resource_team: str = ""):
         if not self.has_permission(user_id, permission, resource_team):
             from fastapi import HTTPException
+
             raise HTTPException(status_code=403, detail=f"Missing permission: {permission}")
 
     def get_role(self, user_id: int) -> Role | None:
@@ -102,8 +104,10 @@ def require_permission(permission: str, resource_team: str = "", allow_anonymous
     By default (allow_anonymous=False), missing or invalid credentials return 401.
     Set allow_anonymous=True for endpoints that should work without auth
     (e.g. health checks, local desktop mode)."""
-    from fastapi import Depends, HTTPException, status as http_status
+    from fastapi import Depends, HTTPException
+    from fastapi import status as http_status
     from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
     from kawkab.cloud.auth import decode_token
 
     _bearer = HTTPBearer(auto_error=False)
@@ -118,12 +122,21 @@ def require_permission(permission: str, resource_team: str = "", allow_anonymous
                 db = None
                 try:
                     from kawkab.cloud.database import get_cloud_db
+
                     db = get_cloud_db()
                     row = db.execute(
-                        "SELECT id, username, email, display_name, role, is_active, created_at FROM users WHERE id = ?",
+                        "SELECT id, username, email, display_name, role, is_active, token_version, created_at FROM users WHERE id = ?",
                         (int(payload["sub"]),),
                     ).fetchone()
-                    if row and row["is_active"]:
+                    # This dependency has its own, independent auth check
+                    # rather than calling cloud.auth.get_current_user --
+                    # it must therefore also independently check "tv"
+                    # (token_version), or every /api/v1 route (all 39 of
+                    # them use require_permission()) would keep accepting
+                    # a token after it was supposed to be revoked (e.g. by
+                    # a password change), even though cloud.auth's own
+                    # get_current_user correctly rejects it.
+                    if row and row["is_active"] and payload.get("tv", 0) == row["token_version"]:
                         current_user = dict(row)
                 except Exception:
                     pass
@@ -135,8 +148,14 @@ def require_permission(permission: str, resource_team: str = "", allow_anonymous
                     detail="Authentication required",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            current_user = {"id": 0, "username": "anonymous", "role": "viewer",
-                            "role_level": 30, "email": "", "team": ""}
+            current_user = {
+                "id": 0,
+                "username": "anonymous",
+                "role": "viewer",
+                "role_level": 30,
+                "email": "",
+                "team": "",
+            }
 
         user_role = current_user.get("role", "viewer")
         try:
@@ -146,7 +165,10 @@ def require_permission(permission: str, resource_team: str = "", allow_anonymous
         user_level = ROLE_HIERARCHY.get(role_enum, 0)
         required_role = PERMISSION_ROLES.get(permission)
         if required_role is None:
-            raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail=f"Unknown permission: {permission}")
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN,
+                detail=f"Unknown permission: {permission}",
+            )
         required_level = ROLE_HIERARCHY.get(required_role, 0)
         if user_level < required_level:
             raise HTTPException(

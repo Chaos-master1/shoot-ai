@@ -1,4 +1,5 @@
 """Run France vs Sweden 15-min segment pipeline validation."""
+
 from __future__ import annotations
 
 import asyncio
@@ -15,12 +16,19 @@ FRANCE_SWEDEN_FULL = Path(__file__).resolve().parent.parent / "France vs Sweden.
 FRANCE_SWEDEN_MATCH = Path(__file__).resolve().parent.parent / "France vs Sweden_match.mp4"
 
 
-async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = False, resume: bool = False, tracker: str = "deepocsort"):
+async def run(
+    video_path: Path,
+    frame_skip: int = 6,
+    use_checkpoint: bool = False,
+    resume: bool = False,
+    tracker: str = "deepocsort",
+):
     from kawkab.services.cv_service import CVService, PipelineCheckpoint
 
     print(f"=== Processing {video_path.name} ===")
-    print(f"Resolution: checking...")
+    print("Resolution: checking...")
     import cv2
+
     cap = cv2.VideoCapture(str(video_path))
     fps = cap.get(cv2.CAP_PROP_FPS)
     frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -50,7 +58,9 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
     await svc.initialize()
 
     match_data = await svc.process_video(
-        video_path, frame_skip=frame_skip, enable_team_detection=True,
+        video_path,
+        frame_skip=frame_skip,
+        enable_team_detection=True,
         checkpoint_interval=checkpoint_interval,
         resume_checkpoint=resume_state,
     )
@@ -64,9 +74,11 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
 
     # Save detailed output for downstream use and evaluation
     try:
-        import json, pickle
-        import numpy as np
+        import json
+        import pickle
         from datetime import datetime
+
+        import numpy as np
 
         def _to_python(val):
             if isinstance(val, (np.float32, np.float64)):
@@ -83,19 +95,38 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
         for fd in match_data.frames:
             for det in fd.detections:
                 if det.class_name == "sports ball" and det.confidence > 0.5:
-                    events.append({"type":"ball","timestamp":fd.timestamp,"frame":fd.frame_number,"title":f"Ball @ {fd.timestamp:.0f}s"})
-        team_label = lambda tid: match_data.player_teams.get(tid, "unclassified")
+                    events.append(
+                        {
+                            "type": "ball",
+                            "timestamp": fd.timestamp,
+                            "frame": fd.frame_number,
+                            "title": f"Ball @ {fd.timestamp:.0f}s",
+                        }
+                    )
+
+        def team_label(tid):
+            return match_data.player_teams.get(tid, "unclassified")
+
         summary = {
             "n_tracks": len(match_data.track_registry),
-            "tracks": {str(tid): {"frames":int(i["frames_tracked"]),"pct":round(float(i["lifetime_pct"]),2),"team":team_label(tid)} for tid,i in match_data.track_registry.items()},
+            "tracks": {
+                str(tid): {
+                    "frames": int(i["frames_tracked"]),
+                    "pct": round(float(i["lifetime_pct"]), 2),
+                    "team": team_label(tid),
+                }
+                for tid, i in match_data.track_registry.items()
+            },
             "events_sample": events[:50],
-            "metrics": {k:_to_python(v) for k,v in metrics.items() if not isinstance(v,(dict,list))},
-            "team_detection": metrics.get("team_detection",{}),
+            "metrics": {
+                k: _to_python(v) for k, v in metrics.items() if not isinstance(v, (dict, list))
+            },
+            "team_detection": metrics.get("team_detection", {}),
             "run_timestamp": datetime.now().isoformat(),
             "video": str(video_path.name),
         }
-        with open(output_dir / "track_summary.json","w") as f:
-            json.dump(summary,f,indent=2,default=str)
+        with open(output_dir / "track_summary.json", "w") as f:
+            json.dump(summary, f, indent=2, default=str)
 
         # 2. Full frame data (sampled every 30 frames for evaluation)
         compact = []
@@ -103,10 +134,19 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
             if idx % 30 == 0:
                 dets = []
                 for d in fd.detections:
-                    dets.append([[_to_python(v) for v in d.bbox], _to_python(d.confidence), d.class_name, d.track_id])
-                compact.append({"frame": fd.frame_number, "timestamp": fd.timestamp, "detections": dets})
-        with open(output_dir / "frames_compact.pkl","wb") as f:
-            pickle.dump(compact,f)
+                    dets.append(
+                        [
+                            [_to_python(v) for v in d.bbox],
+                            _to_python(d.confidence),
+                            d.class_name,
+                            d.track_id,
+                        ]
+                    )
+                compact.append(
+                    {"frame": fd.frame_number, "timestamp": fd.timestamp, "detections": dets}
+                )
+        with open(output_dir / "frames_compact.pkl", "wb") as f:
+            pickle.dump(compact, f)
 
         # 3. Ball-only tracking (top 1000 ball detections)
         ball_data = []
@@ -115,22 +155,32 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
                 if det.class_name == "sports ball" and det.confidence > 0.3:
                     cx = _to_python((det.bbox[0] + det.bbox[2]) / 2)
                     cy = _to_python((det.bbox[1] + det.bbox[3]) / 2)
-                    ball_data.append({"frame":fd.frame_number,"timestamp":fd.timestamp,"x":cx,"y":cy,"conf":_to_python(det.confidence)})
+                    ball_data.append(
+                        {
+                            "frame": fd.frame_number,
+                            "timestamp": fd.timestamp,
+                            "x": cx,
+                            "y": cy,
+                            "conf": _to_python(det.confidence),
+                        }
+                    )
                     break
-        with open(output_dir / "ball_tracking.json","w") as f:
-            json.dump(ball_data[:1000],f,indent=2,default=str)
+        with open(output_dir / "ball_tracking.json", "w") as f:
+            json.dump(ball_data[:1000], f, indent=2, default=str)
 
         # 4. Per-track stats
         track_stats = []
         for tid, tdata in match_data.track_registry.items():
-            track_stats.append({
-                "track_id": tid,
-                "team": team_label(tid),
-                "frames_tracked": int(tdata.get("frames_tracked", 0)),
-                "lifetime_pct": round(float(tdata.get("lifetime_pct", 0)), 4),
-                "avg_confidence": round(float(tdata.get("confidence_avg", 0)), 3),
-            })
-        with open(output_dir / "track_stats.json","w") as f:
+            track_stats.append(
+                {
+                    "track_id": tid,
+                    "team": team_label(tid),
+                    "frames_tracked": int(tdata.get("frames_tracked", 0)),
+                    "lifetime_pct": round(float(tdata.get("lifetime_pct", 0)), 4),
+                    "avg_confidence": round(float(tdata.get("confidence_avg", 0)), 3),
+                }
+            )
+        with open(output_dir / "track_stats.json", "w") as f:
             json.dump(track_stats, f, indent=2, default=str)
 
         print(f"Output saved to {output_dir}")
@@ -140,6 +190,7 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
         print(f"  - track_stats.json ({len(track_stats)} entries)")
     except Exception as e:
         import traceback
+
         print(f"Output save error: {e}")
         traceback.print_exc()
 
@@ -154,14 +205,18 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
 
     td = metrics.get("team_detection", {})
     if td:
-        print(f"Team detection: home={td.get('home_size')}, away={td.get('away_size')}, ref={td.get('ref_size')}")
+        print(
+            f"Team detection: home={td.get('home_size')}, away={td.get('away_size')}, ref={td.get('ref_size')}"
+        )
 
     auto_h = metrics.get("auto_homography")
     print(f"Auto-calibration: {'yes' if auto_h else 'no'}")
 
     print()
     print(f"Match type: {match_data.match_type}")
-    print(f"Duration: {match_data.duration_seconds:.0f}s ({match_data.duration_seconds/60:.1f} min)")
+    print(
+        f"Duration: {match_data.duration_seconds:.0f}s ({match_data.duration_seconds / 60:.1f} min)"
+    )
     print(f"Sampled frames: {len(match_data.frames)}")
 
     await svc.shutdown()
@@ -170,16 +225,29 @@ async def run(video_path: Path, frame_skip: int = 6, use_checkpoint: bool = Fals
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Run pipeline on France vs Sweden match")
     parser.add_argument("--skip", type=int, default=6, help="Frame skip rate (default: 6)")
-    parser.add_argument("--full", action="store_true", help="Process full match instead of 15-min segment")
-    parser.add_argument("--checkpoint", action="store_true", help="Enable periodic checkpoint saves")
+    parser.add_argument(
+        "--full", action="store_true", help="Process full match instead of 15-min segment"
+    )
+    parser.add_argument(
+        "--checkpoint", action="store_true", help="Enable periodic checkpoint saves"
+    )
     parser.add_argument("--resume", action="store_true", help="Resume from latest checkpoint")
-    parser.add_argument("--checkpoint-interval", type=int, default=500,
-                        help="Checkpoint save interval in detection frames (default: 500)")
-    parser.add_argument("--tracker", type=str, default="deepocsort",
-                        choices=["deepocsort", "botsort", "bytetrack", "strongsort"],
-                        help="boxmot tracker backend (default: deepocsort)")
+    parser.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=500,
+        help="Checkpoint save interval in detection frames (default: 500)",
+    )
+    parser.add_argument(
+        "--tracker",
+        type=str,
+        default="deepocsort",
+        choices=["deepocsort", "botsort", "bytetrack", "strongsort"],
+        help="boxmot tracker backend (default: deepocsort)",
+    )
     args = parser.parse_args()
 
     if args.full and FRANCE_SWEDEN_MATCH.exists():
@@ -188,5 +256,12 @@ if __name__ == "__main__":
         video = FRANCE_SWEDEN_FULL
     else:
         video = FRANCE_SWEDEN_15
-    asyncio.run(run(video, frame_skip=args.skip, use_checkpoint=args.checkpoint or args.resume,
-                    resume=args.resume, tracker=args.tracker))
+    asyncio.run(
+        run(
+            video,
+            frame_skip=args.skip,
+            use_checkpoint=args.checkpoint or args.resume,
+            resume=args.resume,
+            tracker=args.tracker,
+        )
+    )

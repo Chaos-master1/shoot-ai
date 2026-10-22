@@ -14,8 +14,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import numpy as np
-
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +58,7 @@ def compute_tracking_self_metrics(
     if not track_frames:
         return {"error": "no_tracks", "mot_self_consistency": 0.0}
 
-    total_frames = max(fd.frame_number for fd in frames) + 1 if frames else 1
+    _ = max(fd.frame_number for fd in frames) + 1 if frames else 1
     num_tracks = len(track_frames)
 
     # Fragmentation: count of tracked -> lost -> tracked transitions
@@ -69,7 +67,7 @@ def compute_tracking_self_metrics(
     partially_tracked = 0
     mostly_lost = 0
 
-    for tid, frames_set in track_frames.items():
+    for _tid, frames_set in track_frames.items():
         sorted_frames = sorted(frames_set)
         if len(sorted_frames) < 2:
             mostly_lost += 1
@@ -106,11 +104,15 @@ def compute_tracking_self_metrics(
     id_switches_per_track = total_id_switches / max(num_tracks, 1)
 
     # Score formula: penalize fragmentation and ID switches, reward mostly_tracked
-    score = max(0.0, min(1.0,
-        0.5 * mt_ratio
-        + 0.3 * max(0.0, 1.0 - frag_per_track / 5.0)
-        + 0.2 * max(0.0, 1.0 - id_switches_per_track / 3.0)
-    ))
+    score = max(
+        0.0,
+        min(
+            1.0,
+            0.5 * mt_ratio
+            + 0.3 * max(0.0, 1.0 - frag_per_track / 5.0)
+            + 0.2 * max(0.0, 1.0 - id_switches_per_track / 3.0),
+        ),
+    )
 
     return {
         "num_tracks": num_tracks,
@@ -164,9 +166,9 @@ def _estimate_id_switches(
                 positions = frame_positions.get(fn, [])
                 pos_a = next((p for t, p in positions if t == tid_a), None)
                 pos_b = next((p for t, p in positions if t == tid_b), None)
-                if pos_a is not None and pos_b is not None:
-                    if abs(pos_a - pos_b) < 30:  # within 30 pixels
-                        close_frames += 1
+                if pos_a is not None and pos_b is not None and abs(pos_a - pos_b) < 30:
+                    # within 30 pixels
+                    close_frames += 1
 
             # If positions are close in >50% of overlap, likely an ID switch
             if len(overlap) > 0 and close_frames / len(overlap) > 0.5:
@@ -217,8 +219,12 @@ def compute_merge_map_from_switches(
             overlap = track_frames[tid_a] & track_frames[tid_b]
             if overlap:
                 close = sum(
-                    1 for fn in overlap
-                    if abs(frame_positions[fn].get(tid_a, 999) - frame_positions[fn].get(tid_b, 999)) < spatial_threshold_px
+                    1
+                    for fn in overlap
+                    if abs(
+                        frame_positions[fn].get(tid_a, 999) - frame_positions[fn].get(tid_b, 999)
+                    )
+                    < spatial_threshold_px
                 )
                 if len(overlap) > 0 and close / len(overlap) > 0.5:
                     count_a = len(track_frames[tid_a])

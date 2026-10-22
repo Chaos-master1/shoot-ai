@@ -7,7 +7,6 @@ on event metadata, and analyzing duel patterns across both teams.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
 
 
 def classify_duel_type(event_metadata: dict) -> str:
@@ -43,8 +42,22 @@ def analyze_duels(events: list[dict]) -> dict:
         win rates, and per-player breakdowns.
     """
     team_stats: dict[str, dict] = {
-        "home": {"total": 0, "aerial": 0, "ground": 0, "50_50": 0, "won": 0, "players": defaultdict(lambda: {"total": 0, "won": 0})},
-        "away": {"total": 0, "aerial": 0, "ground": 0, "50_50": 0, "won": 0, "players": defaultdict(lambda: {"total": 0, "won": 0})},
+        "home": {
+            "total": 0,
+            "aerial": 0,
+            "ground": 0,
+            "50_50": 0,
+            "won": 0,
+            "players": defaultdict(lambda: {"total": 0, "won": 0}),
+        },
+        "away": {
+            "total": 0,
+            "aerial": 0,
+            "ground": 0,
+            "50_50": 0,
+            "won": 0,
+            "players": defaultdict(lambda: {"total": 0, "won": 0}),
+        },
     }
 
     for event in events:
@@ -74,12 +87,16 @@ def analyze_duels(events: list[dict]) -> dict:
     for team, stats in team_stats.items():
         players_list = []
         for pid, pdata in stats["players"].items():
-            players_list.append({
-                "player_id": pid,
-                "total_duels": pdata["total"],
-                "duels_won": pdata["won"],
-                "win_rate": round(pdata["won"] / pdata["total"], 2) if pdata["total"] > 0 else 0.0,
-            })
+            players_list.append(
+                {
+                    "player_id": pid,
+                    "total_duels": pdata["total"],
+                    "duels_won": pdata["won"],
+                    "win_rate": round(pdata["won"] / pdata["total"], 2)
+                    if pdata["total"] > 0
+                    else 0.0,
+                }
+            )
         players_list.sort(key=lambda x: x["total_duels"], reverse=True)
         result[team] = {
             "total_duels": stats["total"],

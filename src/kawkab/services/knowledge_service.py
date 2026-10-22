@@ -1,11 +1,13 @@
 """Knowledge base service - loads tactical rules and drills from YAML.
 
-Manages the knowledge graph of 500+ rules and 500+ drills.
+Current inventory: 40 rule files across 5 categories (defensive, offensive,
+transitions, individual, meta) and 24 drills. Counted from the files by
+scripts/check_docs_truth.py — do not state larger numbers here.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -30,10 +32,10 @@ class TacticalRule:
     pattern_signature: dict[str, Any]
     hypotheses: list[dict[str, Any]]
     recommended_drills: list[str]
-    sources: list[str] = None
+    sources: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_yaml(cls, yaml_path: Path) -> "TacticalRule":
+    def from_yaml(cls, yaml_path: Path) -> TacticalRule:
         """Load a tactical rule from a YAML file."""
         with open(yaml_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -68,15 +70,15 @@ class Drill:
     space: str
     setup: str
     rules: list[str]
-    progressions: list[str] = None
-    regressions: list[str] = None
-    coaching_points: list[str] = None
-    addresses_problems: list[str] = None
-    source: str = None
-    video_reference: str = None
+    progressions: list[str] = field(default_factory=list)
+    regressions: list[str] = field(default_factory=list)
+    coaching_points: list[str] = field(default_factory=list)
+    addresses_problems: list[str] = field(default_factory=list)
+    source: str = ""
+    video_reference: str = ""
 
     @classmethod
-    def from_yaml(cls, yaml_path: Path) -> "Drill":
+    def from_yaml(cls, yaml_path: Path) -> Drill:
         """Load a drill from a YAML file."""
         with open(yaml_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -157,9 +159,7 @@ class KnowledgeService:
             except Exception as e:
                 logger.warning(f"Failed to load drill {yml_file}: {e}")
 
-        logger.info(
-            f"Knowledge base loaded: {rule_count} rules, {drill_count} drills"
-        )
+        logger.info(f"Knowledge base loaded: {rule_count} rules, {drill_count} drills")
         self._initialized = True
 
     def get_rule(self, rule_id: str) -> TacticalRule | None:
@@ -191,9 +191,7 @@ class KnowledgeService:
                 results.append(rule)
         return results
 
-    def find_drills_for_problem(
-        self, problem_signature: str
-    ) -> list[Drill]:
+    def find_drills_for_problem(self, problem_signature: str) -> list[Drill]:
         """Find drills that address a specific problem.
 
         Args:

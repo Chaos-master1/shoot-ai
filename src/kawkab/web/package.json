@@ -5,7 +5,7 @@
   "scripts": {
     "test": "jest",
     "test:e2e": "npx playwright test",
-    "build:frontend": "node ../../../../scripts/build-frontend.js"
+    "build:frontend": "node ../../../scripts/bundle-js.mjs"
   },
   "keywords": [],
   "author": "",

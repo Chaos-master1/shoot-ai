@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 import numpy as np
 
@@ -34,15 +33,15 @@ class WearableDataPoint:
     """
 
     timestamp_s: float = 0.0
-    heart_rate_bpm: Optional[float] = None
-    speed_ms: Optional[float] = None
-    distance_m: Optional[float] = None
-    acceleration_ms2: Optional[float] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    altitude_m: Optional[float] = None
-    cadence_rpm: Optional[float] = None
-    power_w: Optional[float] = None
+    heart_rate_bpm: float | None = None
+    speed_ms: float | None = None
+    distance_m: float | None = None
+    acceleration_ms2: float | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    altitude_m: float | None = None
+    cadence_rpm: float | None = None
+    power_w: float | None = None
     # Vendors-specific extras that don't fit the unified channels above
     # (e.g. Catapult "Body Load", STATSports "PlayerLoad", FIT "left_right_balance").
     extras: dict = field(default_factory=dict)
@@ -73,7 +72,7 @@ class WearableSession:
     device_serial: str = ""
     athlete_id: str = ""
     athlete_name: str = ""
-    start_time: Optional[datetime] = None
+    start_time: datetime | None = None
     duration_s: float = 0.0
     sample_rate_hz: float = 0.0
     data: list[WearableDataPoint] = field(default_factory=list)

@@ -6,6 +6,7 @@ Optional audio analysis from match videos for richer context.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from kawkab.core.logging import get_logger
 
@@ -28,7 +29,7 @@ class AudioService:
         self.enable_crowd_analysis = enable_crowd_analysis
         self.whisper_model = whisper_model
         self.gpu_enabled = gpu_enabled
-        self._model: object | None = None
+        self._model: Any = None
 
         logger.info(
             f"AudioService: transcribe={enable_transcription}, "
@@ -49,18 +50,11 @@ class AudioService:
             device = "cuda" if self.gpu_enabled else "cpu"
             compute_type = "float16" if self.gpu_enabled else "int8"
 
-            logger.info(
-                f"Loading Whisper model: {self.whisper_model} on {device}"
-            )
-            self._model = WhisperModel(
-                self.whisper_model, device=device, compute_type=compute_type
-            )
+            logger.info(f"Loading Whisper model: {self.whisper_model} on {device}")
+            self._model = WhisperModel(self.whisper_model, device=device, compute_type=compute_type)
             logger.info("Whisper model loaded")
         except ImportError:
-            logger.warning(
-                "faster-whisper not installed. "
-                "Run: pip install faster-whisper"
-            )
+            logger.warning("faster-whisper not installed. Run: pip install faster-whisper")
             self._model = None
 
     async def transcribe_video(self, video_path: Path) -> list[dict]:
@@ -86,9 +80,7 @@ class AudioService:
         logger.info(f"Transcribing audio: {video_path.name}")
 
         try:
-            segments, info = self._model.transcribe(
-                str(video_path), beam_size=5
-            )
+            segments, info = self._model.transcribe(str(video_path), beam_size=5)
 
             results = []
             for segment in segments:
@@ -103,8 +95,7 @@ class AudioService:
                 )
 
             logger.info(
-                f"Transcription complete: {len(results)} segments, "
-                f"language={info.language}"
+                f"Transcription complete: {len(results)} segments, language={info.language}"
             )
             return results
         except Exception as e:
@@ -141,9 +132,7 @@ class AudioService:
 
             stft = np.abs(librosa.stft(y))
             freqs = librosa.fft_frequencies(sr=sr)
-            times = librosa.frames_to_time(
-                np.arange(stft.shape[1]), sr=sr
-            )
+            times = librosa.frames_to_time(np.arange(stft.shape[1]), sr=sr)
 
             freq_mask = (freqs >= whistle_freq_min) & (freqs <= whistle_freq_max)
             whistle_energy = np.mean(stft[freq_mask, :], axis=0)
@@ -167,9 +156,7 @@ class AudioService:
                                 "duration": duration,
                                 "confidence": min(
                                     1.0,
-                                    whistle_energy[
-                                        int(start_time * sr / 512) : i
-                                    ].mean()
+                                    whistle_energy[int(start_time * sr / 512) : i].mean()
                                     / threshold,
                                 ),
                             }
@@ -181,6 +168,50 @@ class AudioService:
         except Exception as e:
             logger.error(f"Whistle detection failed: {e}")
             return []
+
+    async def analyze_crowd_noise(self, video_path: Path) -> dict:
+        """Analyze crowd noise intensity over time (cheer-detection proxy).
+
+        Args:
+            video_path: Path to video file
+
+        Returns:
+            Dict with avg_intensity, peak_intensity, peak_time, samples.
+            Always has this exact shape (zeroed out) if disabled, librosa
+            is unavailable, or analysis fails -- callers never need to
+            check for a missing key.
+        """
+        empty = {"avg_intensity": 0.0, "peak_intensity": 0.0, "peak_time": 0.0, "samples": 0}
+        if not self.enable_crowd_analysis:
+            return empty
+
+        logger.info(f"Analyzing crowd noise in: {video_path.name}")
+
+        try:
+            import librosa
+            import numpy as np
+        except ImportError:
+            logger.warning("librosa not installed. Run: pip install librosa")
+            return empty
+
+        try:
+            y, sr = librosa.load(str(video_path), sr=None, mono=True)
+            rms = librosa.feature.rms(y=y)[0]
+            times = librosa.frames_to_time(np.arange(len(rms)), sr=sr)
+
+            if len(rms) == 0:
+                return empty
+
+            peak_idx = int(np.argmax(rms))
+            return {
+                "avg_intensity": float(np.mean(rms)),
+                "peak_intensity": float(rms[peak_idx]),
+                "peak_time": float(times[peak_idx]),
+                "samples": int(len(rms)),
+            }
+        except Exception as e:
+            logger.error(f"Crowd noise analysis failed: {e}")
+            return empty
 
     async def analyze_audio(self, video_path: Path) -> dict:
         """Full audio analysis: transcription + whistle detection.

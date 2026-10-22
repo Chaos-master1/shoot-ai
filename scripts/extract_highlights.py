@@ -34,11 +34,16 @@ def extract_clip(
     start = max(0.0, start_time - padding)
     duration = end_time - start_time + padding * 2
     cmd = [
-        "ffmpeg", "-y",
-        "-ss", f"{start:.2f}",
-        "-i", str(video_path),
-        "-t", f"{duration:.2f}",
-        "-c", "copy",
+        "ffmpeg",
+        "-y",
+        "-ss",
+        f"{start:.2f}",
+        "-i",
+        str(video_path),
+        "-t",
+        f"{duration:.2f}",
+        "-c",
+        "copy",
         str(output_path),
     ]
     try:
@@ -80,9 +85,9 @@ def extract_highlights(
         end = t + padding
         safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in evt["title"])
         safe_name = safe_name.strip().replace(" ", "_")[:48] or f"event_{i}"
-        out_path = output_dir / f"{i+1:02d}_{safe_name}.mp4"
+        out_path = output_dir / f"{i + 1:02d}_{safe_name}.mp4"
 
-        print(f"  [{i+1}/{len(merged)}] {evt['title']} @ {t:.1f}s -> {out_path.name}")
+        print(f"  [{i + 1}/{len(merged)}] {evt['title']} @ {t:.1f}s -> {out_path.name}")
         if extract_clip(video_path, out_path, start, end, padding=0):
             clips.append(out_path)
 
@@ -102,7 +107,9 @@ def _merge_nearby_events(
     for evt in sorted_events[1:]:
         gap = evt["timestamp"] - merged[-1]["timestamp"]
         if gap < min_gap:
-            merged[-1]["end_time"] = max(merged[-1].get("end_time", merged[-1]["timestamp"]), evt["timestamp"])
+            merged[-1]["end_time"] = max(
+                merged[-1].get("end_time", merged[-1]["timestamp"]), evt["timestamp"]
+            )
             merged[-1]["title"] = f"{merged[-1]['title']} + {evt['title']}"
         else:
             merged.append(dict(evt))
@@ -138,12 +145,14 @@ def detect_events_from_video(
         if prev_gray is not None:
             diff = cv2.norm(gray, prev_gray, cv2.NORM_L2) / gray.size
             if diff > 80:
-                events.append({
-                    "type": "intensity_peak",
-                    "timestamp": frame_idx / fps,
-                    "title": f"Activity @ {frame_idx//fps:.0f}s",
-                    "confidence": min(1.0, diff / 200),
-                })
+                events.append(
+                    {
+                        "type": "intensity_peak",
+                        "timestamp": frame_idx / fps,
+                        "title": f"Activity @ {frame_idx // fps:.0f}s",
+                        "confidence": min(1.0, diff / 200),
+                    }
+                )
         prev_gray = gray
         frame_idx += sample_step
 
@@ -153,12 +162,19 @@ def detect_events_from_video(
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Extract highlight clips from match video")
     parser.add_argument("video", type=Path, help="Match video file")
-    parser.add_argument("--output-dir", "-o", type=Path, default=Path("highlights"), help="Output directory")
+    parser.add_argument(
+        "--output-dir", "-o", type=Path, default=Path("highlights"), help="Output directory"
+    )
     parser.add_argument("--padding", type=float, default=15.0, help="Seconds around each event")
-    parser.add_argument("--events", type=Path, default=None, help="JSON events file [{type, timestamp, title}]")
-    parser.add_argument("--detect", action="store_true", help="Auto-detect events from video activity")
+    parser.add_argument(
+        "--events", type=Path, default=None, help="JSON events file [{type, timestamp, title}]"
+    )
+    parser.add_argument(
+        "--detect", action="store_true", help="Auto-detect events from video activity"
+    )
     args = parser.parse_args()
 
     events = []

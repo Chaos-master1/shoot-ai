@@ -7,12 +7,20 @@ of where the game was won or lost.
 
 from __future__ import annotations
 
-import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from kawkab.core.xt_model import ExpectedThreatModel
+
+if TYPE_CHECKING:
+
+    class _XtModelProtocol(Protocol):
+        """Structural subset of ExpectedThreatModel used below."""
+
+        def compute_action_xt(self, sx: float, sy: float, ex: float, ey: float) -> float: ...
+
+        def _zone_from_position(self, x: float, y: float) -> tuple[int, int]: ...
 
 
 @dataclass
@@ -84,9 +92,7 @@ def _detect_possession_chains_full(
     if not events:
         return []
 
-    sorted_indices = sorted(
-        range(len(events)), key=lambda i: events[i].get("timestamp", 0.0)
-    )
+    sorted_indices = sorted(range(len(events)), key=lambda i: events[i].get("timestamp", 0.0))
     chains: list[list[int]] = []
     current: list[int] = []
     current_team: str | None = None
@@ -130,7 +136,7 @@ def compute_territory_value(
     opponent_events: list[dict],
     match_events: list[dict],
     team_id: str,
-    xt_model: object | None = None,
+    xt_model: _XtModelProtocol | None = None,
     possession_chains: list[list[int]] | None = None,
     grid_rows: int = 20,
     grid_cols: int = 32,
@@ -167,20 +173,18 @@ def compute_territory_value(
 
     if xt_model is None:
         xt_model = _make_default_xt_model(match_events, grid_rows, grid_cols)
+    assert xt_model is not None  # narrowed for mypy (optional-arg default built above)
 
     if possession_chains is None:
         possession_chains = _detect_possession_chains_full(match_events)
 
     # Map team id to a boolean flag
     team_team = team_events[0].get("team", "") if team_events else ""
-    opp_team = opponent_events[0].get("team", "") if opponent_events else ""
 
     # Zone accumulation
     gained: dict[tuple[int, int], float] = defaultdict(float)
     conceded: dict[tuple[int, int], float] = defaultdict(float)
     zone_event_count: dict[tuple[int, int], int] = defaultdict(int)
-    total_ts_per_zone: dict[tuple[int, int], float] = defaultdict(float)
-    total_ts_all = 0.0
 
     # Timeline
     minute_buckets: dict[int, dict[str, float]] = defaultdict(
@@ -244,30 +248,34 @@ def compute_territory_value(
                 reached_final_third = True
                 break
 
-        chain_summaries.append({
-            "chain_id": len(chain_summaries),
-            "team": chain_team,
-            "duration_sec": round(chain_duration, 1),
-            "pass_count": chain_passes,
-            "xT_gained": round(chain_xT, 4),
-            "reached_final_third": reached_final_third,
-        })
+        chain_summaries.append(
+            {
+                "chain_id": len(chain_summaries),
+                "team": chain_team,
+                "duration_sec": round(chain_duration, 1),
+                "pass_count": chain_passes,
+                "xT_gained": round(chain_xT, 4),
+                "reached_final_third": reached_final_third,
+            }
+        )
 
     # Build cells
     all_zones: set[tuple[int, int]] = set(gained.keys()) | set(conceded.keys())
     cells: list[TerritoryCell] = []
-    for (zx, zy) in all_zones:
+    for zx, zy in all_zones:
         g = gained.get((zx, zy), 0.0)
         c = conceded.get((zx, zy), 0.0)
-        cells.append(TerritoryCell(
-            zone_x=zx,
-            zone_y=zy,
-            xT_gained=g,
-            xT_conceded=c,
-            net_xT=g - c,
-            possession_time_pct=0.0,
-            event_count=zone_event_count.get((zx, zy), 0),
-        ))
+        cells.append(
+            TerritoryCell(
+                zone_x=zx,
+                zone_y=zy,
+                xT_gained=g,
+                xT_conceded=c,
+                net_xT=g - c,
+                possession_time_pct=0.0,
+                event_count=zone_event_count.get((zx, zy), 0),
+            )
+        )
 
     total_gained = sum(gained.values())
     total_conceded = sum(conceded.values())
@@ -277,12 +285,14 @@ def compute_territory_value(
     for cell in cells:
         total = cell.xT_gained + cell.xT_conceded
         if total > 0 and (cell.xT_gained / total) > 0.6:
-            dominant.append({
-                "zone_x": cell.zone_x,
-                "zone_y": cell.zone_y,
-                "advantage_pct": round(cell.xT_gained / total * 100, 1),
-                "net_xT": round(cell.net_xT, 4),
-            })
+            dominant.append(
+                {
+                    "zone_x": cell.zone_x,
+                    "zone_y": cell.zone_y,
+                    "advantage_pct": round(cell.xT_gained / total * 100, 1),
+                    "net_xT": round(cell.net_xT, 4),
+                }
+            )
 
     # Territory timeline
     timeline: list[dict] = []
@@ -290,11 +300,13 @@ def compute_territory_value(
         b = minute_buckets[minute]
         total_ev = b["team_events"] + b["opp_events"]
         control_pct = round(b["team_events"] / total_ev * 100, 1) if total_ev else 50.0
-        timeline.append({
-            "minute": minute,
-            "team_control_pct": control_pct,
-            "xT_gained_this_min": round(b["team_xT"], 4),
-        })
+        timeline.append(
+            {
+                "minute": minute,
+                "team_control_pct": control_pct,
+                "xT_gained_this_min": round(b["team_xT"], 4),
+            }
+        )
 
     return TerritoryReport(
         team=team_id,

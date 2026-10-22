@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-import pytest
-
 from kawkab.services.tag_analytics_service import (
-    TagTemplate,
     DEFAULT_TAG_TEMPLATES,
+    _format_timecode,
+    _guess_category,
+    _parse_timecode,
     compute_tag_analytics,
-    TagAnalytics,
-    tags_to_csv,
-    tags_from_csv,
     export_tags_sportscode,
     import_tags_sportscode,
-    _format_timecode,
-    _parse_timecode,
-    _guess_category,
+    tags_from_csv,
+    tags_to_csv,
 )
 
 
@@ -88,7 +84,10 @@ class TestComputeTagAnalytics:
         ]
         analytics = compute_tag_analytics(tags, window_size_seconds=5.0)
         assert len(analytics.co_occurrence) > 0
-        assert analytics.co_occurrence["Pass"]["Shot"] >= 1 or analytics.co_occurrence["Shot"]["Pass"] >= 1
+        assert (
+            analytics.co_occurrence["Pass"]["Shot"] >= 1
+            or analytics.co_occurrence["Shot"]["Pass"] >= 1
+        )
 
     def test_no_co_occurrence_outside_window(self):
         tags = [
@@ -130,7 +129,16 @@ class TestComputeTagAnalytics:
 
 class TestCSVImportExport:
     def test_tags_to_csv_headers(self):
-        tags = [{"timestamp": 1.0, "type": "Shot", "category": "attack", "player_name": "P1", "period": "1st", "notes": "Goal"}]
+        tags = [
+            {
+                "timestamp": 1.0,
+                "type": "Shot",
+                "category": "attack",
+                "player_name": "P1",
+                "period": "1st",
+                "notes": "Goal",
+            }
+        ]
         csv_text = tags_to_csv(tags)
         assert "timestamp" in csv_text
         assert "type" in csv_text
@@ -138,8 +146,22 @@ class TestCSVImportExport:
 
     def test_tags_to_csv_roundtrip(self):
         original = [
-            {"timestamp": 1.5, "type": "Shot", "category": "attack", "player_name": "P1", "period": "1st", "notes": ""},
-            {"timestamp": 10.0, "type": "Tackle", "category": "defense", "player_name": "P2", "period": "1st", "notes": "Won"},
+            {
+                "timestamp": 1.5,
+                "type": "Shot",
+                "category": "attack",
+                "player_name": "P1",
+                "period": "1st",
+                "notes": "",
+            },
+            {
+                "timestamp": 10.0,
+                "type": "Tackle",
+                "category": "defense",
+                "player_name": "P2",
+                "period": "1st",
+                "notes": "Won",
+            },
         ]
         csv_text = tags_to_csv(original)
         restored = tags_from_csv(csv_text)

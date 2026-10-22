@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 ACWR_RISK_THRESHOLDS = [
     ("low", 0.0, 0.8),
     ("moderate", 0.8, 1.3),
@@ -54,11 +53,23 @@ DEFAULT_RECOMMENDATION = {
 class InjuryRiskPredictor:
     def compute_acwr_overload(self, workload_data: list[float]) -> dict[str, Any]:
         if len(workload_data) < 7:
-            return {"acwr": 0.0, "risk_level": "low", "recommendation": "Insufficient data (need 7+ days)"}
+            return {
+                "acwr": 0.0,
+                "risk_level": "low",
+                "recommendation": "Insufficient data (need 7+ days)",
+            }
         acute_window = 7
         chronic_window = 28
-        acute = sum(workload_data[-acute_window:]) / acute_window if len(workload_data) >= acute_window else sum(workload_data) / len(workload_data)
-        chronic_data = workload_data[-chronic_window:] if len(workload_data) >= chronic_window else workload_data
+        acute = (
+            sum(workload_data[-acute_window:]) / acute_window
+            if len(workload_data) >= acute_window
+            else sum(workload_data) / len(workload_data)
+        )
+        chronic_data = (
+            workload_data[-chronic_window:]
+            if len(workload_data) >= chronic_window
+            else workload_data
+        )
         chronic = sum(chronic_data) / len(chronic_data) if chronic_data else 1.0
         acwr = acute / chronic if chronic > 0 else 1.0
         risk_level = "low"

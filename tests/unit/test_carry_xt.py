@@ -1,11 +1,9 @@
 """Tests for carry expected threat (Carry xT) module."""
-import pytest
 
 from kawkab.core.carry_xt import (
+    CarryXTMatchReport,
     compute_carry_xt,
     compute_carry_xt_from_tracking,
-    CarryXTResult,
-    CarryXTMatchReport,
 )
 from kawkab.core.xt_model import ExpectedThreatModel
 
@@ -32,7 +30,14 @@ class TestComputeCarryXT:
 
     def test_no_carry_events_returns_zero(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 30, "start_y": 34, "end_x": 50, "end_y": 34},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+            },
         ]
         result = compute_carry_xt(events)
         assert result.home_total_xt == 0.0
@@ -40,7 +45,15 @@ class TestComputeCarryXT:
     def test_forward_carry_positive_xt(self):
         model = _make_xt_model()
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 60, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt(events, xt_model=model)
         assert result.home_total_xt >= 0.0
@@ -49,7 +62,15 @@ class TestComputeCarryXT:
     def test_carry_xt_values_have_sign_based_on_direction(self):
         model = _make_xt_model()
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 60, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt(events, xt_model=model)
         for c in result.carries:
@@ -58,8 +79,24 @@ class TestComputeCarryXT:
     def test_per_team_stats_populated(self):
         model = _make_xt_model()
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 60, "end_y": 34, "timestamp": 1.0},
-            {"type": "carry", "team": "away", "start_x": 70, "start_y": 34, "end_x": 50, "end_y": 34, "timestamp": 2.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
+            {
+                "type": "carry",
+                "team": "away",
+                "start_x": 70,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+                "timestamp": 2.0,
+            },
         ]
         result = compute_carry_xt(events, xt_model=model)
         assert result.home_carries >= 1
@@ -70,7 +107,15 @@ class TestComputeCarryXT:
     def test_progressive_flag_set(self):
         model = _make_xt_model()
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 70, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt(events, xt_model=model)
         assert result.home_progressive >= 1
@@ -85,14 +130,30 @@ class TestComputeCarryXT:
     def test_forward_distance_gt_5_is_progressive(self):
         model = _make_xt_model()
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 31, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 31,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt(events, xt_model=model)
         assert result.home_progressive == result.home_progressive
 
     def test_carry_xt_generated_without_model(self):
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 60, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt(events)
         assert isinstance(result, CarryXTMatchReport)
@@ -100,7 +161,15 @@ class TestComputeCarryXT:
     def test_carry_results_have_required_fields(self):
         model = _make_xt_model()
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 60, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt(events, xt_model=model)
         assert len(result.carries) == 1
@@ -127,7 +196,15 @@ class TestComputeCarryXTFromTracking:
             {"timestamp": 1.5, "home_positions": [(60, 34, 1)], "ball_pos": (60, 34)},
         ]
         events = [
-            {"type": "carry", "team": "home", "start_x": 30, "start_y": 34, "end_x": 60, "end_y": 34, "timestamp": 1.0},
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "timestamp": 1.0,
+            },
         ]
         result = compute_carry_xt_from_tracking(frames, events, xt_model=model)
         assert result.home_carries == 1

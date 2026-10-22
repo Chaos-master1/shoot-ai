@@ -122,8 +122,12 @@ def compute_player_benchmarks(
 
     # Collect all stat values per field across players
     stat_fields = [
-        "pass_accuracy", "shots", "tackles", "distance_covered_m",
-        "passes_attempted", "passes_completed",
+        "pass_accuracy",
+        "shots",
+        "tackles",
+        "distance_covered_m",
+        "passes_attempted",
+        "passes_completed",
     ]
     stat_values: dict[str, list[float]] = {f: [] for f in stat_fields}
     stat_names = {
@@ -136,26 +140,26 @@ def compute_player_benchmarks(
     }
 
     # Extract numeric fields from player rating data
-    for tid, pdata in player_ratings.items():
+    for _tid, pdata in player_ratings.items():
         if not isinstance(pdata, dict):
             continue
-        for field in stat_fields:
-            val = pdata.get(field)
+        for stat_field in stat_fields:
+            val = pdata.get(stat_field)
             if isinstance(val, (int, float)):
-                stat_values[field].append(float(val))
+                stat_values[stat_field].append(float(val))
 
     results: list[PlayerBenchmark] = []
     for tid, pdata in player_ratings.items():
         if not isinstance(pdata, dict):
             continue
         benchmarks: list[PercentileResult] = []
-        for field in stat_fields:
-            val = pdata.get(field)
+        for stat_field in stat_fields:
+            val = pdata.get(stat_field)
             if not isinstance(val, (int, float)):
                 continue
-            vals = stat_values[field]
+            vals = stat_values[stat_field]
             results_list = PercentileResult(
-                stat_name=stat_names.get(field, field),
+                stat_name=stat_names.get(stat_field, stat_field),
                 value=float(val),
                 percentile=_percentile(vals, float(val)),
                 squad_min=min(vals) if vals else 0.0,
@@ -167,11 +171,13 @@ def compute_player_benchmarks(
 
         name = pdata.get("name", f"Player #{tid}")
         position = pdata.get("position", "unknown")
-        results.append(PlayerBenchmark(
-            track_id=tid,
-            name=name,
-            position=position,
-            results=benchmarks,
-        ))
+        results.append(
+            PlayerBenchmark(
+                track_id=tid,
+                name=name,
+                position=position,
+                results=benchmarks,
+            )
+        )
 
     return results

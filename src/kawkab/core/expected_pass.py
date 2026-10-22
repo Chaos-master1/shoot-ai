@@ -50,6 +50,7 @@ class ExpectedPassResult:
             or "very_difficult".
         factors: Per-feature contribution to the log-odds before sigmoid.
     """
+
     ep: float
     is_progressive: bool
     difficulty: str
@@ -195,15 +196,10 @@ def _compute_ep_cached(pass_data_items: tuple) -> ExpectedPassResult:
 
     logit = float(np.dot(coeffs, features))
     if not math.isfinite(logit):
-        return ExpectedPassResult(
-            ep=0.0, is_progressive=False, difficulty="unknown", factors={}
-        )
+        return ExpectedPassResult(ep=0.0, is_progressive=False, difficulty="unknown", factors={})
     ep = 1.0 / (1.0 + math.exp(-min(logit, 20.0)))
 
-    factors = {
-        name: float(coeffs[i] * features[i])
-        for i, name in enumerate(_FEATURE_NAMES)
-    }
+    factors = {name: float(coeffs[i] * features[i]) for i, name in enumerate(_FEATURE_NAMES)}
 
     distance_m = float(pd.get("distance_m", 15.0))
     start_x = float(pd.get("start_x", 52.5))
@@ -255,8 +251,7 @@ def compute_ep_batch(passes: list[dict[str, Any]]) -> list[ExpectedPassResult]:
         difficulty = _classify_difficulty(float(eps[i]))
 
         factors = {
-            name: float(coeffs[j] * feature_matrix[i, j])
-            for j, name in enumerate(_FEATURE_NAMES)
+            name: float(coeffs[j] * feature_matrix[i, j]) for j, name in enumerate(_FEATURE_NAMES)
         }
 
         results.append(

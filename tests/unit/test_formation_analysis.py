@@ -1,7 +1,12 @@
 """Tests for formation shape analysis."""
 
 import pytest
-from kawkab.core.formation_analysis import FormationAnalyzer, FormationMatchReport, FormationSnapshot
+
+from kawkab.core.formation_analysis import (
+    FormationAnalyzer,
+    FormationMatchReport,
+    FormationSnapshot,
+)
 
 
 class TestFormationAnalyzer:
@@ -45,14 +50,28 @@ class TestFormationAnalyzer:
 
     def test_analyze_with_few_players(self):
         fa = FormationAnalyzer()
-        frames = [{"timestamp": 0.0, "possession": True, "home_positions": [(50, 34)], "away_positions": [(50, 40)]}]
+        frames = [
+            {
+                "timestamp": 0.0,
+                "possession": True,
+                "home_positions": [(50, 34)],
+                "away_positions": [(50, 40)],
+            }
+        ]
         report = fa.analyze_team_shape(frames, team="home")
         assert isinstance(report, FormationMatchReport)
 
     def test_analyze_with_full_frame(self):
         fa = FormationAnalyzer()
         home = [(10 + i * 8, 20 + i * 4) for i in range(10)]
-        frames = [{"timestamp": 0.0, "possession": True, "home_positions": home, "away_positions": [(80, 34)]}]
+        frames = [
+            {
+                "timestamp": 0.0,
+                "possession": True,
+                "home_positions": home,
+                "away_positions": [(80, 34)],
+            }
+        ]
         report = fa.analyze_team_shape(frames, team="home")
         assert report.avg_width_in > 0
         assert report.avg_depth_in > 0
@@ -62,14 +81,26 @@ class TestFormationAnalyzer:
         home_compact = [(45 + i * 2, 34) for i in range(10)]
         home_spread = [(10 + i * 10, 34) for i in range(10)]
         frames = [
-            {"timestamp": 0.0, "possession": True, "home_positions": home_compact, "away_positions": [(80, 34)]},
-            {"timestamp": 10.0, "possession": False, "home_positions": home_spread, "away_positions": [(80, 34)]},
+            {
+                "timestamp": 0.0,
+                "possession": True,
+                "home_positions": home_compact,
+                "away_positions": [(80, 34)],
+            },
+            {
+                "timestamp": 10.0,
+                "possession": False,
+                "home_positions": home_spread,
+                "away_positions": [(80, 34)],
+            },
         ]
         report = fa.analyze_team_shape(frames, team="home")
         assert report.in_possession_formation != "unknown"
 
     def test_snapshot_to_dict(self):
-        snap = FormationSnapshot(timestamp=10.0, width=40.0, depth=30.0, compactness=8.5, possession=True)
+        snap = FormationSnapshot(
+            timestamp=10.0, width=40.0, depth=30.0, compactness=8.5, possession=True
+        )
         d = snap.to_dict()
         assert d["t"] == 10.0
         assert d["w"] == 40.0

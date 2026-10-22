@@ -4,36 +4,41 @@ from __future__ import annotations
 
 # Early torch init to resolve CUDA DLL conflicts with PySide6
 import os as _os
+
 try:
     import torch as _torch
-    _cuda_lib = _os.path.join(_os.path.dirname(_torch.__file__), 'lib')
-    if _os.path.exists(_cuda_lib):
+
+    _cuda_lib = _os.path.join(_os.path.dirname(_torch.__file__), "lib")
+    if _os.path.exists(_cuda_lib) and hasattr(_os, "add_dll_directory"):  # Windows-only API
         _os.add_dll_directory(_cuda_lib)
 except Exception:
     pass
 
+import asyncio
 import sys
 from pathlib import Path
+from typing import Literal, cast
 
-from PySide6.QtCore import QSize, Qt, QUrl
+from PySide6.QtCore import QSize, QUrl
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication, QMainWindow, QSystemTrayIcon, QMenu
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QSystemTrayIcon
 
 from kawkab.core.config import get_settings
 from kawkab.core.logging import get_logger, setup_logging
+from kawkab.core.model_manager import ModelManager
 from kawkab.core.paths import get_paths
-from kawkab.utils.profiler import Profiler
 from kawkab.services import (
     AdvancedEventDetectionService,
+    AnalysisService,
     AnomalyDetectionService,
     ApiFootballService,
     AudioService,
-    AnalysisService,
     BenchmarkService,
     BzzoiroService,
+    CardDetectionService,
     ClipExtractionService,
     CVService,
     DataExportService,
@@ -44,13 +49,14 @@ from kawkab.services import (
     FluidX3DService,
     FootballDataService,
     FootballRulesService,
+    GoalkeeperService,
     HomographyService,
     KnowledgeService,
     LightGlueHomographyService,
     LLMConfig,
     LLMService,
-    MultiMatchAnalysisService,
     MuJoCoBallService,
+    MultiMatchAnalysisService,
     OpenFootballDataService,
     PhysicalLoadService,
     PlayerProfileService,
@@ -62,17 +68,15 @@ from kawkab.services import (
     RealtimeService,
     RoboflowSportsService,
     SetPieceService,
-    GoalkeeperService,
     StatsBombService,
     StorageService,
     SubstitutionService,
     TheSportsDBService,
     VisualizationService,
     WeatherService,
-    CardDetectionService,
 )
-from kawkab.core.model_manager import ModelManager
 from kawkab.ui.bridge import Bridge
+from kawkab.utils.profiler import Profiler
 
 logger = get_logger(__name__)
 
@@ -88,6 +92,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{self.settings.app_name} v{self.settings.app_version}")
         self.setMinimumSize(QSize(1280, 800))
 
+        # Set by the tray "Quit" action so closeEvent() knows this is a
+        # real exit, not a click on the window's X button (which should
+        # minimize to tray, matching closeEvent()'s existing behavior).
+        self._quitting = False
+
         self._init_services()
         self._init_ui()
         self.profiler = Profiler()
@@ -102,6 +111,31 @@ class MainWindow(QMainWindow):
         logger.info("Initializing services...")
 
         self.storage = StorageService()
+        # StorageService() only records a path/DSN -- the actual connection
+        # and migration run happen in the async initialize(). Every call
+        # site of initialize() used to be in tests/scripts only; the GUI
+        # never called it, so self.storage._conn stayed None forever and
+        # every save_* method's `if self._conn is None: return 0` guard
+        # silently discarded all data with no error surfaced anywhere.
+        # initialize() does no actual awaiting internally (sqlite3 is
+        # synchronous), so running it via asyncio.run() here -- before the
+        # Qt event loop starts -- is safe and matches how the rest of this
+        # codebase invokes async service methods from sync call sites.
+        try:
+            asyncio.run(self.storage.initialize())
+        except Exception:
+            db_location = "(postgres, see KAWKAB_DB_URL)"
+            try:
+                if not self.storage._use_postgres:
+                    db_location = str(self.storage._db_path)
+            except Exception:
+                pass
+            logger.exception(
+                "StorageService.initialize() failed -- the app cannot "
+                "persist any data (matches, events, players, ...) this "
+                f"session. Check that the database path is writable: {db_location}"
+            )
+            raise
 
         self.model_manager = ModelManager()
 
@@ -174,10 +208,17 @@ class MainWindow(QMainWindow):
         if self.settings.auto_detect_gpu_tier:
             self._apply_gpu_tier_settings()
 
+        _provider = cast(
+            Literal["ollama", "groq", "google", "openrouter"], self.settings.llm_provider
+        )
         llm_config = LLMConfig(
-            provider=self.settings.llm_provider,
+            provider=_provider,
             ollama_model=self.settings.ollama_model,
             ollama_base_url=self.settings.ollama_base_url,
+            # Cloud providers (groq/google/openrouter) are unreachable
+            # without this — it was silently dropped before, so a user who
+            # selected "google" with a valid key got offline-only behavior.
+            api_key=self.settings.llm_api_key or None,
         )
         self.llm = LLMService(llm_config)
 
@@ -196,6 +237,7 @@ class MainWindow(QMainWindow):
         """Detect GPU and apply recommended settings."""
         try:
             from kawkab.services.benchmark_service import BenchmarkService
+
             gpu_name = self.benchmark._system_info.get("gpu_name", "unknown")
             if gpu_name == "unknown":
                 logger.info("GPU detection: no GPU found, using default settings")
@@ -230,12 +272,10 @@ class MainWindow(QMainWindow):
 
         page = self.web_view.page()
         if hasattr(page, "settings"):
-            page.settings().setAttribute(
-                QWebEngineSettings.LocalContentCanAccessFileUrls, True
-            )
-            page.settings().setAttribute(
-                QWebEngineSettings.LocalContentCanAccessRemoteUrls, True
-            )
+            # PySide6 ships these enum values at runtime but its stubs
+            # predate them (mypy can't see them on the type).
+            page.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)  # type: ignore[attr-defined]
+            page.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)  # type: ignore[attr-defined]
 
         possible_paths = [
             Path(__file__).parent / "web" / "index.html",
@@ -291,10 +331,23 @@ class MainWindow(QMainWindow):
         show_action = tray_menu.addAction("Show")
         show_action.triggered.connect(self.show)
         quit_action = tray_menu.addAction("Quit")
-        quit_action.triggered.connect(self.close)
+        quit_action.triggered.connect(self._quit_from_tray)
         self.tray_icon.setContextMenu(tray_menu)
 
         self.tray_icon.show()
+
+    def _quit_from_tray(self) -> None:
+        """Actually exit, rather than closeEvent()'s default minimize-to-tray.
+
+        Previously this action called self.close() directly, but with a
+        visible tray icon closeEvent() always chose the "minimize to tray"
+        branch -- so the tray menu's "Quit" item just re-hid the window
+        instead of exiting. There was no UI path that ever reached a real
+        quit, which is also why shutdown() (closing the DB, releasing the
+        CV model) was dead code with no caller.
+        """
+        self._quitting = True
+        self.close()
 
     def _init_bridge(self) -> None:
         """Initialize the QWebChannel bridge (will be attached to page after load)."""
@@ -346,18 +399,27 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event) -> None:
-        """Handle window close - minimize to tray."""
-        if hasattr(self, "tray_icon") and self.tray_icon.isVisible():
+        """Handle window close - minimize to tray, unless this is a real quit."""
+        if not self._quitting and hasattr(self, "tray_icon") and self.tray_icon.isVisible():
             self.tray_icon.showMessage(
                 self.settings.app_name,
                 "Still running in system tray. Right-click to quit.",
-                QSystemTrayIcon.Information,
+                QSystemTrayIcon.MessageIcon.Information,
                 2000,
             )
             self.hide()
             event.ignore()
-        else:
-            event.accept()
+            return
+
+        # Real exit: release the CV model and close the DB connection.
+        # shutdown() does its own awaiting internally (unlike initialize()),
+        # but there's no asyncio loop running here either, so asyncio.run()
+        # is again the right tool -- same reasoning as _init_services().
+        try:
+            asyncio.run(self.shutdown())
+        except Exception:
+            logger.exception("Error during shutdown (continuing to close)")
+        event.accept()
 
     async def shutdown(self) -> None:
         """Graceful shutdown of all services."""

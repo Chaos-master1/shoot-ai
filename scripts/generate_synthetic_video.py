@@ -3,11 +3,10 @@
 Generates a football-like scene with moving figures that YOLO can actually
 detect as people. Uses colored silhouettes on a green field.
 """
+
 from __future__ import annotations
 
 import argparse
-import math
-import os
 import random
 import subprocess
 import sys
@@ -69,7 +68,7 @@ def generate_better_synthetic_video(
     for frame_idx in range(n_frames):
         t = frame_idx * dt
         new_positions = []
-        for (x, y, vx, vy, team) in player_positions:
+        for x, y, vx, vy, team in player_positions:
             nx = x + vx * dt
             ny = y + vy * dt
             if nx < 80 or nx > width - 80:
@@ -92,20 +91,22 @@ def generate_better_synthetic_video(
             ball_vy = -ball_vy
 
         shape_cmds = []
-        for (x, y, _, _, team) in player_positions:
+        for x, y, _, _, team in player_positions:
             color = "0:0:200" if team == "team1" else "200:0:0"
             shape_cmds.append(
-                f"drawbox=x={int(x-15)}:y={int(y-30)}:w=30:h=60:color={color}@0.9:t=fill"
+                f"drawbox=x={int(x - 15)}:y={int(y - 30)}:w=30:h=60:color={color}@0.9:t=fill"
             )
         shape_cmds.append(
-            f"drawbox=x={int(ball_x-8)}:y={int(ball_y-8)}:w=16:h=16:color=white:t=fill"
+            f"drawbox=x={int(ball_x - 8)}:y={int(ball_y - 8)}:w=16:h=16:color=white:t=fill"
         )
         shape_cmds.append(
             f"drawtext=text='Kawkab Test - {t:.1f}s':fontsize=24:fontcolor=white:x=20:y=20:box=1:boxcolor=black@0.5:boxborderw=5"
         )
 
         frame_str = ",\n".join(shape_cmds)
-        frames_cmd.append(f"drawbox=x=0:y=0:w={width}:h={height}:color=green@0.001:t=fill, {frame_str}")
+        frames_cmd.append(
+            f"drawbox=x=0:y=0:w={width}:h={height}:color=green@0.001:t=fill, {frame_str}"
+        )
 
     print("  Encoding video (this may take a minute)...")
 
@@ -115,10 +116,13 @@ def generate_better_synthetic_video(
         start = i * 5
         end = min(start + 5, len(frames_cmd))
         seg = ",".join(frames_cmd[start:end])
-        segments.append(
-            f"[0:v]{seg},format=yuv420p[v{i}]"
-        )
-    filter_complex = ";\n".join(segments) + ";\n" + "".join(f"[v{i}]" for i in range(n_segments)) + f"concat=n={n_segments}:v=1:a=0[outv]"
+        segments.append(f"[0:v]{seg},format=yuv420p[v{i}]")
+    filter_complex = (
+        ";\n".join(segments)
+        + ";\n"
+        + "".join(f"[v{i}]" for i in range(n_segments))
+        + f"concat=n={n_segments}:v=1:a=0[outv]"
+    )
 
     with open("filter_script.txt", "w") as f:
         f.write(filter_complex)
@@ -126,32 +130,37 @@ def generate_better_synthetic_video(
     cmd = [
         "ffmpeg",
         "-y",
-        "-f", "lavfi",
-        "-i", f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
-        "-filter_complex_script", "filter_script.txt",
-        "-map", "[outv]",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-crf", "28",
-        "-pix_fmt", "yuv420p",
-        "-r", str(fps),
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
+        "-filter_complex_script",
+        "filter_script.txt",
+        "-map",
+        "[outv]",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "28",
+        "-pix_fmt",
+        "yuv420p",
+        "-r",
+        str(fps),
         str(output_path),
     ]
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"  [WARN] Complex filter failed, trying simpler approach...")
-            return _generate_simple_animated_video(
-                output_path, duration_sec, fps, width, height
-            )
+            print("  [WARN] Complex filter failed, trying simpler approach...")
+            return _generate_simple_animated_video(output_path, duration_sec, fps, width, height)
         print(f"  [OK] Video saved: {output_path}")
         return output_path
     except Exception as e:
         print(f"  [ERROR] {e}")
-        return _generate_simple_animated_video(
-            output_path, duration_sec, fps, width, height
-        )
+        return _generate_simple_animated_video(output_path, duration_sec, fps, width, height)
 
 
 def _generate_simple_animated_video(
@@ -167,14 +176,20 @@ def _generate_simple_animated_video(
     cmd = [
         "ffmpeg",
         "-y",
-        "-f", "lavfi",
-        "-i", f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
         "-vf",
-        f"drawbox=x='if(lt(t,5),100+t*100,if(lt(t,10),600-(t-5)*100,if(lt(t,15),600,100+(t-15)*100)))':y='if(lt(t,3),200,if(lt(t,8),300+t*30,if(lt(t,13),450,400)))':w=30:h=60:color=red:t=fill,drawbox=x='if(lt(t,5),200+t*80,if(lt(t,10),600-(t-5)*80,if(lt(t,15),600,200+(t-15)*80)))':y='if(lt(t,3),250,if(lt(t,8),350+t*20,if(lt(t,13),400,350)))':w=30:h=60:color=blue:t=fill,drawbox=x='if(lt(t,5),400+t*60,if(lt(t,10),700-(t-5)*60,if(lt(t,15),700,400+(t-15)*60)))':y='if(lt(t,3),300,if(lt(t,8),400,if(lt(t,13),500,400)))':w=30:h=60:color=red:t=fill,drawbox=x=640:y=360:w=20:h=20:color=white:t=fill,drawtext=text='%{{eif\\:t\\:d}}':fontsize=40:fontcolor=white:x=20:y=20:box=1:boxcolor=black@0.5:boxborderw=5",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-crf", "28",
-        "-pix_fmt", "yuv420p",
+        "drawbox=x='if(lt(t,5),100+t*100,if(lt(t,10),600-(t-5)*100,if(lt(t,15),600,100+(t-15)*100)))':y='if(lt(t,3),200,if(lt(t,8),300+t*30,if(lt(t,13),450,400)))':w=30:h=60:color=red:t=fill,drawbox=x='if(lt(t,5),200+t*80,if(lt(t,10),600-(t-5)*80,if(lt(t,15),600,200+(t-15)*80)))':y='if(lt(t,3),250,if(lt(t,8),350+t*20,if(lt(t,13),400,350)))':w=30:h=60:color=blue:t=fill,drawbox=x='if(lt(t,5),400+t*60,if(lt(t,10),700-(t-5)*60,if(lt(t,15),700,400+(t-15)*60)))':y='if(lt(t,3),300,if(lt(t,8),400,if(lt(t,13),500,400)))':w=30:h=60:color=red:t=fill,drawbox=x=640:y=360:w=20:h=20:color=white:t=fill,drawtext=text='%{eif\\:t\\:d}':fontsize=40:fontcolor=white:x=20:y=20:box=1:boxcolor=black@0.5:boxborderw=5",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "28",
+        "-pix_fmt",
+        "yuv420p",
         str(output_path),
     ]
     subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -190,8 +205,13 @@ def main() -> int:
     args = parser.parse_args()
 
     from kawkab.core.paths import get_paths
+
     paths = get_paths()
-    output = Path(args.output) if args.output else paths.cache / "tests" / f"better_synthetic_{args.duration}s.mp4"
+    output = (
+        Path(args.output)
+        if args.output
+        else paths.cache / "tests" / f"better_synthetic_{args.duration}s.mp4"
+    )
 
     try:
         generate_better_synthetic_video(output, args.duration, args.fps)

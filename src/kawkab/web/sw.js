@@ -19,6 +19,7 @@ var STATIC_ASSETS = [
   'js/app-scout.js',
   'js/app-sparklines.js',
   'js/app-data-providers.js',
+  'js/app-search-compare.js',
   'js/app-tooltips.js',
   'js/app-opponent.js',
   'js/app-marketplace.js',

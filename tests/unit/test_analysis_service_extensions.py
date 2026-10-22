@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sys
 import types
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -113,30 +113,42 @@ class TestFormationTracking:
 
     def test_formation_change_detected(self) -> None:
         svc = AnalysisService()
-        win1 = [FakeFrame(0, 0, [
-            FakeDetection(bbox=FakeBBox(cx=20), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=25), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=30), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=50), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=55), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=60), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=80), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=85), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=90), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=95), team="home"),
-        ])]
-        win2 = [FakeFrame(0, 0, [
-            FakeDetection(bbox=FakeBBox(cx=20), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=25), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=28), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=30), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=50), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=55), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=60), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=80), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=85), team="home"),
-            FakeDetection(bbox=FakeBBox(cx=88), team="home"),
-        ])]
+        win1 = [
+            FakeFrame(
+                0,
+                0,
+                [
+                    FakeDetection(bbox=FakeBBox(cx=20), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=25), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=30), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=50), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=55), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=60), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=80), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=85), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=90), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=95), team="home"),
+                ],
+            )
+        ]
+        win2 = [
+            FakeFrame(
+                0,
+                0,
+                [
+                    FakeDetection(bbox=FakeBBox(cx=20), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=25), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=28), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=30), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=50), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=55), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=60), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=80), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=85), team="home"),
+                    FakeDetection(bbox=FakeBBox(cx=88), team="home"),
+                ],
+            )
+        ]
         f1 = svc._classify_formation_in_window(win1, "home")
         f2 = svc._classify_formation_in_window(win2, "home")
         assert f1 == "3-3-4"
@@ -156,16 +168,25 @@ class TestLineBreakingPasses:
     def test_short_pass_not_line_breaking(self) -> None:
         svc = AnalysisService()
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.4, "end_x_pct": 0.5}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.4, "end_x_pct": 0.5},
+            },
         ]
         assert svc.detect_line_breaking_passes(events) == []
 
     def test_long_forward_pass_detected(self) -> None:
         svc = AnalysisService()
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.8}, "player_track_id": 7},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.8},
+                "player_track_id": 7,
+            },
         ]
         result = svc.detect_line_breaking_passes(events)
         assert len(result) == 1
@@ -175,24 +196,36 @@ class TestLineBreakingPasses:
     def test_backward_pass_excluded(self) -> None:
         svc = AnalysisService()
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.8, "end_x_pct": 0.2}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.8, "end_x_pct": 0.2},
+            },
         ]
         assert svc.detect_line_breaking_passes(events) == []
 
     def test_failed_pass_excluded(self) -> None:
         svc = AnalysisService()
         events = [
-            {"type": "pass", "team": "home", "completed": False,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": False,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9},
+            },
         ]
         assert svc.detect_line_breaking_passes(events) == []
 
     def test_non_pass_event_excluded(self) -> None:
         svc = AnalysisService()
         events = [
-            {"type": "shot", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9}},
+            {
+                "type": "shot",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9},
+            },
         ]
         assert svc.detect_line_breaking_passes(events) == []
 

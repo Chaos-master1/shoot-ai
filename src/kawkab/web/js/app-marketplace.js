@@ -1,4 +1,11 @@
-﻿    // â”€â”€ Phase 15 â€” Community Marketplace â”€â”€
+    // ── Phase 15 — Community Marketplace ──
+
+    // Not wrapped in its own IIFE (split out of app.js without one) -- the
+    // bundler is a plain concatenation, so this and every escapeHtml(...)
+    // call below resolved to nothing at runtime (ReferenceError) until this
+    // import was added. Matches app-data-providers.js's own fix for the
+    // same gap.
+    var escapeHtml = window.__kawkab.escapeHtml;
 
     function initMarketplace() {
         var currentType = 'drill';
@@ -45,14 +52,14 @@
                         var card = document.createElement('div');
                         card.className = 'pro-card';
                         card.style.cursor = 'pointer';
-                        var icon = item.item_type === 'drill' ? 'ðŸƒ' : item.item_type === 'template' ? 'ðŸ“' : 'ðŸ”Œ';
+                        var icon = item.item_type === 'drill' ? '🏃' : item.item_type === 'template' ? '📐' : '🔌';
                         card.innerHTML = '<div style="font-weight:700">' + icon + ' ' + escapeHtml(item.name) + '</div>' +
                             '<div style="font-size:0.75rem;color:var(--text-muted);margin:2px 0">' +
                             escapeHtml(item.description) + '</div>' +
                             '<div style="display:flex;gap:8px;font-size:0.7rem;color:var(--text-muted)">' +
-                            '<span>â­ ' + item.rating + '</span>' +
-                            '<span>â¬‡ ' + item.download_count + '</span>' +
-                            (item.category ? '<span>ðŸ“‚ ' + escapeHtml(item.category) + '</span>' : '') +
+                            '<span>⭐ ' + item.rating + '</span>' +
+                            '<span>⬇ ' + item.download_count + '</span>' +
+                            (item.category ? '<span>📂 ' + escapeHtml(item.category) + '</span>' : '') +
                             '</div>';
                         card.addEventListener('click', function() { showItemDetail(item.id); });
                         grid.appendChild(card);
@@ -76,7 +83,7 @@
                     document.getElementById('mp-detail-name').textContent = item.name;
                     document.getElementById('mp-detail-type').textContent = item.item_type + ' | ' + (item.category || 'General');
                     document.getElementById('mp-detail-body').textContent = item.description;
-                    document.getElementById('mp-detail-rating').textContent = 'â­ ' + item.rating + ' | â¬‡ ' + item.download_count + ' downloads | By: ' + (item.author || 'Community');
+                    document.getElementById('mp-detail-rating').textContent = '⭐ ' + item.rating + ' | ⬇ ' + item.download_count + ' downloads | By: ' + (item.author || 'Community');
                     var dataEl = document.getElementById('mp-detail-data');
                     try {
                         var parsed = JSON.parse(item.data || '{}');

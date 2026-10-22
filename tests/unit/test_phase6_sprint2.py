@@ -1,11 +1,7 @@
 """Phase 6 Sprint 2: Live Tagging Dashboard tests."""
 
-import json
 import re
-import os
 from pathlib import Path
-
-import pytest
 
 BASE = Path(__file__).resolve().parent.parent.parent
 SRC = BASE / "src"
@@ -13,12 +9,13 @@ WEB_JS = BASE / "src" / "kawkab" / "web" / "js"
 WEB_CSS = BASE / "src" / "kawkab" / "web" / "css"
 INDEX = BASE / "src" / "kawkab" / "web" / "index.html"
 BRIDGE_ANALYSIS = BASE / "src" / "kawkab" / "ui" / "bridge_handlers" / "bridge_analysis.py"
+BRIDGE_LIVE = BASE / "src" / "kawkab" / "ui" / "bridge_handlers" / "bridge_live.py"
 BRIDGE = BASE / "src" / "kawkab" / "ui" / "bridge.py"
 SERVICE = BASE / "src" / "kawkab" / "services" / "live_tagging_service.py"
 
 
 def _read(path):
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return f.read()
 
 
@@ -26,31 +23,33 @@ class TestBridgeAnalysisMethods:
     """Deliverable 1: verify get_live_kpis / get_live_pitch_map / get_live_xg_chart exist."""
 
     def test_get_live_kpis_exists(self):
-        code = _read(BRIDGE_ANALYSIS)
+        code = _read(BRIDGE_LIVE)
         assert "async def get_live_kpis" in code
 
     def test_get_live_pitch_map_exists(self):
-        code = _read(BRIDGE_ANALYSIS)
+        code = _read(BRIDGE_LIVE)
         assert "async def get_live_pitch_map" in code
 
     def test_get_live_xg_chart_exists(self):
-        code = _read(BRIDGE_ANALYSIS)
+        code = _read(BRIDGE_LIVE)
         assert "async def get_live_xg_chart" in code
 
     def test_get_live_kpis_returns_json(self):
-        code = _read(BRIDGE_ANALYSIS)
-        assert 'return json.dumps({' in code.split("async def get_live_kpis")[1].split("async def")[0]
+        code = _read(BRIDGE_LIVE)
+        assert (
+            "return json.dumps({" in code.split("async def get_live_kpis")[1].split("async def")[0]
+        )
 
     def test_get_live_pitch_map_returns_json(self):
-        code = _read(BRIDGE_ANALYSIS)
-        assert 'home_events' in code.split("async def get_live_pitch_map")[1].split("async def")[0]
+        code = _read(BRIDGE_LIVE)
+        assert "home_events" in code.split("async def get_live_pitch_map")[1].split("async def")[0]
 
     def test_get_live_xg_chart_returns_json(self):
-        code = _read(BRIDGE_ANALYSIS)
-        assert 'timeline' in code.split("async def get_live_xg_chart")[1].split("async def")[0]
+        code = _read(BRIDGE_LIVE)
+        assert "timeline" in code.split("async def get_live_xg_chart")[1].split("async def")[0]
 
     def test_get_live_kpis_has_possession_key(self):
-        code = _read(BRIDGE_ANALYSIS)
+        code = _read(BRIDGE_LIVE)
         body = code.split("async def get_live_kpis")[1].split("async def")[0]
         assert '"possession_pct"' in body
         assert '"shots"' in body
@@ -62,16 +61,16 @@ class TestBridgeAnalysisMethods:
         assert '"team_stats"' in body
 
     def test_get_live_pitch_map_has_zones(self):
-        code = _read(BRIDGE_ANALYSIS)
+        code = _read(BRIDGE_LIVE)
         body = code.split("async def get_live_pitch_map")[1].split("async def")[0]
-        assert 'home_hot_zones' in body
-        assert 'away_hot_zones' in body
+        assert "home_hot_zones" in body
+        assert "away_hot_zones" in body
 
     def test_get_live_xg_chart_has_cumulative(self):
-        code = _read(BRIDGE_ANALYSIS)
+        code = _read(BRIDGE_LIVE)
         body = code.split("async def get_live_xg_chart")[1].split("async def")[0]
-        assert 'cumulative_home' in body
-        assert 'cumulative_away' in body
+        assert "cumulative_home" in body
+        assert "cumulative_away" in body
 
 
 class TestBridgeSlots:
@@ -91,19 +90,19 @@ class TestBridgeSlots:
 
     def test_get_live_kpis_slot_delegates(self):
         code = _read(BRIDGE)
-        assert "self._analysis.get_live_kpis(" in code
+        assert "self._live.get_live_kpis(" in code
 
     def test_get_live_pitch_map_slot_delegates(self):
         code = _read(BRIDGE)
-        assert "self._analysis.get_live_pitch_map(" in code
+        assert "self._live.get_live_pitch_map(" in code
 
     def test_get_live_xg_chart_slot_delegates(self):
         code = _read(BRIDGE)
-        assert "self._analysis.get_live_xg_chart(" in code
+        assert "self._live.get_live_xg_chart(" in code
 
     def test_slots_have_correct_signature(self):
         code = _read(BRIDGE)
-        assert '@Slot(str, result=str)' in code
+        assert "@Slot(str, result=str)" in code
 
 
 class TestFrontendKpiDashboard:
@@ -111,32 +110,32 @@ class TestFrontendKpiDashboard:
 
     def test_kpi_dashboard_section_exists(self):
         html = _read(INDEX)
-        assert 'live-kpi-dashboard' in html
+        assert "live-kpi-dashboard" in html
 
     def test_kpi_possession_element(self):
         html = _read(INDEX)
-        assert 'live-possession' in html
+        assert "live-possession" in html
 
     def test_kpi_shots_element(self):
         html = _read(INDEX)
-        assert 'live-shots' in html
+        assert "live-shots" in html
 
     def test_kpi_xg_element(self):
         html = _read(INDEX)
-        assert 'live-xg' in html
+        assert "live-xg" in html
 
     def test_kpi_xg_diff_element(self):
         html = _read(INDEX)
-        assert 'live-xg-diff' in html
+        assert "live-xg-diff" in html
 
     def test_kpi_goals_element(self):
         html = _read(INDEX)
-        assert 'live-goals' in html
+        assert "live-goals" in html
 
     def test_dashboard_toggle_button(self):
         html = _read(INDEX)
-        assert 'live-dashboard-toggle' in html
-        assert 'Dashboard' in html
+        assert "live-dashboard-toggle" in html
+        assert "Dashboard" in html
 
     def test_kpi_section_starts_hidden(self):
         html = _read(INDEX)
@@ -155,15 +154,15 @@ class TestFrontendPitchMap:
 
     def test_pitch_svg_exists(self):
         html = _read(INDEX)
-        assert 'live-pitch-svg' in html
+        assert "live-pitch-svg" in html
 
     def test_pitch_events_overlay_exists(self):
         html = _read(INDEX)
-        assert 'live-pitch-events' in html
+        assert "live-pitch-events" in html
 
     def test_pitch_map_container_exists(self):
         html = _read(INDEX)
-        assert 'live-pitch-map-container' in html
+        assert "live-pitch-map-container" in html
 
     def test_svg_has_pitch_dimensions(self):
         html = _read(INDEX)
@@ -176,7 +175,7 @@ class TestFrontendPitchMap:
 
     def test_pitch_map_panel_exists(self):
         html = _read(INDEX)
-        assert 'Pitch Map' in html
+        assert "Pitch Map" in html
 
 
 class TestFrontendXgChart:
@@ -184,15 +183,15 @@ class TestFrontendXgChart:
 
     def test_xg_chart_canvas_exists(self):
         html = _read(INDEX)
-        assert 'live-xg-chart-canvas' in html
+        assert "live-xg-chart-canvas" in html
 
     def test_xg_chart_panel_exists(self):
         html = _read(INDEX)
-        assert 'xG Timeline' in html
+        assert "xG Timeline" in html
 
     def test_chart_export_bar_exists(self):
         html = _read(INDEX)
-        assert 'chart-export-bar' in html
+        assert "chart-export-bar" in html
 
 
 class TestLiveDashboardJS:

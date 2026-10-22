@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 import httpx
 
@@ -33,7 +32,7 @@ class OAuthProvider:
             f"access_type=offline"
         )
 
-    def exchange_code(self, code: str, redirect_uri: str) -> Optional[dict]:
+    def exchange_code(self, code: str, redirect_uri: str) -> dict | None:
         resp = httpx.post(
             self.config.token_url,
             data={
@@ -44,21 +43,23 @@ class OAuthProvider:
                 "grant_type": "authorization_code",
             },
             headers={"Accept": "application/json"},
+            timeout=10.0,
         )
         if resp.status_code != 200:
             return None
         return resp.json()
 
-    def get_userinfo(self, access_token: str) -> Optional[dict]:
+    def get_userinfo(self, access_token: str) -> dict | None:
         resp = httpx.get(
             self.config.userinfo_url,
             headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10.0,
         )
         if resp.status_code != 200:
             return None
         return resp.json()
 
-    def refresh_token(self, refresh_token: str) -> Optional[dict]:
+    def refresh_token(self, refresh_token: str) -> dict | None:
         resp = httpx.post(
             self.config.token_url,
             data={
@@ -68,6 +69,7 @@ class OAuthProvider:
                 "grant_type": "refresh_token",
             },
             headers={"Accept": "application/json"},
+            timeout=10.0,
         )
         if resp.status_code != 200:
             return None
@@ -89,35 +91,44 @@ def _register_provider(name: str, config: OAuthProviderConfig) -> None:
         PROVIDERS[name] = OAuthProvider(config)
 
 
-_register_provider("google", OAuthProviderConfig(
-    client_id=_env("KAWKAB_GOOGLE_CLIENT_ID"),
-    client_secret=_env("KAWKAB_GOOGLE_CLIENT_SECRET"),
-    authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
-    token_url="https://oauth2.googleapis.com/token",
-    userinfo_url="https://www.googleapis.com/oauth2/v2/userinfo",
-    scopes=["openid", "email", "profile"],
-))
+_register_provider(
+    "google",
+    OAuthProviderConfig(
+        client_id=_env("KAWKAB_GOOGLE_CLIENT_ID"),
+        client_secret=_env("KAWKAB_GOOGLE_CLIENT_SECRET"),
+        authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
+        token_url="https://oauth2.googleapis.com/token",
+        userinfo_url="https://www.googleapis.com/oauth2/v2/userinfo",
+        scopes=["openid", "email", "profile"],
+    ),
+)
 
-_register_provider("github", OAuthProviderConfig(
-    client_id=_env("KAWKAB_GITHUB_CLIENT_ID"),
-    client_secret=_env("KAWKAB_GITHUB_CLIENT_SECRET"),
-    authorize_url="https://github.com/login/oauth/authorize",
-    token_url="https://github.com/login/oauth/access_token",
-    userinfo_url="https://api.github.com/user",
-    scopes=["read:user", "user:email"],
-))
+_register_provider(
+    "github",
+    OAuthProviderConfig(
+        client_id=_env("KAWKAB_GITHUB_CLIENT_ID"),
+        client_secret=_env("KAWKAB_GITHUB_CLIENT_SECRET"),
+        authorize_url="https://github.com/login/oauth/authorize",
+        token_url="https://github.com/login/oauth/access_token",
+        userinfo_url="https://api.github.com/user",
+        scopes=["read:user", "user:email"],
+    ),
+)
 
-_register_provider("apple", OAuthProviderConfig(
-    client_id=_env("KAWKAB_APPLE_CLIENT_ID"),
-    client_secret=_env("KAWKAB_APPLE_CLIENT_SECRET"),
-    authorize_url="https://appleid.apple.com/auth/authorize",
-    token_url="https://appleid.apple.com/auth/token",
-    userinfo_url="https://appleid.apple.com/auth/userinfo",
-    scopes=["name", "email"],
-))
+_register_provider(
+    "apple",
+    OAuthProviderConfig(
+        client_id=_env("KAWKAB_APPLE_CLIENT_ID"),
+        client_secret=_env("KAWKAB_APPLE_CLIENT_SECRET"),
+        authorize_url="https://appleid.apple.com/auth/authorize",
+        token_url="https://appleid.apple.com/auth/token",
+        userinfo_url="https://appleid.apple.com/auth/userinfo",
+        scopes=["name", "email"],
+    ),
+)
 
 
-def get_oauth_provider(name: str) -> Optional[OAuthProvider]:
+def get_oauth_provider(name: str) -> OAuthProvider | None:
     return PROVIDERS.get(name)
 
 

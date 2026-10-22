@@ -39,11 +39,9 @@ class TestKabschRotation:
         np.random.seed(42)
         src = np.random.randn(50, 3)
         angle = 0.6
-        R_true = np.array([
-            [np.cos(angle), -np.sin(angle), 0],
-            [np.sin(angle), np.cos(angle), 0],
-            [0, 0, 1]
-        ])
+        R_true = np.array(
+            [[np.cos(angle), -np.sin(angle), 0], [np.sin(angle), np.cos(angle), 0], [0, 0, 1]]
+        )
         tgt = (R_true @ src.T).T
         R, _, _ = kabsch_rotation(src, tgt)
         np.testing.assert_allclose(R, R_true, atol=1e-6)
@@ -76,11 +74,7 @@ class TestKabschAlign:
     def test_full_transform_recovery(self) -> None:
         np.random.seed(7)
         src = np.random.randn(20, 3)
-        R_true = np.array([
-            [0, -1, 0],
-            [1, 0, 0],
-            [0, 0, 1]
-        ])
+        R_true = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
         t_true = np.array([10.0, 20.0, 30.0])
         tgt = (R_true @ src.T).T + t_true
         R, t, rmsd = kabsch_align(src, tgt)

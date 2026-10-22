@@ -1,6 +1,7 @@
 """Tests for corner kick xG model."""
 
 import pytest
+
 from kawkab.core.corner_xg import CornerKickXgModel, _classify_delivery_zone
 
 
@@ -69,9 +70,25 @@ class TestCornerXgModel:
         """xG from shots preceded by a corner within 3 events."""
         events = [
             {"type": "corner_kick", "team": "home", "timestamp": 10.0, "x": 104, "y": 0},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.35, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.35,
+                "is_goal": False,
+            },
             {"type": "corner_kick", "team": "away", "timestamp": 20.0, "x": 0, "y": 68},
-            {"type": "shot", "team": "away", "timestamp": 22.0, "x": 5, "y": 34, "xg": 0.12, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "away",
+                "timestamp": 22.0,
+                "x": 5,
+                "y": 34,
+                "xg": 0.12,
+                "is_goal": True,
+            },
         ]
         result = CornerKickXgModel.compute_corner_xg(events)
         assert result["total_xg"] == pytest.approx(0.47, rel=0.01)
@@ -82,7 +99,15 @@ class TestCornerXgModel:
         """Shot and goal conversion rates."""
         events = [
             {"type": "corner_kick", "team": "home", "timestamp": 10.0, "x": 104, "y": 0},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.35, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.35,
+                "is_goal": True,
+            },
             {"type": "corner_kick", "team": "home", "timestamp": 20.0, "x": 104, "y": 0},
             {"type": "pass", "team": "home", "timestamp": 22.0, "x": 80, "y": 34},
         ]
@@ -139,9 +164,25 @@ class TestCornerXgModel:
         """3 corners, 2 leading to shots, 1 goal."""
         events = [
             {"type": "corner_kick", "team": "home", "timestamp": 10.0, "x": 104, "y": 0},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.35, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.35,
+                "is_goal": True,
+            },
             {"type": "corner_kick", "team": "home", "timestamp": 20.0, "x": 104, "y": 0},
-            {"type": "shot", "team": "home", "timestamp": 22.0, "x": 90, "y": 34, "xg": 0.08, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 22.0,
+                "x": 90,
+                "y": 34,
+                "xg": 0.08,
+                "is_goal": False,
+            },
             {"type": "corner_kick", "team": "home", "timestamp": 30.0, "x": 104, "y": 0},
             {"type": "pass", "team": "home", "timestamp": 32.0, "x": 80, "y": 34},
         ]

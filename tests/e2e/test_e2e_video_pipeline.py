@@ -12,7 +12,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import cv2
-import numpy as np
 import pytest
 
 from kawkab.core.gpu_acceleration import detect_gpu_tier
@@ -29,6 +28,7 @@ SWEDEN_TEST_60S = PROJECT_ROOT / "data" / "sweden_test_60s.mp4"
 _ULTALYTICS_AVAILABLE = False
 try:
     import ultralytics  # noqa: F401
+
     _ULTALYTICS_AVAILABLE = True
 except ImportError:
     pass
@@ -93,6 +93,22 @@ class TestVideoStructure:
 class TestFullPipeline:
     """Full CV pipeline test. Requires ultralytics + torch + boxmot."""
 
+    @pytest.fixture(autouse=True)
+    def _ensure_real_cv_service(self, monkeypatch):
+        # Several other test files replace sys.modules
+        # ["kawkab.services.cv_service"] with a stub CVService (no
+        # constructor override -> "takes no arguments") and don't always
+        # restore it; under pytest-xdist, if one of those files shares this
+        # worker process, the `from ... import CVService` below could
+        # silently bind to that stub. monkeypatch.delitem (unlike a bare
+        # sys.modules.pop) auto-restores whatever was there right after
+        # this test, so it doesn't itself become a new source of leakage
+        # for some other file relying on that entry persisting.
+        import sys
+
+        monkeypatch.delitem(sys.modules, "kawkab.services.cv_service", raising=False)
+        yield
+
     @pytest.mark.asyncio
     async def test_cv_service_initializes(self):
         from kawkab.services.cv_service import CVService
@@ -126,7 +142,9 @@ class TestFullPipeline:
         svc = CVService(model_size="n", gpu_enabled=False)
         await svc.initialize()
         match_data = await svc.process_video(
-            REAL_MATCH_VIDEO, frame_skip=30, enable_team_detection=False,
+            REAL_MATCH_VIDEO,
+            frame_skip=30,
+            enable_team_detection=False,
         )
         assert match_data.fps > 0
         assert match_data.total_frames > 0
@@ -140,7 +158,9 @@ class TestFullPipeline:
         svc = CVService(model_size="n", gpu_enabled=False)
         await svc.initialize()
         match_data = await svc.process_video(
-            REAL_MATCH_VIDEO, frame_skip=30, enable_team_detection=False,
+            REAL_MATCH_VIDEO,
+            frame_skip=30,
+            enable_team_detection=False,
         )
         if match_data.track_registry:
             sample_tid = list(match_data.track_registry.keys())[0]
@@ -156,7 +176,9 @@ class TestFullPipeline:
         svc = CVService(model_size="n", gpu_enabled=False)
         await svc.initialize()
         match_data = await svc.process_video(
-            SWEDEN_TEST_60S, frame_skip=30, enable_team_detection=False,
+            SWEDEN_TEST_60S,
+            frame_skip=30,
+            enable_team_detection=False,
         )
         assert match_data is not None
         await svc.shutdown()

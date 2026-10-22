@@ -1,8 +1,15 @@
-﻿    function _catchBridge(method) {
+    function _catchBridge(method) {
         return function(err) { console.error('bridge.' + method + ' failed:', err); };
     }
 
-    // â”€â”€ AI Coach Assistant v2 (Phase 12) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Not wrapped in its own IIFE (split out of app.js without one) -- the
+    // bundler is a plain concatenation, so this and every escapeHtml(...)
+    // call below resolved to nothing at runtime (ReferenceError) until this
+    // import was added. Matches app-data-providers.js's own fix for the
+    // same gap.
+    var escapeHtml = window.__kawkab.escapeHtml;
+
+    // ── AI Coach Assistant v2 (Phase 12) ─────────────────────────
 
     function initAiWorkspace() {
         var askBtn = document.getElementById('ai-ask-btn');
@@ -144,17 +151,17 @@
             recognition.lang = 'en-US';
             recognition.interimResults = false;
             voiceBtn.addEventListener('click', function() {
-                voiceBtn.textContent = 'ðŸŽ¤ Listening...';
+                voiceBtn.textContent = '🎤 Listening...';
                 recognition.start();
             });
             recognition.onresult = function(e) {
                 var transcript = e.results[0][0].transcript;
                 input.value = transcript;
-                voiceBtn.textContent = 'ðŸŽ¤';
+                voiceBtn.textContent = '🎤';
                 askQuestion(transcript);
             };
-            recognition.onerror = function() { voiceBtn.textContent = 'ðŸŽ¤'; };
-            recognition.onend = function() { voiceBtn.textContent = 'ðŸŽ¤'; };
+            recognition.onerror = function() { voiceBtn.textContent = '🎤'; };
+            recognition.onend = function() { voiceBtn.textContent = '🎤'; };
         } else if (voiceBtn) {
             voiceBtn.title = 'Voice not supported in this browser';
             voiceBtn.style.opacity = '0.4';
@@ -243,13 +250,13 @@
         loadConversations();
     }
 
-    // â”€â”€ Squad + Player Ratings (delegated to app-squad.js) â”€â”€â”€
+    // ── Squad + Player Ratings (delegated to app-squad.js) ───
 
     function initSquadWorkspace() {
         if (window.KawkabSquad) return window.KawkabSquad.initSquadWorkspace();
     }
 
-    // â”€â”€ Event Review Workspace (Phase 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Event Review Workspace (Phase 2) ─────────────────────────
 
     var _reviewState = {
         matchId: null,
@@ -302,7 +309,7 @@
             _reviewState.autoAdvance = !_reviewState.autoAdvance;
             this.classList.toggle('btn-primary');
             this.classList.toggle('btn-secondary');
-            this.innerHTML = _reviewState.autoAdvance ? 'â© Auto-Advance: ON' : 'â© Auto-Advance: OFF';
+            this.innerHTML = _reviewState.autoAdvance ? '⏩ Auto-Advance: ON' : '⏩ Auto-Advance: OFF';
         });
 
         typeFilter.addEventListener('change', function() {
@@ -529,7 +536,7 @@
         count.textContent = queue.length;
 
         if (queue.length === 0) {
-            list.innerHTML = '<div class="review-queue-empty">All events reviewed! ðŸŽ‰</div>';
+            list.innerHTML = '<div class="review-queue-empty">All events reviewed! 🎉</div>';
             return;
         }
 
@@ -558,7 +565,7 @@
 
             html += '<div class="review-queue-item' + (isActive ? ' active' : '') + '" data-event-id="' + ev.id + '" data-idx="' + globalIdx + '">' +
                 '<div class="q-type">' + escapeHtml(typeLabel) + '</div>' +
-                '<div class="q-time">' + timeStr + (teamLabel ? ' Â· ' + escapeHtml(teamLabel) : '') + '</div>' +
+                '<div class="q-time">' + timeStr + (teamLabel ? ' · ' + escapeHtml(teamLabel) : '') + '</div>' +
                 '<div class="q-conf ' + confClass + '">' + conf.toFixed(2) + '</div>' +
                 '</div>';
         });
@@ -590,7 +597,7 @@
 
         var idx = _reviewState.currentIndex;
         if (idx < 0 || idx >= _reviewState.queue.length) {
-            detailContainer.innerHTML = '<div class="review-detail-empty">All events reviewed! ðŸŽ‰</div>';
+            detailContainer.innerHTML = '<div class="review-detail-empty">All events reviewed! 🎉</div>';
             infoContainer.innerHTML = '<p class="review-detail-placeholder">No event selected.</p>';
             badge.textContent = '--';
             badge.className = 'review-confidence-badge';
@@ -628,7 +635,7 @@
             '<div class="detail-row"><span class="detail-label">Team</span><span class="detail-value">' + escapeHtml(ev.team || '--') + '</span></div>' +
             '<div class="detail-row"><span class="detail-label">Completed</span><span class="detail-value">' + (ev.completed ? 'Yes' : 'No') + '</span></div>' +
             (ev.from_track_id ? '<div class="detail-row"><span class="detail-label">Player</span><span class="detail-value">#' + ev.from_track_id + '</span></div>' : '') +
-            (conf < 0.35 ? '<div class="detail-row" style="color:var(--warning);font-size:0.75rem">âš  Low confidence â€” likely needs review</div>' : '') +
+            (conf < 0.35 ? '<div class="detail-row" style="color:var(--warning);font-size:0.75rem">⚠ Low confidence — likely needs review</div>' : '') +
             '</div>';
 
         // Info in right panel
@@ -755,7 +762,7 @@
         document.getElementById('review-edit-completed').checked = !!ev.completed;
     }
 
-    // â”€â”€ End Event Review Workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── End Event Review Workspace ──────────────────────────────
 
     document.addEventListener('change', function(e) {
         if (e.target.id === 'timeline-filter-type') {
@@ -796,7 +803,7 @@
         }
     });
 
-    // â”€â”€ Roster table rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Roster table rendering ──────────────────────────────
 
     function renderRosterTable() {
         var wrapper = document.getElementById('player-roster-table-wrapper');
@@ -891,7 +898,7 @@
         wrapper.innerHTML = html;
     }
 
-    // â”€â”€ View toggle wiring â”€â”€
+    // ── View toggle wiring ──
 
     function setupViewToggles() {
         // Timeline view toggle
@@ -972,7 +979,7 @@
         });
     }
 
-    // â”€â”€ Batch action wiring â”€â”€
+    // ── Batch action wiring ──
 
     function setupBatchActions() {
         document.getElementById('batch-delete-btn')?.addEventListener('click', function() {
@@ -1045,13 +1052,16 @@
         }
     }
 
-    document.getElementById('match-video').addEventListener('timeupdate', function() {
-        highlightCurrentTimelineItem(this.currentTime);
-    });
+    var _aiMatchVideo = document.getElementById('match-video');
+    if (_aiMatchVideo) {
+        _aiMatchVideo.addEventListener('timeupdate', function() {
+            highlightCurrentTimelineItem(this.currentTime);
+        });
+    }
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       Wave A â€” Telestration Engine
-       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* ═══════════════════════════════════════════════════════════════
+       Wave A — Telestration Engine
+       ═══════════════════════════════════════════════════════════════ */
 
     var _telestrateState = {
         active: false,
@@ -1066,7 +1076,7 @@
         textInput: null,
     };
 
-    // â”€â”€ Sprint 1: Multi-Angle Video, Trimming, Highlight Reel â”€â”€
+    // ── Sprint 1: Multi-Angle Video, Trimming, Highlight Reel ──
     var _maInitialized = false;
     var _maSources = [];
     var _maTrimIn = null;
@@ -1195,7 +1205,7 @@
         _maSources.forEach(function (s, i) {
             html += '<div class="ma-source-item">';
             html += '<span class="ma-source-label" title="' + escapeHtml(s.label) + '">' + escapeHtml(s.label) + '</span>';
-            html += '<span class="ma-source-remove" data-index="' + i + '">âœ•</span>';
+            html += '<span class="ma-source-remove" data-index="' + i + '">✕</span>';
             html += '</div>';
         });
         list.innerHTML = html;
@@ -1259,7 +1269,7 @@
     }
     var _maSyncHandler = null;
 
-    // â”€â”€ Sprint 3: Team Collaboration â”€â”€
+    // ── Sprint 3: Team Collaboration ──
     var _collabInitialized = false;
 
     function initCollaboration() {
@@ -1579,7 +1589,7 @@
         });
     }
 
-    // â”€â”€ Sprint 4: Live Tagging â”€â”€
+    // ── Sprint 4: Live Tagging ──
     var _liveInitialized = false;
     var _liveSessionActive = false;
     var _liveHotkeys = {};
@@ -1764,10 +1774,10 @@
             r.tags.slice().reverse().forEach(function(tag) {
                 var div = document.createElement('div');
                 div.className = 'live-tag-entry';
-                div.innerHTML = '<span class="live-tag-type">' + tag.type.replace(/_/g, ' ') + '</span>'
-                    + '<span class="live-tag-team">' + (tag.team || '') + '</span>'
+                div.innerHTML = '<span class="live-tag-type">' + escapeHtml(tag.type.replace(/_/g, ' ')) + '</span>'
+                    + '<span class="live-tag-team">' + escapeHtml(tag.team || '') + '</span>'
                     + '<span class="live-tag-time">' + formatLiveTime(tag.t) + '</span>'
-                    + '<span class="live-tag-notes" style="flex:1;font-size:0.75rem;color:var(--text-muted)">' + (tag.notes || '') + '</span>';
+                    + '<span class="live-tag-notes" style="flex:1;font-size:0.75rem;color:var(--text-muted)">' + escapeHtml(tag.notes || '') + '</span>';
                 container.appendChild(div);
             });
         });
@@ -1780,7 +1790,7 @@
         return m + ':' + (s < 10 ? '0' : '') + s;
     }
 
-    // â”€â”€ Phase 6 Sprint 2: Live Tagging Dashboard â”€â”€
+    // ── Phase 6 Sprint 2: Live Tagging Dashboard ──
 
     function initLiveDashboard() {
         var toggleBtn = document.getElementById('live-dashboard-toggle');
@@ -1861,7 +1871,7 @@
                 el.setAttribute('r', '5');
                 el.setAttribute('fill', color);
                 el.setAttribute('opacity', '0.5');
-                el.innerHTML = '<title>' + (ev.type || 'event') + ' at ' + formatLiveTime(ev.t) + '</title>';
+                el.innerHTML = '<title>' + escapeHtml(ev.type || 'event') + ' at ' + formatLiveTime(ev.t) + '</title>';
             }
             el.setAttribute('cx', ex);
             el.setAttribute('cy', ey);
@@ -1930,7 +1940,7 @@
         });
     }
 
-    // â”€â”€ Sprint 5: Scout Camera (Mobile/Tablet) â”€â”€
+    // ── Sprint 5: Scout Camera (Mobile/Tablet) ──
     var _scoutCamInitialized = false;
     var _scoutCamStream = null;
     var _scoutCaptures = [];
@@ -2016,7 +2026,7 @@
         }
     }
 
-    // â”€â”€ PWA install prompt handler â”€â”€
+    // ── PWA install prompt handler ──
     var _deferredPrompt = null;
     var _pwaInitialized = false;
 
@@ -2053,7 +2063,7 @@
         updateOnlineStatus();
     }
 
-    // â”€â”€ Install button handler â”€â”€
+    // ── Install button handler ──
     document.addEventListener('click', function(e) {
         if (e.target && e.target.matches('#pwa-install-btn')) {
             if (_deferredPrompt) {
@@ -2071,7 +2081,7 @@
         }
     });
 
-    // â”€â”€ Phase 9: Live Stream Capture â”€â”€
+    // ── Phase 9: Live Stream Capture ──
     var _streamInitialized = false;
     var _currentStreamId = null;
 
@@ -2166,7 +2176,7 @@
         loadStreamRecordings();
     }
 
-    // â”€â”€ Phase 8: Cloud Sync â”€â”€
+    // ── Phase 8: Cloud Sync ──
     var _cloudInitialized = false;
 
     function initCloud() {
@@ -2342,9 +2352,9 @@
                     return;
                 }
                 list.innerHTML = r.map(function(t) {
-                    return '<div class="collab-user-item" style="padding:6px 8px"><span class="collab-user-name">' + t.name + '</span><span class="collab-user-role">' + (t.role || 'member') + '</span></div>';
+                    return '<div class="collab-user-item" style="padding:6px 8px"><span class="collab-user-name">' + escapeHtml(t.name) + '</span><span class="collab-user-role">' + escapeHtml(t.role || 'member') + '</span></div>';
                 }).join('');
-                select.innerHTML = '<option value="">Select team</option>' + r.map(function(t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
+                select.innerHTML = '<option value="">Select team</option>' + r.map(function(t) { return '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.name) + '</option>'; }).join('');
             }).catch(_catchBridge('cloud_list_teams'));
         }
 

@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import json
-import sys
-import sqlite3
 import tempfile
-import types
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -19,23 +16,27 @@ install_kawkab_stubs()
 
 @pytest.fixture(scope="module")
 def de_mod():
-    return load_service_module(
-        "kawkab.services.data_export_service", "data_export_service.py"
-    )
+    return load_service_module("kawkab.services.data_export_service", "data_export_service.py")
 
 
 class FakeRow:
     """Simulates sqlite3.Row with dict-like access."""
+
     def __init__(self, data: dict):
         self._data = data
+
     def __getitem__(self, key):
         return self._data[key]
+
     def __iter__(self):
         return iter(self._data.items())
+
     def keys(self):
         return self._data.keys()
+
     def get(self, key, default=None):
         return self._data.get(key, default)
+
 
 def _make_row(data: dict) -> FakeRow:
     return FakeRow(data)
@@ -71,22 +72,50 @@ def _mock_conn(mocker, rows_by_query: dict[str, list[dict] | None]):
 
 
 class TestDataExportService:
-
     @pytest.mark.asyncio
     async def test_export_match_csv_success(self, de_mod, mocker):
         svc = de_mod.DataExportService()
-        tmp = tempfile.mktemp(suffix=".db")
+        _ = tempfile.mktemp(suffix=".db")
         try:
-            match_row = {"id": 1, "name": "Test Match", "home_team": "Home", "away_team": "Away",
-                         "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
+            match_row = {
+                "id": 1,
+                "name": "Test Match",
+                "home_team": "Home",
+                "away_team": "Away",
+                "match_date": "2024-01-01",
+                "duration_seconds": 5400,
+                "fps": 30,
+                "total_frames": 162000,
+            }
             events = [
-                {"id": 1, "event_type": "pass", "timestamp": 10.0, "from_track_id": 1, "to_track_id": 2,
-                 "team": "home", "completed": 1, "confidence": 0.9, "metadata": "{}"},
+                {
+                    "id": 1,
+                    "event_type": "pass",
+                    "timestamp": 10.0,
+                    "from_track_id": 1,
+                    "to_track_id": 2,
+                    "team": "home",
+                    "completed": 1,
+                    "confidence": 0.9,
+                    "metadata": "{}",
+                },
             ]
             players = [
-                {"id": 1, "track_id": 1, "jersey_number": 10, "name": "P1", "team": "home",
-                 "position": "FW", "distance_covered_m": 5000.0, "max_speed_kmh": 30.0, "avg_speed_kmh": 7.0,
-                 "passes_attempted": 40, "passes_completed": 35, "shots": 3, "tackles": 2},
+                {
+                    "id": 1,
+                    "track_id": 1,
+                    "jersey_number": 10,
+                    "name": "P1",
+                    "team": "home",
+                    "position": "FW",
+                    "distance_covered_m": 5000.0,
+                    "max_speed_kmh": 30.0,
+                    "avg_speed_kmh": 7.0,
+                    "passes_attempted": 40,
+                    "passes_completed": 35,
+                    "shots": 3,
+                    "tackles": 2,
+                },
             ]
 
             conn = MagicMock()
@@ -145,8 +174,16 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_export_match_csv_no_events(self, de_mod):
         svc = de_mod.DataExportService()
-        match_row = {"id": 2, "name": "No Events", "home_team": "H", "away_team": "A",
-                     "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
+        match_row = {
+            "id": 2,
+            "name": "No Events",
+            "home_team": "H",
+            "away_team": "A",
+            "match_date": "2024-01-01",
+            "duration_seconds": 5400,
+            "fps": 30,
+            "total_frames": 162000,
+        }
         conn = MagicMock()
         cursor = MagicMock()
         conn.cursor.return_value = cursor
@@ -154,9 +191,9 @@ class TestDataExportService:
         def _execute(sql, params=None):
             if "FROM matches WHERE id = ?" in sql:
                 cursor.fetchone.return_value = _make_row(match_row)
-            elif "FROM events WHERE match_id = ?" in sql:
-                cursor.fetchall.return_value = []
-            elif "FROM players WHERE match_id = ?" in sql:
+            elif (
+                "FROM events WHERE match_id = ?" in sql or "FROM players WHERE match_id = ?" in sql
+            ):
                 cursor.fetchall.return_value = []
             return cursor
 
@@ -171,14 +208,47 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_export_match_json_success(self, de_mod):
         svc = de_mod.DataExportService()
-        match_row = {"id": 1, "name": "JSON Match", "home_team": "H", "away_team": "A",
-                     "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
+        match_row = {
+            "id": 1,
+            "name": "JSON Match",
+            "home_team": "H",
+            "away_team": "A",
+            "match_date": "2024-01-01",
+            "duration_seconds": 5400,
+            "fps": 30,
+            "total_frames": 162000,
+        }
         analysis_row = {"id": 1, "match_id": 1, "full_data": "{}"}
-        players = [{"id": 1, "track_id": 1, "jersey_number": 10, "name": "P1", "team": "home",
-                     "position": "FW", "distance_covered_m": 5000.0, "max_speed_kmh": 30.0, "avg_speed_kmh": 7.0,
-                     "passes_attempted": 40, "passes_completed": 35, "shots": 3, "tackles": 2}]
-        events = [{"id": 1, "event_type": "pass", "timestamp": 10.0, "from_track_id": 1, "to_track_id": 2,
-                    "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"key": "val"}'}]
+        players = [
+            {
+                "id": 1,
+                "track_id": 1,
+                "jersey_number": 10,
+                "name": "P1",
+                "team": "home",
+                "position": "FW",
+                "distance_covered_m": 5000.0,
+                "max_speed_kmh": 30.0,
+                "avg_speed_kmh": 7.0,
+                "passes_attempted": 40,
+                "passes_completed": 35,
+                "shots": 3,
+                "tackles": 2,
+            }
+        ]
+        events = [
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 10.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"key": "val"}',
+            }
+        ]
 
         conn = MagicMock()
         cursor = MagicMock()
@@ -211,8 +281,16 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_export_match_json_no_analysis(self, de_mod):
         svc = de_mod.DataExportService()
-        match_row = {"id": 3, "name": "No Analysis", "home_team": "H", "away_team": "A",
-                     "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
+        match_row = {
+            "id": 3,
+            "name": "No Analysis",
+            "home_team": "H",
+            "away_team": "A",
+            "match_date": "2024-01-01",
+            "duration_seconds": 5400,
+            "fps": 30,
+            "total_frames": 162000,
+        }
         conn = MagicMock()
         cursor = MagicMock()
         conn.cursor.return_value = cursor
@@ -222,9 +300,9 @@ class TestDataExportService:
                 cursor.fetchone.return_value = _make_row(match_row)
             elif "FROM analysis_results WHERE match_id = ?" in sql:
                 cursor.fetchone.return_value = None
-            elif "FROM players WHERE match_id = ?" in sql:
-                cursor.fetchall.return_value = []
-            elif "FROM events WHERE match_id = ?" in sql:
+            elif (
+                "FROM players WHERE match_id = ?" in sql or "FROM events WHERE match_id = ?" in sql
+            ):
                 cursor.fetchall.return_value = []
             return cursor
 
@@ -239,10 +317,29 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_export_match_json_bad_metadata(self, de_mod):
         svc = de_mod.DataExportService()
-        match_row = {"id": 4, "name": "Bad Meta", "home_team": "H", "away_team": "A",
-                     "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
-        events = [{"id": 1, "event_type": "pass", "timestamp": 10.0, "from_track_id": 1, "to_track_id": 2,
-                    "team": "home", "completed": 1, "confidence": 0.9, "metadata": "{invalid"}]
+        match_row = {
+            "id": 4,
+            "name": "Bad Meta",
+            "home_team": "H",
+            "away_team": "A",
+            "match_date": "2024-01-01",
+            "duration_seconds": 5400,
+            "fps": 30,
+            "total_frames": 162000,
+        }
+        events = [
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 10.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": "{invalid",
+            }
+        ]
         conn = MagicMock()
         cursor = MagicMock()
         conn.cursor.return_value = cursor
@@ -269,13 +366,39 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_export_statsbomb_compatible(self, de_mod):
         svc = de_mod.DataExportService()
-        match_row = {"id": 1, "name": "SB Match", "home_team": "H", "away_team": "A",
-                     "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
+        match_row = {
+            "id": 1,
+            "name": "SB Match",
+            "home_team": "H",
+            "away_team": "A",
+            "match_date": "2024-01-01",
+            "duration_seconds": 5400,
+            "fps": 30,
+            "total_frames": 162000,
+        }
         events = [
-            {"id": 1, "event_type": "pass", "timestamp": 10.0, "from_track_id": 1, "to_track_id": 2,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": "{}"},
-            {"id": 2, "event_type": "shot", "timestamp": 20.0, "from_track_id": 3, "to_track_id": None,
-             "team": "away", "completed": 1, "confidence": 0.7, "metadata": "{}"},
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 10.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": "{}",
+            },
+            {
+                "id": 2,
+                "event_type": "shot",
+                "timestamp": 20.0,
+                "from_track_id": 3,
+                "to_track_id": None,
+                "team": "away",
+                "completed": 1,
+                "confidence": 0.7,
+                "metadata": "{}",
+            },
         ]
         conn = MagicMock()
         cursor = MagicMock()
@@ -306,8 +429,16 @@ class TestDataExportService:
         """Helper: run export_statsbomb_compatible and return parsed data."""
         svc = de_mod.DataExportService()
         if match_row is None:
-            match_row = {"id": 1, "name": "SB Match", "home_team": "H", "away_team": "A",
-                         "match_date": "2024-01-01", "duration_seconds": 5400, "fps": 30, "total_frames": 162000}
+            match_row = {
+                "id": 1,
+                "name": "SB Match",
+                "home_team": "H",
+                "away_team": "A",
+                "match_date": "2024-01-01",
+                "duration_seconds": 5400,
+                "fps": 30,
+                "total_frames": 162000,
+            }
         conn = MagicMock()
         cursor = MagicMock()
         conn.cursor.return_value = cursor
@@ -329,8 +460,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_period_first_half(self, de_mod):
         events = [
-            {"id": 1, "event_type": "pass", "timestamp": 120.0, "from_track_id": 1, "to_track_id": 2,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": "{}"},
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 120.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": "{}",
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["period"] == 1
@@ -338,8 +478,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_period_second_half(self, de_mod):
         events = [
-            {"id": 1, "event_type": "pass", "timestamp": 3600.0, "from_track_id": 1, "to_track_id": 2,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": "{}"},
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 3600.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": "{}",
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["period"] == 2
@@ -347,8 +496,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_period_from_metadata(self, de_mod):
         events = [
-            {"id": 1, "event_type": "pass", "timestamp": 5000.0, "from_track_id": 1, "to_track_id": 2,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"period": 3}'},
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 5000.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"period": 3}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["period"] == 3
@@ -356,8 +514,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_shot_outcome_goal(self, de_mod):
         events = [
-            {"id": 1, "event_type": "shot", "timestamp": 30.0, "from_track_id": 3, "to_track_id": None,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"is_goal": true}'},
+            {
+                "id": 1,
+                "event_type": "shot",
+                "timestamp": 30.0,
+                "from_track_id": 3,
+                "to_track_id": None,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"is_goal": true}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["shot"]["outcome"]["id"] == 97
@@ -366,8 +533,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_shot_outcome_saved(self, de_mod):
         events = [
-            {"id": 1, "event_type": "shot", "timestamp": 30.0, "from_track_id": 3, "to_track_id": None,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"is_saved": true}'},
+            {
+                "id": 1,
+                "event_type": "shot",
+                "timestamp": 30.0,
+                "from_track_id": 3,
+                "to_track_id": None,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"is_saved": true}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["shot"]["outcome"]["id"] == 95
@@ -375,8 +551,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_shot_outcome_blocked(self, de_mod):
         events = [
-            {"id": 1, "event_type": "shot", "timestamp": 30.0, "from_track_id": 3, "to_track_id": None,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"blocked": true}'},
+            {
+                "id": 1,
+                "event_type": "shot",
+                "timestamp": 30.0,
+                "from_track_id": 3,
+                "to_track_id": None,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"blocked": true}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["shot"]["outcome"]["id"] == 96
@@ -384,8 +569,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_shot_outcome_missed(self, de_mod):
         events = [
-            {"id": 1, "event_type": "shot", "timestamp": 30.0, "from_track_id": 3, "to_track_id": None,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"off_target": true}'},
+            {
+                "id": 1,
+                "event_type": "shot",
+                "timestamp": 30.0,
+                "from_track_id": 3,
+                "to_track_id": None,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"off_target": true}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["shot"]["outcome"]["id"] == 94
@@ -393,8 +587,17 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_xg_from_event_xg(self, de_mod):
         events = [
-            {"id": 1, "event_type": "shot", "timestamp": 30.0, "from_track_id": 3, "to_track_id": None,
-             "team": "home", "completed": 1, "confidence": 0.9, "metadata": '{"xg": 0.45}'},
+            {
+                "id": 1,
+                "event_type": "shot",
+                "timestamp": 30.0,
+                "from_track_id": 3,
+                "to_track_id": None,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"xg": 0.45}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         assert data["events"][0]["shot"]["xG"] == 0.45
@@ -402,15 +605,24 @@ class TestDataExportService:
     @pytest.mark.asyncio
     async def test_statsbomb_pass_length_and_angle(self, de_mod):
         events = [
-            {"id": 1, "event_type": "pass", "timestamp": 10.0, "from_track_id": 1, "to_track_id": 2,
-             "team": "home", "completed": 1, "confidence": 0.9,
-             "metadata": '{"start_x": 0, "start_y": 34, "end_x": 30, "end_y": 40}'},
+            {
+                "id": 1,
+                "event_type": "pass",
+                "timestamp": 10.0,
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "team": "home",
+                "completed": 1,
+                "confidence": 0.9,
+                "metadata": '{"start_x": 0, "start_y": 34, "end_x": 30, "end_y": 40}',
+            },
         ]
         data = await self._sb_export(de_mod, events)
         length = data["events"][0]["pass"]["length"]
-        angle = data["events"][0]["pass"]["angle"]
+        _ = data["events"][0]["pass"]["angle"]
         assert length > 0
         import math
+
         expected_length = math.hypot(30, 6)
         assert abs(length - expected_length) < 0.1
 
@@ -445,10 +657,28 @@ class TestDataExportService:
         svc = de_mod.DataExportService()
         season_row = {"id": 1, "name": "2024 Season"}
         matches = [
-            {"id": 1, "name": "M1", "match_date": "2024-01-01", "home_team": "H", "away_team": "A",
-             "score_home": 2, "score_away": 1, "duration_seconds": 5400, "match_type": "league"},
-            {"id": 2, "name": "M2", "match_date": "2024-01-02", "home_team": "H2", "away_team": "A2",
-             "score_home": 0, "score_away": 0, "duration_seconds": 5400, "match_type": "cup"},
+            {
+                "id": 1,
+                "name": "M1",
+                "match_date": "2024-01-01",
+                "home_team": "H",
+                "away_team": "A",
+                "score_home": 2,
+                "score_away": 1,
+                "duration_seconds": 5400,
+                "match_type": "league",
+            },
+            {
+                "id": 2,
+                "name": "M2",
+                "match_date": "2024-01-02",
+                "home_team": "H2",
+                "away_team": "A2",
+                "score_home": 0,
+                "score_away": 0,
+                "duration_seconds": 5400,
+                "match_type": "cup",
+            },
         ]
         conn = MagicMock()
         cursor = MagicMock()
@@ -476,8 +706,17 @@ class TestDataExportService:
     async def test_export_season_csv_no_season_name(self, de_mod):
         svc = de_mod.DataExportService()
         matches = [
-            {"id": 5, "name": "M5", "match_date": "2024-01-01", "home_team": "H", "away_team": "A",
-             "score_home": 1, "score_away": 1, "duration_seconds": 5400, "match_type": "league"},
+            {
+                "id": 5,
+                "name": "M5",
+                "match_date": "2024-01-01",
+                "home_team": "H",
+                "away_team": "A",
+                "score_home": 1,
+                "score_away": 1,
+                "duration_seconds": 5400,
+                "match_type": "league",
+            },
         ]
         conn = MagicMock()
         cursor = MagicMock()

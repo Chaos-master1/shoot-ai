@@ -81,9 +81,16 @@ class TestVaepBasic:
 
     def test_vaep_result_to_dict(self):
         r = VaepepResult(
-            event_index=0, event_type="pass", timestamp=10.0,
-            team="home", zone_x=8, zone_y=6, delta_home=0.01,
-            delta_away=-0.005, vaep_value=0.015, is_goal=False,
+            event_index=0,
+            event_type="pass",
+            timestamp=10.0,
+            team="home",
+            zone_x=8,
+            zone_y=6,
+            delta_home=0.01,
+            delta_away=-0.005,
+            vaep_value=0.015,
+            is_goal=False,
         )
         d = r.to_dict()
         assert d["event_type"] == "pass"
@@ -103,11 +110,16 @@ class TestVaepBasic:
     def test_multiple_events(self):
         events = []
         for i in range(5):
-            events.append({
-                "type": "pass", "timestamp": float(i * 5),
-                "team": "home" if i % 2 == 0 else "away",
-                "x": 50 + i * 5, "y": 34, "is_goal": False,
-            })
+            events.append(
+                {
+                    "type": "pass",
+                    "timestamp": float(i * 5),
+                    "team": "home" if i % 2 == 0 else "away",
+                    "x": 50 + i * 5,
+                    "y": 34,
+                    "is_goal": False,
+                }
+            )
         result = compute_vaep(events)
         assert len(result) == 5
 
@@ -134,7 +146,9 @@ class TestVaepBasic:
         assert timestamps == sorted(timestamps)
 
     def test_single_event(self):
-        events = [{"type": "pass", "timestamp": 10.0, "team": "home", "x": 50, "y": 34, "is_goal": False}]
+        events = [
+            {"type": "pass", "timestamp": 10.0, "team": "home", "x": 50, "y": 34, "is_goal": False}
+        ]
         result = compute_vaep(events)
         assert len(result) == 1
 
@@ -158,7 +172,7 @@ class TestVaepSurvival:
         ]
         result = compute_vaep(events)
         shot_vaep = abs(result[1]["vaep_value"])
-        pass_vaep = abs(result[0]["vaep_value"])
+        _ = abs(result[0]["vaep_value"])
         assert shot_vaep >= 0
 
     def test_delta_fields_present(self):
@@ -228,7 +242,14 @@ class TestVaepCorrectness:
     def test_turnover_negative_vaep(self):
         events = [
             {"type": "pass", "timestamp": 1.0, "team": "home", "x": 50, "y": 34, "is_goal": False},
-            {"type": "interception", "timestamp": 2.0, "team": "away", "x": 55, "y": 34, "is_goal": False},
+            {
+                "type": "interception",
+                "timestamp": 2.0,
+                "team": "away",
+                "x": 55,
+                "y": 34,
+                "is_goal": False,
+            },
         ]
         result = compute_vaep(events)
         assert len(result) == 2
@@ -263,5 +284,5 @@ class TestVaepCorrectness:
         # Skip the last pass (index 5) — no next event, computed differently.
         for i in range(2, len(result) - 2):
             assert result[i]["vaep_value"] >= result[i + 1]["vaep_value"] - 1e-9, (
-                f"VAEP should diminish at event {i}: {result[i]['vaep_value']} < {result[i+1]['vaep_value']}"
+                f"VAEP should diminish at event {i}: {result[i]['vaep_value']} < {result[i + 1]['vaep_value']}"
             )

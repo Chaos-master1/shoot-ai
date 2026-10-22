@@ -1,14 +1,34 @@
 """Tests for match scripting."""
 
+import random
+
+import pytest
+
 from kawkab.core.match_scripting import (
-    generate_possession_phase,
-    generate_pressing_phase,
     generate_counter_attack_phase,
     generate_match_script,
+    generate_possession_phase,
+    generate_pressing_phase,
 )
 
 
 class TestMatchScripting:
+    @pytest.fixture(autouse=True)
+    def _seeded_random(self):
+        """match_scripting.py generates event positions/outcomes via the
+        unseeded global `random` module. Without a fixed seed, statistical
+        assertions below (e.g. "home_events > away_events" for a 5:1
+        possession-weighted template) pass the vast majority of runs but
+        fail intermittently by chance -- flaky in the full suite while
+        always passing alone, since collection order shifts which prior
+        tests already consumed random draws from the same global state.
+        Seeding makes every test in this file deterministic and immune to
+        run order."""
+        state = random.getstate()
+        random.seed(20260729)
+        yield
+        random.setstate(state)
+
     def test_possession_phase(self):
         phase = generate_possession_phase("home", 0, 3, 0.5)
         assert phase.name == "Home Possession"
@@ -41,12 +61,8 @@ class TestMatchScripting:
 
     def test_generate_match_script_home_dominant(self):
         script = generate_match_script("home_dominant")
-        home_events = sum(
-            1 for p in script.phases for e in p.events if e.team == "home"
-        )
-        away_events = sum(
-            1 for p in script.phases for e in p.events if e.team == "away"
-        )
+        home_events = sum(1 for p in script.phases for e in p.events if e.team == "home")
+        away_events = sum(1 for p in script.phases for e in p.events if e.team == "away")
         assert home_events > away_events
 
     def test_generate_match_script_invalid_template(self):

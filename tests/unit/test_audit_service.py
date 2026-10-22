@@ -5,10 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
-import tempfile
-import time
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -53,10 +50,23 @@ def db_conn():
 
 
 @pytest.fixture
-def storage_mock(db_conn):
-    m = MagicMock()
-    m._conn = db_conn
-    return m
+def storage_mock(tmp_path):
+    """A real StorageService on a migrated scratch DB — AuditService now
+    goes through the typed audit_log/get_audit_log methods (which also
+    work on Postgres), not raw _conn access."""
+    from pathlib import Path
+
+    from kawkab.core.migration_manager import MigrationManager
+    from kawkab.services.storage_service import StorageService
+
+    svc = StorageService()
+    svc._use_postgres = False
+    svc._pg = None
+    svc._db_path = tmp_path / "audit_test.db"
+    svc._conn = sqlite3.connect(str(svc._db_path))
+    svc._conn.row_factory = sqlite3.Row
+    MigrationManager(svc._db_path, Path("src/kawkab/migrations")).migrate()
+    return svc
 
 
 @pytest.fixture
@@ -65,21 +75,19 @@ def audit_service(storage_mock):
 
 
 class TestAuditService:
-
     def test_log_event_creates_record(self, audit_service, storage_mock):
         row_id = audit_service.log_event(
-            "analysis.completed", "match", "42",
-            {"xg": 1.5, "shots": 10}, "coach@example.com"
+            "analysis.completed", "match", "42", {"xg": 1.5, "shots": 10}, "coach@example.com"
         )
         assert row_id > 0
         cursor = storage_mock._conn.cursor()
-        cursor.execute("SELECT * FROM audit_events WHERE id = ?", (row_id,))
+        cursor.execute("SELECT * FROM audit_events_local WHERE id = ?", (row_id,))
         row = dict(cursor.fetchone())
         assert row["action"] == "analysis.completed"
-        assert row["entity_type"] == "match"
-        assert row["entity_id"] == "42"
-        assert json.loads(row["details_json"]) == {"xg": 1.5, "shots": 10}
-        assert row["user"] == "coach@example.com"
+        assert row["resource_type"] == "match"
+        assert row["resource_id"] == "42"
+        assert json.loads(row["details"])["xg"] == 1.5
+        assert row["username"] == "coach@example.com"
 
     def test_get_events_returns_all(self, audit_service):
         for i in range(3):
@@ -142,9 +150,13 @@ class TestAuditService:
         assert stats["total_events"] == 0
 
     def test_log_event_closed_connection_returns_zero(self):
-        m = MagicMock()
-        m._conn = None
-        svc = AuditService(storage_service=m)
+        from kawkab.services.storage_service import StorageService
+
+        svc_raw = StorageService()
+        svc_raw._conn = None
+        svc = AuditService(storage_service=svc_raw)
+        # Not-initialized storage raises honestly; log_event surfaces that
+        # as 0 so callers can detect a non-persisted audit event.
         assert svc.log_event("test.action", "test") == 0
 
     def test_multiple_actions_appear_in_stats(self, audit_service):

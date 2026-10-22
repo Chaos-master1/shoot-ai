@@ -7,11 +7,8 @@ Tests cover:
 - Loading skeletons (all sections registered, show/hide)
 """
 
-import json
 import re
-import os
 from pathlib import Path
-
 
 BASE = Path(__file__).resolve().parent.parent.parent
 WEB_JS = BASE / "src" / "kawkab" / "web" / "js"
@@ -23,8 +20,9 @@ INDEX = BASE / "src" / "kawkab" / "web" / "index.html"
 # Helpers
 # ──────────────────────────────────────────────
 
+
 def _read(filepath):
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         return f.read()
 
 
@@ -41,6 +39,7 @@ def _get_section_ids():
 # ──────────────────────────────────────────────
 # Error Boundary Tests
 # ──────────────────────────────────────────────
+
 
 class TestErrorBoundary:
     def test_error_boundary_file_exists(self):
@@ -74,6 +73,7 @@ class TestErrorBoundary:
 # Keyboard Shortcuts Tests
 # ──────────────────────────────────────────────
 
+
 class TestKeyboardShortcuts:
     def test_shortcuts_modal_in_html(self):
         html = _read(INDEX)
@@ -97,7 +97,7 @@ class TestKeyboardShortcuts:
     def test_shortcuts_handler_in_ux(self):
         code = _readjs("app-ux.js")
         assert "shortcuts-modal" in code
-        assert "'?'" in code or 'e.key === "?"' in code or 'e.key === \'?\'' in code
+        assert "'?'" in code or 'e.key === "?"' in code or "e.key === '?'" in code
 
     def test_shortcuts_css_exists(self):
         css = _read(WEB_CSS / "main.css")
@@ -109,6 +109,7 @@ class TestKeyboardShortcuts:
 # i18n Coverage Tests
 # ──────────────────────────────────────────────
 
+
 class TestI18nCoverage:
     def test_all_section_h2_have_data_i18n(self):
         """Every visible section h2 should have data-i18n."""
@@ -116,10 +117,13 @@ class TestI18nCoverage:
         sections = re.findall(r'<section\s+id="([^"]+)".*?<h2([^>]*)>', html, re.DOTALL)
         missing = []
         for sid, h2_attrs in sections:
-            if "data-i18n" not in h2_attrs:
-                # Some sections may not have h2 as direct child — be tolerant
-                if "review-section" not in sid and "coding-section" not in sid:
-                    missing.append(sid)
+            # Some sections may not have h2 as direct child — be tolerant
+            if (
+                "data-i18n" not in h2_attrs
+                and "review-section" not in sid
+                and "coding-section" not in sid
+            ):
+                missing.append(sid)
         # Only report truly missing
         strict_missing = []
         # Check opponent-section and marketplace-section specifically
@@ -131,13 +135,17 @@ class TestI18nCoverage:
                 re.DOTALL,
             )
             m = pattern.search(html_before)
-            if m and 'data-i18n' not in m.group(1):
+            if m and "data-i18n" not in m.group(1):
                 strict_missing.append(sid)
         # We expect opponent and marketplace to now have data-i18n
         assert "opponent-section" not in strict_missing, "opponent-section h2 missing data-i18n"
-        assert "marketplace-section" not in strict_missing, "marketplace-section h2 missing data-i18n"
+        assert "marketplace-section" not in strict_missing, (
+            "marketplace-section h2 missing data-i18n"
+        )
         # Allow other legacy sections
-        remaining = [s for s in strict_missing if s not in ("opponent-section", "marketplace-section")]
+        remaining = [
+            s for s in strict_missing if s not in ("opponent-section", "marketplace-section")
+        ]
         assert len(remaining) < 3, f"Unexpected sections missing data-i18n on h2: {remaining}"
 
     def test_no_hardcoded_labels_in_new_sections(self):
@@ -160,9 +168,7 @@ class TestI18nCoverage:
         for pattern in hardcoded_patterns:
             escaped = re.escape(pattern)
             # Look for pattern NOT preceded by data-i18n= on the same tag
-            matches = re.findall(
-                r'<([a-z]+)[^>]*?' + escaped + r'[^<]*?</\1>', html, re.IGNORECASE
-            )
+            matches = re.findall(r"<([a-z]+)[^>]*?" + escaped + r"[^<]*?</\1>", html, re.IGNORECASE)
             for match in matches:
                 tag = f"<{match}"
                 idx = html.index(tag)
@@ -171,7 +177,9 @@ class TestI18nCoverage:
                     # Check if the text is dynamically populated (by id attribute)
                     if "id=" in tag:
                         continue
-                    assert False, f"Hardcoded text '{pattern}' found without data-i18n in: {snippet[:100]}"
+                    raise AssertionError(
+                        f"Hardcoded text '{pattern}' found without data-i18n in: {snippet[:100]}"
+                    )
 
     def test_data_i18n_keys_have_fallback_values(self):
         """Every data-i18n attribute should have a visible text fallback."""
@@ -184,18 +192,23 @@ class TestI18nCoverage:
             stripped = text.strip()
             if not stripped or stripped == "" or stripped == key:
                 empty.append(key)
-        assert len(empty) < 20, f"Too many empty data-i18n fallbacks: {empty[:10]}"  # some are emoji-only
+        assert len(empty) < 20, (
+            f"Too many empty data-i18n fallbacks: {empty[:10]}"
+        )  # some are emoji-only
 
 
 # ──────────────────────────────────────────────
 # Loading Skeletons Tests
 # ──────────────────────────────────────────────
 
+
 class TestLoadingSkeletons:
     def test_skeleton_registrations_in_app_js(self):
         code = _readjs("app.js")
         registrations = re.findall(r"skeletons\.register\(([^)]+)\)", code)
-        assert len(registrations) >= 4, f"Expected >=4 skeleton registrations, got {len(registrations)}"
+        assert len(registrations) >= 4, (
+            f"Expected >=4 skeleton registrations, got {len(registrations)}"
+        )
 
     def test_new_sections_registered(self):
         code = _readjs("app.js")
@@ -229,6 +242,7 @@ class TestLoadingSkeletons:
 # Console Warning Audit Tests
 # ──────────────────────────────────────────────
 
+
 class TestConsoleWarnAudit:
     def test_console_warn_replaced_with_toast(self):
         """Key app files should have showToast alongside console.warn."""
@@ -245,6 +259,4 @@ class TestConsoleWarnAudit:
             warns = re.findall(r"console\.warn", code)
             toasts = re.findall(r"showToast", code)
             # At least as many toasts as warns in these files
-            assert (
-                toasts or not warns
-            ), f"{fname}: console.warn found without showToast in file"
+            assert toasts or not warns, f"{fname}: console.warn found without showToast in file"

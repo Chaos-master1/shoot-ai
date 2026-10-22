@@ -14,8 +14,9 @@ References:
 
 from __future__ import annotations
 
-import numpy as np
 from collections import deque
+
+import numpy as np
 
 
 class PlayerPositionSmoother:
@@ -53,9 +54,7 @@ class PlayerPositionSmoother:
     def initialized(self) -> bool:
         return self._initialized and self._state is not None
 
-    def _init_state(
-        self, x: float, y: float, vx: float = 0.0, vy: float = 0.0
-    ) -> None:
+    def _init_state(self, x: float, y: float, vx: float = 0.0, vy: float = 0.0) -> None:
         self._state = np.array([x, y, vx, vy], dtype=np.float64)
         self._cov = np.eye(4, dtype=np.float64) * 5.0
         self._initialized = True
@@ -85,19 +84,25 @@ class PlayerPositionSmoother:
     def _predict(self, dt: float) -> None:
         if self._state is None or self._cov is None:
             return
-        F = np.array([
-            [1, 0, dt, 0],
-            [0, 1, 0, dt],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1],
-        ], dtype=np.float64)
+        F = np.array(
+            [
+                [1, 0, dt, 0],
+                [0, 1, 0, dt],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=np.float64,
+        )
         dt2 = dt * dt
-        G = np.array([
-            [dt2 / 2, 0],
-            [0, dt2 / 2],
-            [dt, 0],
-            [0, dt],
-        ], dtype=np.float64)
+        G = np.array(
+            [
+                [dt2 / 2, 0],
+                [0, dt2 / 2],
+                [dt, 0],
+                [0, dt],
+            ],
+            dtype=np.float64,
+        )
         self._state = F @ self._state
         Q = G @ G.T * (self.q_std * self.q_std)
         Q = np.maximum(Q, np.eye(4) * 1e-6)
@@ -108,10 +113,13 @@ class PlayerPositionSmoother:
         if self._state is None or self._cov is None:
             return
         z = np.array([x, y], dtype=np.float64)
-        H = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-        ], dtype=np.float64)
+        H = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+            ],
+            dtype=np.float64,
+        )
         R = np.eye(2, dtype=np.float64) * (self.r_std * self.r_std)
         y_vec = z - H @ self._state
         S = H @ self._cov @ H.T + R
@@ -124,19 +132,19 @@ class PlayerPositionSmoother:
         self._cov = IKH @ self._cov
         self._cov = np.maximum(self._cov, np.eye(4) * 1e-6)
 
-    def update(
-        self, x: float, y: float, dt: float
-    ) -> None:
+    def update(self, x: float, y: float, dt: float) -> None:
         """Feed a new (x, y) measurement, dt seconds since last measurement."""
         if not self._initialized:
             self._init_state(x, y)
             self._median_buffer.append((x, y))
             return
 
+        state = self._state
+        assert state is not None  # _init_state ran above (early return otherwise)
         mx, my = self._median_filter(x, y)
-        diff = np.sqrt((mx - self._state[0]) ** 2 + (my - self._state[1]) ** 2)
+        diff = np.sqrt((mx - state[0]) ** 2 + (my - state[1]) ** 2)
         if diff > 2.0:
-            mx, my = self._state[0], self._state[1]
+            mx, my = state[0], state[1]
 
         self._predict(dt)
         self._update(mx, my)

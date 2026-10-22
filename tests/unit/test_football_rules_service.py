@@ -50,7 +50,7 @@ class TestLawsLoaded:
 
     def test_get_all_laws_sorted(self, rules: FootballRulesService) -> None:
         laws = rules.get_all_laws()
-        numbers = [l["number"] for l in laws]
+        numbers = [law["number"] for law in laws]
         assert numbers == sorted(numbers)
 
     def test_get_unknown_law_returns_empty(self, rules: FootballRulesService) -> None:
@@ -125,19 +125,27 @@ class TestClassifyOther:
 
 class TestOffside:
     def test_clearly_offside(self, rules: FootballRulesService) -> None:
-        result = rules.is_offside(attacker_x=85, second_last_defender_x=75, ball_x=78, attacking_direction="right")
+        result = rules.is_offside(
+            attacker_x=85, second_last_defender_x=75, ball_x=78, attacking_direction="right"
+        )
         assert result.is_offside
 
     def test_clearly_onside(self, rules: FootballRulesService) -> None:
-        result = rules.is_offside(attacker_x=70, second_last_defender_x=75, ball_x=78, attacking_direction="right")
+        result = rules.is_offside(
+            attacker_x=70, second_last_defender_x=75, ball_x=78, attacking_direction="right"
+        )
         assert not result.is_offside
 
     def test_level_with_ball(self, rules: FootballRulesService) -> None:
-        result = rules.is_offside(attacker_x=78, second_last_defender_x=75, ball_x=78, attacking_direction="right")
+        result = rules.is_offside(
+            attacker_x=78, second_last_defender_x=75, ball_x=78, attacking_direction="right"
+        )
         assert not result.is_offside
 
     def test_left_direction(self, rules: FootballRulesService) -> None:
-        result = rules.is_offside(attacker_x=20, second_last_defender_x=30, ball_x=27, attacking_direction="left")
+        result = rules.is_offside(
+            attacker_x=20, second_last_defender_x=30, ball_x=27, attacking_direction="left"
+        )
         assert result.is_offside
 
     def test_offside_explanation_mentions_law(self, rules: FootballRulesService) -> None:

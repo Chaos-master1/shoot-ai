@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
-
-import math
 
 
 @dataclass
@@ -87,23 +86,31 @@ def compute_fatigue(
     """
     from collections import defaultdict
 
-    player_data: dict[int, dict[str, Any]] = defaultdict(lambda: {
-        "team": "home", "total_time": 0.0, "total_dist": 0.0,
-        "high_intensity": 0, "first_seen": 1e9, "last_seen": 0.0,
-        "sprints": 0,
-    })
+    player_data: dict[int, dict[str, Any]] = defaultdict(
+        lambda: {
+            "team": "home",
+            "total_time": 0.0,
+            "total_dist": 0.0,
+            "high_intensity": 0,
+            "first_seen": 1e9,
+            "last_seen": 0.0,
+            "sprints": 0,
+        }
+    )
     substitutions_list: list[dict[str, Any]] = []
 
     for ev in events:
         # Handle substitutions first (no track_id needed)
         if ev.get("type") == "substitution":
             s_tid = ev.get("player_in") or ev.get("track_id")
-            substitutions_list.append({
-                "track_id_in": ev.get("player_in", s_tid),
-                "track_id_out": ev.get("player_out", 0),
-                "team": ev.get("team", "home"),
-                "minute": ev.get("timestamp", 0) / 60.0,
-            })
+            substitutions_list.append(
+                {
+                    "track_id_in": ev.get("player_in", s_tid),
+                    "track_id_out": ev.get("player_out", 0),
+                    "team": ev.get("team", "home"),
+                    "minute": ev.get("timestamp", 0) / 60.0,
+                }
+            )
 
         tid = ev.get("track_id") or ev.get("player_id")
         if tid is None:
@@ -120,8 +127,8 @@ def compute_fatigue(
         # Estimate distance from event type
         _type = ev.get("type", "")
         if _type in ("pass", "carry", "run"):
-            dx = (ev.get("end_x", 0) - ev.get("start_x", 0))
-            dy = (ev.get("end_y", 0) - ev.get("start_y", 0))
+            dx = ev.get("end_x", 0) - ev.get("start_x", 0)
+            dy = ev.get("end_y", 0) - ev.get("start_y", 0)
             dist = math.hypot(dx, dy)
             if dist > 0:
                 pd["total_dist"] += dist
@@ -163,12 +170,12 @@ def compute_fatigue(
         else:
             away_fatigue.append(profile)
 
-    report.home_fatigue = [p.to_dict() for p in sorted(
-        home_fatigue, key=lambda x: x.fatigue_index, reverse=True
-    )]
-    report.away_fatigue = [p.to_dict() for p in sorted(
-        away_fatigue, key=lambda x: x.fatigue_index, reverse=True
-    )]
+    report.home_fatigue = [
+        p.to_dict() for p in sorted(home_fatigue, key=lambda x: x.fatigue_index, reverse=True)
+    ]
+    report.away_fatigue = [
+        p.to_dict() for p in sorted(away_fatigue, key=lambda x: x.fatigue_index, reverse=True)
+    ]
 
     if home_fatigue:
         report.home_avg_fatigue = sum(p.fatigue_index for p in home_fatigue) / len(home_fatigue)

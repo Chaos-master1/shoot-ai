@@ -99,7 +99,7 @@ class ProfileReport:
         for s in self.stages:
             lines.append(
                 f"  {s.name:>24s}: {s.count:>5d}x  total {s.total_s:>7.2f}s  "
-                f"mean {s.mean()*1000:>7.1f}ms  p95 {s.percentile(0.95)*1000:>7.1f}ms"
+                f"mean {s.mean() * 1000:>7.1f}ms  p95 {s.percentile(0.95) * 1000:>7.1f}ms"
             )
         if self.bottlenecks:
             lines.append("Bottlenecks: " + "; ".join(self.bottlenecks))

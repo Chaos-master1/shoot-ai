@@ -1,6 +1,8 @@
 """Verify knowledge base content."""
+
 import asyncio
 import os
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
 from kawkab.services.knowledge_service import KnowledgeService
@@ -24,4 +26,5 @@ async def main() -> int:
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

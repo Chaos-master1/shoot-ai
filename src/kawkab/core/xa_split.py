@@ -7,7 +7,7 @@ and throw-in contributions, and compares expected vs actual assists.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from kawkab.core.game_constants import GAME
@@ -76,7 +76,7 @@ def compute_xa_by_type(
     """
     split = XaSplit()
 
-    for i, ev in enumerate(events):
+    for _i, ev in enumerate(events):
         xa_val = ev.get("xA", ev.get("xa", 0.0))
         if not isinstance(xa_val, (int, float)) or xa_val <= 0:
             continue
@@ -145,12 +145,14 @@ def compute_xa_expected_vs_actual(
     for pid in all_ids:
         xa = player_xa.get(pid, 0.0)
         ast = player_assists.get(pid, 0)
-        results.append(XaExpectedVsActual(
-            player_id=pid,
-            xa=round(xa, 4),
-            actual_assists=ast,
-            difference=round(ast - xa, 4),
-        ))
+        results.append(
+            XaExpectedVsActual(
+                player_id=pid,
+                xa=round(xa, 4),
+                actual_assists=ast,
+                difference=round(ast - xa, 4),
+            )
+        )
 
     results.sort(key=lambda r: abs(r.difference), reverse=True)
     return results

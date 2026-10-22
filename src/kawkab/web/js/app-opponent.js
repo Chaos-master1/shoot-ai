@@ -1,4 +1,11 @@
-﻿    // â”€â”€ Phase 13 â€” Opponent Database + Scouting Network + Transfermarkt â”€â”€
+    // ── Phase 13 — Opponent Database + Scouting Network + Transfermarkt ──
+
+    // Not wrapped in its own IIFE (split out of app.js without one) -- the
+    // bundler is a plain concatenation, so this and every escapeHtml(...)
+    // call below resolved to nothing at runtime (ReferenceError) until this
+    // import was added. Matches app-data-providers.js's own fix for the
+    // same gap.
+    var escapeHtml = window.__kawkab.escapeHtml;
 
     function initOpponentWorkspace() {
         // Tab switching
@@ -61,7 +68,7 @@
                     mu.innerHTML = '';
                     (data.matchups || []).forEach(function(m) {
                         mu.innerHTML += '<div style="font-size:0.75rem;padding:4px 0;border-bottom:1px solid var(--border)">' +
-                            escapeHtml(m.date) + ' â€” ' + escapeHtml(m.score) + ' (xG: ' + m.our_xg + '-' + m.their_xg + ')' +
+                            escapeHtml(m.date) + ' — ' + escapeHtml(m.score) + ' (xG: ' + m.our_xg + '-' + m.their_xg + ')' +
                             '</div>';
                     });
                     if (!data.matchups || data.matchups.length === 0) {
@@ -112,11 +119,11 @@
                         card.className = 'pro-card';
                         card.style.margin = '4px 0';
                         card.innerHTML = '<div style="display:flex;justify-content:space-between">' +
-                            '<div><strong>' + escapeHtml(p.name) + '</strong> â€” ' + escapeHtml(p.position || 'N/A') +
+                            '<div><strong>' + escapeHtml(p.name) + '</strong> — ' + escapeHtml(p.position || 'N/A') +
                             ' | ' + escapeHtml(p.club || 'N/A') + ' | Age: ' + p.age + '</div>' +
                             '<div><span class="badge" style="background:var(--primary)">' + p.rating + '/10</span></div></div>' +
                             '<div style="font-size:0.75rem;color:var(--text-muted)">' + escapeHtml(p.league || '') +
-                            (p.estimated_value ? ' | â‚¬' + (p.estimated_value/1e6).toFixed(1) + 'M' : '') +
+                            (p.estimated_value ? ' | €' + (p.estimated_value/1e6).toFixed(1) + 'M' : '') +
                             (p.strengths && p.strengths.length ? ' | Strengths: ' + escapeHtml(p.strengths.join(', ')) : '') + '</div>';
                         container.appendChild(card);
                     });
@@ -170,9 +177,9 @@
                         card.style.cursor = 'pointer';
                         card.style.margin = '4px 0';
                         card.innerHTML = '<div style="display:flex;justify-content:space-between">' +
-                            '<div><strong>' + escapeHtml(p.name) + '</strong> â€” ' + escapeHtml(p.position || 'N/A') +
+                            '<div><strong>' + escapeHtml(p.name) + '</strong> — ' + escapeHtml(p.position || 'N/A') +
                             ' | ' + escapeHtml(p.club || 'N/A') + '</div>' +
-                            '<div>â‚¬' + (p.market_value/1e6).toFixed(1) + 'M</div></div>' +
+                            '<div>€' + (p.market_value/1e6).toFixed(1) + 'M</div></div>' +
                             '<div style="font-size:0.75rem;color:var(--text-muted)">' + escapeHtml(p.league || '') + ' | Age: ' + p.age + ' | ' + escapeHtml(p.nationality || '') + '</div>';
                         card.addEventListener('click', function() {
                             bridge.transfermarkt_get(String(p.id), function(r2) {
@@ -185,7 +192,7 @@
                                     var html = '<p><strong>Position:</strong> ' + escapeHtml(det.position) + '</p>' +
                                         '<p><strong>Club:</strong> ' + escapeHtml(det.club) + '</p>' +
                                         '<p><strong>League:</strong> ' + escapeHtml(det.league) + '</p>' +
-                                        '<p><strong>Market Value:</strong> â‚¬' + (det.market_value/1e6).toFixed(1) + 'M</p>' +
+                                        '<p><strong>Market Value:</strong> €' + (det.market_value/1e6).toFixed(1) + 'M</p>' +
                                         '<p><strong>Age:</strong> ' + det.age + '</p>' +
                                         '<p><strong>Height:</strong> ' + (det.height_cm || 'N/A') + ' cm</p>' +
                                         '<p><strong>Foot:</strong> ' + escapeHtml(det.foot || 'N/A') + '</p>' +

@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 import sys
-import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -63,15 +62,22 @@ def mock_httpx():
 # ApiFootballService
 # ──────────────────────────────────────────────
 
-class TestApiFootballService:
 
+class TestApiFootballService:
     @pytest.mark.asyncio
     async def test_successful_search_team(self, mock_httpx):
         svc = ApiFootballService(api_key="test_key")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "response": [{"team": {"id": 1, "name": "KACM", "code": "KACM"},
-                          "venue": {"name": "Stade", "city": "Marrakech", "capacity": 45000}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "response": [
+                    {
+                        "team": {"id": 1, "name": "KACM", "code": "KACM"},
+                        "venue": {"name": "Stade", "city": "Marrakech", "capacity": 45000},
+                    }
+                ]
+            },
+        )
         result = await svc.search_team("KACM")
         assert len(result) == 1
         assert result[0]["name"] == "KACM"
@@ -109,15 +115,35 @@ class TestApiFootballService:
     @pytest.mark.asyncio
     async def test_get_standings_parses_rows(self, mock_httpx):
         svc = ApiFootballService(api_key="k")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "response": [{"league": {"standings": [[
-                {"rank": 1, "team": {"id": 1, "name": "A", "logo": None},
-                 "points": 10, "goalsDiff": 5,
-                 "all": {"played": 4, "win": 3, "draw": 1, "lose": 0,
-                         "goals": {"for": 8, "against": 3}},
-                 "form": "WWWD"}
-            ]]}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "response": [
+                    {
+                        "league": {
+                            "standings": [
+                                [
+                                    {
+                                        "rank": 1,
+                                        "team": {"id": 1, "name": "A", "logo": None},
+                                        "points": 10,
+                                        "goalsDiff": 5,
+                                        "all": {
+                                            "played": 4,
+                                            "win": 3,
+                                            "draw": 1,
+                                            "lose": 0,
+                                            "goals": {"for": 8, "against": 3},
+                                        },
+                                        "form": "WWWD",
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+        )
         standings = await svc.get_standings(200, 2024)
         assert len(standings) == 1
         assert standings[0]["rank"] == 1
@@ -136,14 +162,14 @@ class TestApiFootballService:
 # BzzoiroService
 # ──────────────────────────────────────────────
 
-class TestBzzoiroService:
 
+class TestBzzoiroService:
     @pytest.mark.asyncio
     async def test_successful_team_search(self, mock_httpx):
         svc = BzzoiroService(api_key="tk")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "results": [{"id": 1, "name": "Wydad", "country": "Morocco", "logo": "logo.png"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"results": [{"id": 1, "name": "Wydad", "country": "Morocco", "logo": "logo.png"}]}
+        )
         result = await svc.search_team("Wydad")
         assert len(result) == 1
         assert result[0]["name"] == "Wydad"
@@ -172,11 +198,26 @@ class TestBzzoiroService:
     @pytest.mark.asyncio
     async def test_get_standings_parses(self, mock_httpx):
         svc = BzzoiroService(api_key="k")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "standings": [{"position": 1, "team_id": 1, "team_name": "A",
-                           "played": 3, "wins": 2, "draws": 1, "losses": 0,
-                           "goals_for": 5, "goals_against": 2, "goal_diff": 3, "points": 7}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "standings": [
+                    {
+                        "position": 1,
+                        "team_id": 1,
+                        "team_name": "A",
+                        "played": 3,
+                        "wins": 2,
+                        "draws": 1,
+                        "losses": 0,
+                        "goals_for": 5,
+                        "goals_against": 2,
+                        "goal_diff": 3,
+                        "points": 7,
+                    }
+                ]
+            },
+        )
         rows = await svc.get_standings(1)
         assert len(rows) == 1
         assert rows[0]["points"] == 7
@@ -184,9 +225,9 @@ class TestBzzoiroService:
     @pytest.mark.asyncio
     async def test_get_leagues_parses(self, mock_httpx):
         svc = BzzoiroService(api_key="k")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "results": [{"id": 1, "name": "Botola", "country": "Morocco", "is_active": True}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"results": [{"id": 1, "name": "Botola", "country": "Morocco", "is_active": True}]}
+        )
         leagues = await svc.get_leagues()
         assert len(leagues) == 1
         assert leagues[0]["name"] == "Botola"
@@ -204,14 +245,14 @@ class TestBzzoiroService:
 # FootballDataService
 # ──────────────────────────────────────────────
 
-class TestFootballDataService:
 
+class TestFootballDataService:
     @pytest.mark.asyncio
     async def test_successful_check_status(self, mock_httpx):
         svc = FootballDataService(api_key="k")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "count": 2, "competitions": [{"id": 1}, {"id": 2}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"count": 2, "competitions": [{"id": 1}, {"id": 2}]}
+        )
         data = await svc.check_status()
         assert data["available"] is True
         assert data["competitions_count"] == 2
@@ -219,9 +260,7 @@ class TestFootballDataService:
     @pytest.mark.asyncio
     async def test_no_api_key_still_uses_env_value(self, mock_httpx):
         svc = FootballDataService(api_key=None)
-        mock_httpx.get.return_value = _mock_response(200, {
-            "count": 0, "competitions": []
-        })
+        mock_httpx.get.return_value = _mock_response(200, {"count": 0, "competitions": []})
         data = await svc.check_status()
         assert data["available"] is True
 
@@ -251,9 +290,9 @@ class TestFootballDataService:
     @pytest.mark.asyncio
     async def test_get_team_returns_parsed(self, mock_httpx):
         svc = FootballDataService(api_key="k")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "id": 1, "name": "KACM", "squad": [{"id": 10, "name": "P1", "position": "FW"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"id": 1, "name": "KACM", "squad": [{"id": 10, "name": "P1", "position": "FW"}]}
+        )
         team = await svc.get_team(1)
         assert team is not None
         assert team["name"] == "KACM"
@@ -271,15 +310,23 @@ class TestFootballDataService:
 # StatsBombService
 # ──────────────────────────────────────────────
 
-class TestStatsBombService:
 
+class TestStatsBombService:
     @pytest.mark.asyncio
     async def test_successful_competitions(self, mock_httpx):
         svc = StatsBombService()
-        mock_httpx.get.return_value = _mock_response(200, [
-            {"competition_id": 1, "season_id": 2, "competition_name": "PL",
-             "country_name": "England", "season_name": "2024"}
-        ])
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            [
+                {
+                    "competition_id": 1,
+                    "season_id": 2,
+                    "competition_name": "PL",
+                    "country_name": "England",
+                    "season_name": "2024",
+                }
+            ],
+        )
         comps = await svc.get_competitions()
         assert len(comps) == 1
         assert comps[0].competition_name == "PL"
@@ -310,14 +357,35 @@ class TestStatsBombService:
     @pytest.mark.asyncio
     async def test_get_events_returns_parsed(self, mock_httpx):
         svc = StatsBombService()
-        mock_httpx.get.return_value = _mock_response(200, [
-            {"id": "e1", "type": "Pass", "period": 1, "minute": 10, "second": 0,
-             "timestamp": "00:00:10", "team": {"name": "Home"}, "player": {"name": "P1"},
-             "location": [1.0, 2.0], "outcome": {"name": "Success"}},
-            {"id": "e2", "type": "Shot", "period": 2, "minute": 50, "second": 10,
-             "timestamp": "00:50:10", "team": {"name": "Away"}, "player": {"name": "P2"},
-             "location": [10.0, 20.0], "shot": {"statsbomb_xg": 0.45}},
-        ])
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            [
+                {
+                    "id": "e1",
+                    "type": {"name": "Pass"},
+                    "period": 1,
+                    "minute": 10,
+                    "second": 0,
+                    "timestamp": "00:00:10",
+                    "team": {"name": "Home"},
+                    "player": {"name": "P1"},
+                    "location": [1.0, 2.0],
+                    "outcome": "Success",
+                },
+                {
+                    "id": "e2",
+                    "type": {"name": "Shot"},
+                    "period": 2,
+                    "minute": 50,
+                    "second": 10,
+                    "timestamp": "00:50:10",
+                    "team": {"name": "Away"},
+                    "player": {"name": "P2"},
+                    "location": [10.0, 20.0],
+                    "shot": {"statsbomb_xg": 0.45},
+                },
+            ],
+        )
         events = await svc.get_events(123)
         assert len(events) == 2
         assert events[0].event_type == "Pass"
@@ -333,16 +401,36 @@ class TestStatsBombService:
     @pytest.mark.asyncio
     async def test_search_team_matches(self, mock_httpx):
         svc = StatsBombService()
-        comp_resp = _mock_response(200, [
-            {"competition_id": 1, "season_id": 2, "competition_name": "PL",
-             "country_name": "England", "season_name": "2024"}
-        ])
-        match_resp = _mock_response(200, [
-            {"match_id": 1, "competition_id": 1, "season_id": 2,
-             "home_team": {"home_team_name": "Arsenal"},
-             "away_team": {"away_team_name": "Chelsea"}, "home_score": 2, "away_score": 1,
-             "match_date": "2024-08-16", "competition_stage": "regular", "stadium": {}, "referee": {}}
-        ])
+        comp_resp = _mock_response(
+            200,
+            [
+                {
+                    "competition_id": 1,
+                    "season_id": 2,
+                    "competition_name": "PL",
+                    "country_name": "England",
+                    "season_name": "2024",
+                }
+            ],
+        )
+        match_resp = _mock_response(
+            200,
+            [
+                {
+                    "match_id": 1,
+                    "competition_id": 1,
+                    "season_id": 2,
+                    "home_team": {"home_team_name": "Arsenal"},
+                    "away_team": {"away_team_name": "Chelsea"},
+                    "home_score": 2,
+                    "away_score": 1,
+                    "match_date": "2024-08-16",
+                    "competition_stage": "regular",
+                    "stadium": {},
+                    "referee": {},
+                }
+            ],
+        )
         mock_httpx.get.side_effect = [comp_resp, match_resp]
         matches = await svc.search_team_matches("Arsenal")
         assert len(matches) >= 1
@@ -352,14 +440,14 @@ class TestStatsBombService:
 # TheSportsDBService
 # ──────────────────────────────────────────────
 
-class TestTheSportsDBService:
 
+class TestTheSportsDBService:
     @pytest.mark.asyncio
     async def test_successful_team_search(self, mock_httpx):
         svc = TheSportsDBService(api_key="3")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "teams": [{"idTeam": "1", "strTeam": "KACM", "strLeague": "Botola"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"teams": [{"idTeam": "1", "strTeam": "KACM", "strLeague": "Botola"}]}
+        )
         results = await svc.search_teams("KACM")
         assert len(results) == 1
         assert results[0].name == "KACM"
@@ -411,15 +499,25 @@ class TestTheSportsDBService:
 # OpenFootballDataService
 # ──────────────────────────────────────────────
 
-class TestOpenFootballDataService:
 
+class TestOpenFootballDataService:
     @pytest.mark.asyncio
     async def test_successful_matches(self, mock_httpx):
         svc = OpenFootballDataService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "matches": [{"round": "1", "date": "2024-08-16", "team1": "Arsenal", "team2": "Wolves",
-                         "score": {"ft": [2, 1]}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "matches": [
+                    {
+                        "round": "1",
+                        "date": "2024-08-16",
+                        "team1": "Arsenal",
+                        "team2": "Wolves",
+                        "score": {"ft": [2, 1]},
+                    }
+                ]
+            },
+        )
         matches = await svc.get_matches("en.1", "2024-25")
         assert len(matches) == 1
         assert matches[0].home_team == "Arsenal"
@@ -455,10 +553,20 @@ class TestOpenFootballDataService:
     @pytest.mark.asyncio
     async def test_worldcup_matches(self, mock_httpx):
         svc = OpenFootballDataService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "matches": [{"round": "Final", "date": "2026-07-19", "team1": "A", "team2": "B",
-                         "score": {"ft": [3, 1]}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "matches": [
+                    {
+                        "round": "Final",
+                        "date": "2026-07-19",
+                        "team1": "A",
+                        "team2": "B",
+                        "score": {"ft": [3, 1]},
+                    }
+                ]
+            },
+        )
         matches = await svc.get_worldcup_matches(2026)
         assert len(matches) == 1
         assert matches[0].competition == "worldcup"
@@ -466,10 +574,20 @@ class TestOpenFootballDataService:
     @pytest.mark.asyncio
     async def test_search_team_matches(self, mock_httpx):
         svc = OpenFootballDataService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "matches": [{"round": "1", "date": "2024-08-16", "team1": "Liverpool", "team2": "Chelsea",
-                         "score": {"ft": [3, 0]}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "matches": [
+                    {
+                        "round": "1",
+                        "date": "2024-08-16",
+                        "team1": "Liverpool",
+                        "team2": "Chelsea",
+                        "score": {"ft": [3, 0]},
+                    }
+                ]
+            },
+        )
         results = await svc.search_team_matches("Liverpool", "en.1")
         assert len(results) >= 1
         assert results[0].home_team == "Liverpool"
@@ -479,8 +597,8 @@ class TestOpenFootballDataService:
 # RoboflowSportsService
 # ──────────────────────────────────────────────
 
-class TestRoboflowSportsService:
 
+class TestRoboflowSportsService:
     def test_not_available_when_package_missing(self):
         svc = RoboflowSportsService()
         assert svc.available is False
@@ -499,6 +617,7 @@ class TestRoboflowSportsService:
     def test_draw_voronoi_returns_none_when_unavailable(self):
         svc = RoboflowSportsService()
         import numpy as np
+
         result = svc.draw_voronoi(
             team_1_xy=np.array([[1.0, 2.0]]),
             team_2_xy=np.array([[3.0, 4.0]]),
@@ -508,12 +627,14 @@ class TestRoboflowSportsService:
     def test_draw_paths_on_pitch_returns_none_when_unavailable(self):
         svc = RoboflowSportsService()
         import numpy as np
+
         result = svc.draw_paths_on_pitch([np.array([[1.0, 2.0]])])
         assert result is None
 
     def test_draw_points_on_pitch_returns_none_when_unavailable(self):
         svc = RoboflowSportsService()
         import numpy as np
+
         result = svc.draw_points_on_pitch(xy=np.array([[1.0, 2.0]]))
         assert result is None
 
@@ -532,6 +653,5 @@ class TestRoboflowSportsService:
     def test_create_view_transformer_returns_none(self):
         svc = RoboflowSportsService()
         import numpy as np
-        assert svc.create_view_transformer(
-            source=np.eye(3), target=np.eye(3)
-        ) is None
+
+        assert svc.create_view_transformer(source=np.eye(3), target=np.eye(3)) is None

@@ -16,7 +16,6 @@ Useful for:
 
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -28,6 +27,7 @@ logger = get_logger(__name__)
 @dataclass
 class SubstitutionEvent:
     """A single substitution event."""
+
     minute: int
     second: int
     team: str
@@ -43,6 +43,7 @@ class SubstitutionEvent:
 @dataclass
 class SubstitutionImpact:
     """Computed impact of one substitution."""
+
     substitution: SubstitutionEvent
     window_minutes: int
     xg_delta: float
@@ -59,6 +60,7 @@ class SubstitutionImpact:
 @dataclass
 class SubstitutionReport:
     """Full substitution report for a match."""
+
     team: str
     impacts: list[SubstitutionImpact]
     best_sub: SubstitutionImpact | None
@@ -115,7 +117,8 @@ class SubstitutionService:
         avg = total / len(impacts)
         tactical = sum(1 for s in team_subs if s.position_changed)
         formation = sum(
-            1 for s in team_subs
+            1
+            for s in team_subs
             if s.formation_before is not None
             and s.formation_after is not None
             and s.formation_before != s.formation_after
@@ -147,23 +150,27 @@ class SubstitutionService:
         post_xg = sum(e.get("xg", 0) for e in post_events)
         pre_pos = self._team_possession(pre_events, sub.team)
         post_pos = self._team_possession(post_events, sub.team)
-        pre_shots = sum(1 for e in pre_events if e.get("type") == "shot" and e.get("team") == sub.team)
-        post_shots = sum(1 for e in post_events if e.get("type") == "shot" and e.get("team") == sub.team)
+        pre_shots = sum(
+            1 for e in pre_events if e.get("type") == "shot" and e.get("team") == sub.team
+        )
+        post_shots = sum(
+            1 for e in post_events if e.get("type") == "shot" and e.get("team") == sub.team
+        )
         pre_corners = sum(
-            1 for e in pre_events
+            1
+            for e in pre_events
             if e.get("type") in {"corner", "shot"} and e.get("team") == sub.team
         )
         post_corners = sum(
-            1 for e in post_events
+            1
+            for e in post_events
             if e.get("type") in {"corner", "shot"} and e.get("team") == sub.team
         )
         goals_for = sum(
-            1 for e in post_events
-            if e.get("type") == "goal" and e.get("team") == sub.team
+            1 for e in post_events if e.get("type") == "goal" and e.get("team") == sub.team
         )
         goals_against = sum(
-            1 for e in post_events
-            if e.get("type") == "goal" and e.get("team") != sub.team
+            1 for e in post_events if e.get("type") == "goal" and e.get("team") != sub.team
         )
         xg_delta = post_xg - pre_xg
         pos_delta = post_pos - pre_pos
@@ -187,11 +194,12 @@ class SubstitutionService:
             notes.append(f"xG improved by {xg_delta:.2f}")
         if xg_delta < -0.2:
             notes.append(f"xG dropped by {abs(xg_delta):.2f}")
-        if sub.formation_before and sub.formation_after:
-            if sub.formation_before != sub.formation_after:
-                notes.append(
-                    f"Formation change: {sub.formation_before} → {sub.formation_after}"
-                )
+        if (
+            sub.formation_before
+            and sub.formation_after
+            and sub.formation_before != sub.formation_after
+        ):
+            notes.append(f"Formation change: {sub.formation_before} → {sub.formation_after}")
         if not notes:
             notes.append("No significant impact")
         return SubstitutionImpact(
@@ -208,18 +216,14 @@ class SubstitutionService:
             notes=notes,
         )
 
-    def _team_possession(
-        self, events: list[dict[str, Any]], team: str
-    ) -> float:
+    def _team_possession(self, events: list[dict[str, Any]], team: str) -> float:
         """Estimate team possession % from pass events."""
         passes = [e for e in events if e.get("type") == "pass"]
         if not passes:
             return 50.0
         team_passes = [p for p in passes if p.get("team") == team]
         completed = sum(1 for p in team_passes if p.get("completed", False))
-        total_completed = sum(
-            1 for p in passes if p.get("completed", False)
-        )
+        total_completed = sum(1 for p in passes if p.get("completed", False))
         if total_completed == 0:
             return 50.0
         return completed / total_completed * 100.0

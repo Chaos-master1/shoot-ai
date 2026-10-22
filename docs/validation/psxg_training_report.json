@@ -1,0 +1,106 @@
+{
+  "generated_at": "2026-09-07T00:55:11.983662+00:00",
+  "corpus": "/home/Houssem/Desktop/projects/football coach ai/data/statsbomb_corpus",
+  "n_on_target_shots": 2768,
+  "split": {
+    "seed": 13,
+    "n_train": 2219,
+    "n_val": 549
+  },
+  "coefficients": {
+    "intercept": -1.2790473051916134,
+    "distance_m": -0.05510679786014554,
+    "distance_m_sq": -0.00019898974432493966,
+    "angle_opening_deg": 0.04700545297588676,
+    "placement_height": -0.4252178194885869,
+    "placement_lateral_abs": -0.03580966148361557,
+    "lateral_height_interaction": 0.2032008215163957,
+    "is_header": -1.2294520291338815,
+    "is_free_kick": 0.6931810822775631
+  },
+  "evaluation": [
+    {
+      "model": "kawkab_psxg_trained",
+      "n_on_target": 549,
+      "n_goals": 151,
+      "goal_rate": 0.2750455373406193,
+      "brier": 0.167304125492138,
+      "log_loss": 0.513603946414362,
+      "auc": 0.7533195780225631,
+      "ece_10bin": 0.05374381299669985,
+      "reliability_curve_10bin": [
+        {
+          "bin_low": 0.0,
+          "bin_high": 0.1,
+          "mean_pred": 0.07364768717565252,
+          "observed_rate": 0.09302325581395349,
+          "n": 43
+        },
+        {
+          "bin_low": 0.1,
+          "bin_high": 0.2,
+          "mean_pred": 0.15373914704982428,
+          "observed_rate": 0.125,
+          "n": 168
+        },
+        {
+          "bin_low": 0.2,
+          "bin_high": 0.30000000000000004,
+          "mean_pred": 0.24636216491137355,
+          "observed_rate": 0.19047619047619047,
+          "n": 126
+        },
+        {
+          "bin_low": 0.30000000000000004,
+          "bin_high": 0.4,
+          "mean_pred": 0.34693336713772793,
+          "observed_rate": 0.36231884057971014,
+          "n": 69
+        },
+        {
+          "bin_low": 0.4,
+          "bin_high": 0.5,
+          "mean_pred": 0.44720694696528385,
+          "observed_rate": 0.3898305084745763,
+          "n": 59
+        },
+        {
+          "bin_low": 0.5,
+          "bin_high": 0.6000000000000001,
+          "mean_pred": 0.5488286169953784,
+          "observed_rate": 0.6875,
+          "n": 32
+        },
+        {
+          "bin_low": 0.6000000000000001,
+          "bin_high": 0.7000000000000001,
+          "mean_pred": 0.6458881623861524,
+          "observed_rate": 0.5238095238095238,
+          "n": 21
+        },
+        {
+          "bin_low": 0.7000000000000001,
+          "bin_high": 0.8,
+          "mean_pred": 0.7565148966691467,
+          "observed_rate": 0.75,
+          "n": 12
+        },
+        {
+          "bin_low": 0.8,
+          "bin_high": 0.9,
+          "mean_pred": 0.831569425208843,
+          "observed_rate": 0.25,
+          "n": 8
+        },
+        {
+          "bin_low": 0.9,
+          "bin_high": 1.0,
+          "mean_pred": 0.9657924576483287,
+          "observed_rate": 0.9090909090909091,
+          "n": 11
+        }
+      ],
+      "mean_prediction": 0.305721112176694
+    }
+  ]
+}

@@ -20,19 +20,89 @@ NAME_PATTERN = re.compile(
 
 # Frequent non-player words that look like names
 SKIP_WORDS = {
-    "Thank", "Please", "Remain", "Standing", "Very", "Much", "Able",
-    "National", "Anthem", "France", "Sweden", "England", "Germany",
-    "Spain", "Italy", "Brazil", "Argentina", "Portugal", "Netherlands",
-    "World", "Cup", "Qualifying", "League", "Team", "Match", "Game",
-    "Half", "Time", "Goal", "Shot", "Save", "Pass", "Foul", "Corner",
-    "Yellow", "Red", "Card", "Substitute", "Injury", "Offside",
-    "Referee", "Manager", "Coach", "Stadium", "Today", "Tonight",
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-    "Sunday", "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-    "Hello", "Welcome", "Here", "There", "Where", "What", "When",
-    "Really", "Just", "Very", "Over", "Under", "About", "After",
-    "Before", "During", "Without", "Because", "While",
+    "Thank",
+    "Please",
+    "Remain",
+    "Standing",
+    "Very",
+    "Much",
+    "Able",
+    "National",
+    "Anthem",
+    "France",
+    "Sweden",
+    "England",
+    "Germany",
+    "Spain",
+    "Italy",
+    "Brazil",
+    "Argentina",
+    "Portugal",
+    "Netherlands",
+    "World",
+    "Cup",
+    "Qualifying",
+    "League",
+    "Team",
+    "Match",
+    "Game",
+    "Half",
+    "Time",
+    "Goal",
+    "Shot",
+    "Save",
+    "Pass",
+    "Foul",
+    "Corner",
+    "Yellow",
+    "Red",
+    "Card",
+    "Substitute",
+    "Injury",
+    "Offside",
+    "Referee",
+    "Manager",
+    "Coach",
+    "Stadium",
+    "Today",
+    "Tonight",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+    "Hello",
+    "Welcome",
+    "Here",
+    "There",
+    "Where",
+    "What",
+    "When",
+    "Really",
+    "Just",
+    "Over",
+    "Under",
+    "About",
+    "After",
+    "Before",
+    "During",
+    "Without",
+    "Because",
+    "While",
 }
 
 
@@ -47,11 +117,13 @@ def parse_transcript(transcript_path: Path) -> list[dict[str, Any]]:
         for line in f:
             m = pattern.match(line.strip())
             if m:
-                segments.append({
-                    "start": float(m.group(1)),
-                    "end": float(m.group(2)),
-                    "text": m.group(3).strip(),
-                })
+                segments.append(
+                    {
+                        "start": float(m.group(1)),
+                        "end": float(m.group(2)),
+                        "text": m.group(3).strip(),
+                    }
+                )
     return segments
 
 
@@ -80,12 +152,14 @@ def extract_name_mentions(
                 continue
             if known_names and word_clean not in known_names:
                 continue
-            mentions.append({
-                "name": word_clean,
-                "timestamp": seg["start"],
-                "end": seg["end"],
-                "context": seg["text"],
-            })
+            mentions.append(
+                {
+                    "name": word_clean,
+                    "timestamp": seg["start"],
+                    "end": seg["end"],
+                    "context": seg["text"],
+                }
+            )
     return mentions
 
 
@@ -108,6 +182,7 @@ def build_squad_lookup(roster_path: Path) -> dict[str, dict[int, str]]:
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Parse transcript for player names")
     parser.add_argument("transcript", type=Path, help="Transcript file")
     parser.add_argument("--squad", type=Path, help="Squad roster JSON")
@@ -139,9 +214,9 @@ def main():
 
     print(f"\nUnique player mentions ({len(unique_mentions)}):")
     for m in unique_mentions:
-        print(f"  {m['name']} @ {m['timestamp']:.1f}s — \"{m['context']}\"")
+        print(f'  {m["name"]} @ {m["timestamp"]:.1f}s — "{m["context"]}"')
 
-    print(f"\nName frequency:")
+    print("\nName frequency:")
     for name, count in sorted(name_counts.items(), key=lambda x: -x[1]):
         print(f"  {name}: {count}x")
 

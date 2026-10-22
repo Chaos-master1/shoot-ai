@@ -18,10 +18,8 @@ from __future__ import annotations
 
 import abc
 from pathlib import Path
-from typing import Optional
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.models import WearableSession
 
 logger = get_logger(__name__)
@@ -59,7 +57,7 @@ class BaseWearableParser(abc.ABC):
         return p
 
     @staticmethod
-    def _parse_float(val) -> Optional[float]:
+    def _parse_float(val) -> float | None:
         """Robust float parse — returns None for empty/garbage values."""
         if val is None or val == "":
             return None
@@ -69,7 +67,7 @@ class BaseWearableParser(abc.ABC):
             return None
 
     @staticmethod
-    def _parse_int(val) -> Optional[int]:
+    def _parse_int(val) -> int | None:
         if val is None or val == "":
             return None
         try:

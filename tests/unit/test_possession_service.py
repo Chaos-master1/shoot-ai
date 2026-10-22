@@ -31,11 +31,35 @@ class TestAnalyzeBasic:
 
     def test_home_dominates(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 2, "player_track_id": 8, "completed": True},
-            {"type": "pass", "team": "away", "timestamp_s": 3, "player_track_id": 3, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 2,
+                "player_track_id": 8,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "timestamp_s": 3,
+                "player_track_id": 3,
+                "completed": True,
+            },
             {"type": "tackle", "team": "home", "timestamp_s": 4, "player_track_id": 5},
-            {"type": "pass", "team": "home", "timestamp_s": 5, "player_track_id": 9, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 5,
+                "player_track_id": 9,
+                "completed": True,
+            },
             {"type": "shot", "team": "home", "timestamp_s": 6, "player_track_id": 9},
         ]
         report = svc.analyze("home", "away", events)
@@ -44,7 +68,13 @@ class TestAnalyzeBasic:
 
     def test_player_touch_tracking(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "shot", "team": "home", "timestamp_s": 2, "player_track_id": 7},
         ]
         report = svc.analyze("home", "away", events)
@@ -53,9 +83,27 @@ class TestAnalyzeBasic:
 
     def test_successful_passes_counted(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 2, "player_track_id": 7, "completed": False},
-            {"type": "pass", "team": "home", "timestamp_s": 3, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 2,
+                "player_track_id": 7,
+                "completed": False,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 3,
+                "player_track_id": 7,
+                "completed": True,
+            },
         ]
         report = svc.analyze("home", "away", events)
         assert report.home_player_stats[7].successful_passes == 2
@@ -65,8 +113,20 @@ class TestAnalyzeBasic:
 class TestChainAttribution:
     def test_chain_end_by_pass_failure(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 2, "player_track_id": 7, "completed": False},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 2,
+                "player_track_id": 7,
+                "completed": False,
+            },
         ]
         report = svc.analyze("home", "away", events)
         # First chain should be ended by pass failure
@@ -75,7 +135,13 @@ class TestChainAttribution:
 
     def test_chain_end_by_tackle(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "tackle", "team": "away", "timestamp_s": 2, "player_track_id": 3},
         ]
         report = svc.analyze("home", "away", events)
@@ -83,7 +149,13 @@ class TestChainAttribution:
 
     def test_chain_end_by_shot(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "shot", "team": "home", "timestamp_s": 2, "player_track_id": 9, "xg": 0.3},
         ]
         report = svc.analyze("home", "away", events)
@@ -95,11 +167,23 @@ class TestCounterPress:
     def test_counter_press_detected(self, svc: PossessionService) -> None:
         events = [
             # Home has ball
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
             # Home loses it
             {"type": "tackle", "team": "away", "timestamp_s": 2, "player_track_id": 3},
             # Away has ball briefly
-            {"type": "pass", "team": "away", "timestamp_s": 3, "player_track_id": 3, "completed": True},
+            {
+                "type": "pass",
+                "team": "away",
+                "timestamp_s": 3,
+                "player_track_id": 3,
+                "completed": True,
+            },
             # Home wins it back within 5s = counter-press
             {"type": "tackle", "team": "home", "timestamp_s": 5, "player_track_id": 5},
         ]
@@ -108,9 +192,21 @@ class TestCounterPress:
 
     def test_no_counter_press_outside_window(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "tackle", "team": "away", "timestamp_s": 2, "player_track_id": 3},
-            {"type": "pass", "team": "away", "timestamp_s": 3, "player_track_id": 3, "completed": True},
+            {
+                "type": "pass",
+                "team": "away",
+                "timestamp_s": 3,
+                "player_track_id": 3,
+                "completed": True,
+            },
             # 10 seconds later — too slow for counter-press
             {"type": "tackle", "team": "home", "timestamp_s": 13, "player_track_id": 5},
         ]
@@ -121,7 +217,13 @@ class TestCounterPress:
 class TestChainDurations:
     def test_avg_chain_duration(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 0, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 0,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "shot", "team": "home", "timestamp_s": 5, "player_track_id": 9},
         ]
         report = svc.analyze("home", "away", events)
@@ -129,7 +231,13 @@ class TestChainDurations:
 
     def test_longest_chain(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 0, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 0,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "shot", "team": "home", "timestamp_s": 10, "player_track_id": 9},
         ]
         report = svc.analyze("home", "away", events)
@@ -139,20 +247,68 @@ class TestChainDurations:
 class TestNotes:
     def test_balanced_notes(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 9, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 9,
+                "player_track_id": 7,
+                "completed": True,
+            },
         ]
         report = svc.analyze("home", "away", events)
         assert any(n for n in report.notes)
 
     def test_dominant_notes(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 1, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 2, "player_track_id": 8, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 3, "player_track_id": 9, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 4, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 5, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 6, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 1,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 2,
+                "player_track_id": 8,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 3,
+                "player_track_id": 9,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 4,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 5,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 6,
+                "player_track_id": 7,
+                "completed": True,
+            },
             {"type": "shot", "team": "home", "timestamp_s": 7, "player_track_id": 9},
         ]
         report = svc.analyze("home", "away", events)
@@ -160,10 +316,34 @@ class TestNotes:
 
     def test_long_chains_note(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 0, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 5, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 10, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 20, "player_track_id": 7, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 0,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 5,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 10,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 20,
+                "player_track_id": 7,
+                "completed": True,
+            },
         ]
         report = svc.analyze("home", "away", events)
         assert any("Long" in n or "patient" in n for n in report.notes)

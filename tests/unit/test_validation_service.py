@@ -1,21 +1,19 @@
-"""Tests for ValidationService - accuracy validation against ground truth.
-"""
+"""Tests for ValidationService - accuracy validation against ground truth."""
 
 from __future__ import annotations
 
-import pytest
-from pathlib import Path
-import tempfile
 import json
+import os
+import tempfile
+from pathlib import Path
 
+import pytest
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
 
-from kawkab.services.validation_service import (
-    ValidationService, EventGroundTruth, ValidationResult, ValidationReport
-)
 from kawkab.services.storage_service import StorageService
+from kawkab.services.validation_service import EventGroundTruth, ValidationResult, ValidationService
 
 
 class TestValidationService:
@@ -40,7 +38,9 @@ class TestValidationService:
         svc = ValidationService()
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "gt.csv"
-            path.write_text("event_type,timestamp,team,player_id\npass,45.2,home,7\nshot,120.5,away,\n")
+            path.write_text(
+                "event_type,timestamp,team,player_id\npass,45.2,home,7\nshot,120.5,away,\n"
+            )
             events = svc.load_ground_truth_events(path)
             assert len(events) == 2
             assert events[0].event_type == "pass"
@@ -116,24 +116,38 @@ class TestValidationService:
 
     @pytest.mark.asyncio
     async def test_save_validation_to_database(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = Path(tmpdir) / "test.db"
-            storage = StorageService()
-            storage._db_path = db_path
-            await storage.initialize()
+        old_url = os.environ.pop("KAWKAB_DB_URL", None)
+        try:
+            tmpdir_obj = tempfile.TemporaryDirectory()
+            try:
+                db_path = Path(tmpdir_obj.name) / "test.db"
+                storage = StorageService()
+                storage._db_path = db_path
+                await storage.initialize()
 
-            svc = ValidationService()
-            results = [
-                ValidationResult("events", "pass_f1", 0.8, 1.0, 0.2, 20.0, 0.8, 10),
-            ]
-            report = svc.build_report(1, "manual", results)
-            ids = await storage.save_validation_result(report)
-            assert len(ids) == 1
-            assert ids[0] > 0
+                # Insert a match first (FK constraint on validation_results)
+                conn = storage._conn
+                conn.execute(
+                    "INSERT INTO matches (id, name, video_path, home_team, away_team, match_date) VALUES (1, 'Test Match', 'test.mp4', 'Home', 'Away', '2025-01-01')"
+                )
+                conn.commit()
 
-            retrieved = await storage.get_validation_results(1)
-            assert len(retrieved) == 1
-            assert retrieved[0]["metric_name"] == "pass_f1"
-            assert retrieved[0]["accuracy_score"] == 0.8
+                svc = ValidationService()
+                results = [
+                    ValidationResult("events", "pass_f1", 0.8, 1.0, 0.2, 20.0, 0.8, 10),
+                ]
+                report = svc.build_report(1, "manual", results)
+                ids = await storage.save_validation_result(report)
+                assert len(ids) == 1
+                assert ids[0] > 0
 
-            await storage.close()
+                retrieved = await storage.get_validation_results(1)
+                assert len(retrieved) == 1
+                assert retrieved[0]["metric_name"] == "pass_f1"
+                assert retrieved[0]["computed_value"] == 0.8
+            finally:
+                await storage.close()
+                tmpdir_obj.cleanup()
+        finally:
+            if old_url is not None:
+                os.environ["KAWKAB_DB_URL"] = old_url

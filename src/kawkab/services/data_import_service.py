@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import csv
 import json
-import os
 from pathlib import Path
-from typing import Any
 
-from kawkab.core.events import event_from_dict
 from kawkab.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +30,7 @@ class DataImportService:
     def _import_csv(self, file_path: str, match_id: str) -> dict:
         events = []
         errors = []
-        with open(file_path, "r", encoding="utf-8-sig") as f:
+        with open(file_path, encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             for i, row in enumerate(reader):
                 try:
@@ -57,7 +54,7 @@ class DataImportService:
         }
 
     def _import_json(self, file_path: str, match_id: str) -> dict:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
 
         events = []
@@ -72,7 +69,7 @@ class DataImportService:
                 except Exception as e:
                     errors.append(f"Item {i + 1}: {e}")
         elif isinstance(data, dict):
-            raw_events = data.get("events", data.get("data", []))
+            raw_events = data.get("events", data.get("data", [])) or []
             for i, item in enumerate(raw_events):
                 try:
                     event = self._statsbomb_to_event(item, match_id)
@@ -102,7 +99,9 @@ class DataImportService:
             "type": event_type,
             "timestamp": float(row.get("timestamp", 0)),
             "team": row.get("team", "unknown"),
-            "from_track_id": int(row["from_track_id"]) if row.get("from_track_id", "").strip() else None,
+            "from_track_id": int(row["from_track_id"])
+            if row.get("from_track_id", "").strip()
+            else None,
             "to_track_id": int(row["to_track_id"]) if row.get("to_track_id", "").strip() else None,
             "player_name": row.get("player_name", ""),
             "completed": row.get("completed", "true").strip().lower() in ("true", "1", "yes"),
@@ -141,7 +140,9 @@ class DataImportService:
             "type": event_type,
             "timestamp": float(item.get("timestamp", 0)),
             "team": item.get("team", "unknown"),
-            "from_track_id": item.get("from_track_id") or item.get("player_id") or item.get("track_id"),
+            "from_track_id": item.get("from_track_id")
+            or item.get("player_id")
+            or item.get("track_id"),
             "to_track_id": item.get("to_track_id"),
             "player_name": item.get("player_name", ""),
             "completed": item.get("completed", True),
@@ -226,7 +227,9 @@ class DataImportService:
         xg = shot_info.get("statsbomb_xg") or None
 
         team_info = item.get("team") or {}
-        team_name = team_info.get("name") if isinstance(team_info, dict) else item.get("team", "unknown")
+        team_name = (
+            team_info.get("name") if isinstance(team_info, dict) else item.get("team", "unknown")
+        )
 
         player_info = item.get("player") or {}
         player_name = ""
@@ -264,7 +267,7 @@ class DataImportService:
         return event
 
     def detect_format(self, file_path: str) -> str:
-        with open(file_path, "r", encoding="utf-8-sig") as f:
+        with open(file_path, encoding="utf-8-sig") as f:
             first_chunk = f.read(4096)
 
         if not first_chunk.strip():

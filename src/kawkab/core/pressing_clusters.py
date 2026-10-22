@@ -7,12 +7,9 @@ opponent impact.
 
 from __future__ import annotations
 
-import math
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
-
-import numpy as np
 
 from kawkab.core.game_constants import GAME
 
@@ -59,7 +56,7 @@ def cluster_pressing_events(
 
     Args:
         events: List of event dicts with type, team, start_x, start_y.
-        player_tracks: Optional dict mapping track_id to list of (x, y, timestamp).  
+        player_tracks: Optional dict mapping track_id to list of (x, y, timestamp).
             Not currently used but included for API compatibility.
         grid_rows: Number of rows in the spatial grid.
         grid_cols: Number of columns in the spatial grid.
@@ -119,23 +116,28 @@ def cluster_pressing_events(
         if len(teams_in_zone) == 1:
             dominant_team = list(teams_in_zone)[0]
         elif len(teams_in_zone) > 1:
-            home_count = sum(1 for ev in events
-                             if ev.get("type") in PRESS_EVENT_TYPES
-                             and ev.get("team") == "home"
-                             and zone(ev.get("start_y", PITCH_WIDTH / 2), PITCH_WIDTH, grid_rows) == zy
-                             and zone(ev.get("start_x", 0.0), PITCH_LENGTH, grid_cols) == zx)
+            home_count = sum(
+                1
+                for ev in events
+                if ev.get("type") in PRESS_EVENT_TYPES
+                and ev.get("team") == "home"
+                and zone(ev.get("start_y", PITCH_WIDTH / 2), PITCH_WIDTH, grid_rows) == zy
+                and zone(ev.get("start_x", 0.0), PITCH_LENGTH, grid_cols) == zx
+            )
             away_count = count - home_count
             dominant_team = "home" if home_count >= away_count else "away"
 
-        clusters.append(PressingCluster(
-            zone=z,
-            center_x=round(center_x, 1),
-            center_y=round(center_y, 1),
-            intensity=round(intensity, 2),
-            event_count=count,
-            success_rate=round(success_rate, 3),
-            dominant_team=dominant_team,
-        ))
+        clusters.append(
+            PressingCluster(
+                zone=z,
+                center_x=round(center_x, 1),
+                center_y=round(center_y, 1),
+                intensity=round(intensity, 2),
+                event_count=count,
+                success_rate=round(success_rate, 3),
+                dominant_team=dominant_team,
+            )
+        )
 
     clusters.sort(key=lambda c: c.intensity, reverse=True)
     return clusters

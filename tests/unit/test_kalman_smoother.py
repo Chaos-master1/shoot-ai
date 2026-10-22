@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
-
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
@@ -121,12 +119,6 @@ class TestPredictOnly:
         smoother.predict_only(1.0)
         x1, y1 = smoother.get_position()
         assert x1 >= x0  # velocity carries position forward
-
-    def test_predict_only_before_init_does_nothing(self):
-        smoother = PlayerPositionSmoother()
-        smoother.predict_only(0.04)
-        assert smoother.initialized is False
-        assert smoother.get_position() == (0.0, 0.0)
 
     def test_predict_only_before_init_does_nothing(self):
         smoother = PlayerPositionSmoother()

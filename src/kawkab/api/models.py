@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -15,8 +12,16 @@ class MatchOut(BaseModel):
     home_team: str | None = None
     away_team: str | None = None
     duration: float = 0.0
-    fps: float = 0.0
-    total_frames: int = 0
+    # fps/total_frames are only populated once a match has actually been
+    # through the analysis pipeline (save_match() doesn't set them at
+    # creation) -- a non-Optional type with a numeric default doesn't
+    # help once the DB value is explicitly NULL: Pydantic v2 only applies
+    # a field's default when the key is *absent*, not when it's present
+    # as None, so GET /api/v1/matches/{id} raised a 500 on any match
+    # that existed but hadn't been analyzed yet. None now means "not
+    # analyzed yet", not a fabricated 0.
+    fps: float | None = None
+    total_frames: int | None = None
     created_at: str = ""
 
 

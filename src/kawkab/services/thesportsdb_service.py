@@ -94,11 +94,13 @@ class TheSportsDBService:
         self._cache: dict[str, tuple[float, Any]] = {}
         self._available = False
 
-    async def _ensure_client(self) -> None:
+    def _ensure_client(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(
-                base_url=f"{BASE_URL}/{self.api_key}", timeout=15.0
-            )
+            self._client = httpx.AsyncClient(base_url=f"{BASE_URL}/{self.api_key}", timeout=15.0)
+        assert (
+            self._client is not None
+        )  # narrowed for mypy (https://github.com/python/mypy/issues/11011)
+        return self._client
 
     def _cache_get(self, key: str) -> Any | None:
         if key in self._cache:
@@ -111,17 +113,25 @@ class TheSportsDBService:
     def _cache_set(self, key: str, data: Any, ttl: int) -> None:
         self._cache[key] = (time.monotonic() + ttl, data)
 
-    async def _get(self, path: str, ttl: int = CACHE_TTL_SHORT) -> dict | list | None:
+    async def _get(self, path: str, ttl: int = CACHE_TTL_SHORT) -> dict[str, Any] | None:
+        """Fetch a TheSportsDB v1 endpoint (JSON object) with caching.
+
+        The v1 API always returns a JSON object keyed by result-set name
+        ("teams", "events", ...); a list return was never real, and the
+        ``| list`` union previously poisoned every ``data["teams"]`` site
+        with a spurious list-indexing error.
+        """
         cache_key = f"tsdb:{path}"
         cached = self._cache_get(cache_key)
         if cached is not None:
-            return cached
+            result: dict[str, Any] = cached
+            return result
 
-        await self._ensure_client()
+        client = self._ensure_client()
         try:
-            r = await self._client.get(path)
+            r = await client.get(path)
             if r.status_code == 200:
-                data = r.json()
+                data: dict[str, Any] = r.json()
                 self._cache_set(cache_key, data, ttl)
                 self._available = True
                 return data
@@ -159,21 +169,23 @@ class TheSportsDBService:
         for t in teams:
             if not isinstance(t, dict):
                 continue
-            results.append(TeamResult(
-                id=str(t.get("idTeam", "")),
-                name=str(t.get("strTeam", "")),
-                alternate_name=str(t.get("strTeamAlternate", "")),
-                league_id=str(t.get("idLeague", "")),
-                league_name=str(t.get("strLeague", "")),
-                badge_url=str(t.get("strBadge", "") or t.get("strTeamBadge", "")),
-                formed_year=str(t.get("intFormedYear", "")),
-                stadium=str(t.get("strStadium", "")),
-                stadium_capacity=str(t.get("intStadiumCapacity", "")),
-                location=str(t.get("strLocation", "")),
-                description=str(t.get("strDescriptionEN", "")),
-                api_football_id=str(t.get("idAPIfootball", "")),
-                raw=t,
-            ))
+            results.append(
+                TeamResult(
+                    id=str(t.get("idTeam", "")),
+                    name=str(t.get("strTeam", "")),
+                    alternate_name=str(t.get("strTeamAlternate", "")),
+                    league_id=str(t.get("idLeague", "")),
+                    league_name=str(t.get("strLeague", "")),
+                    badge_url=str(t.get("strBadge", "") or t.get("strTeamBadge", "")),
+                    formed_year=str(t.get("intFormedYear", "")),
+                    stadium=str(t.get("strStadium", "")),
+                    stadium_capacity=str(t.get("intStadiumCapacity", "")),
+                    location=str(t.get("strLocation", "")),
+                    description=str(t.get("strDescriptionEN", "")),
+                    api_football_id=str(t.get("idAPIfootball", "")),
+                    raw=t,
+                )
+            )
         return results
 
     async def get_team(self, team_id: str) -> TeamResult | None:
@@ -208,7 +220,8 @@ class TheSportsDBService:
         """Get league info by ID."""
         data = await self._get(f"lookupleague.php?id={league_id}", ttl=CACHE_TTL_LONG)
         if data and "leagues" in data and data["leagues"]:
-            return data["leagues"][0]
+            league: dict = data["leagues"][0]
+            return league
         return None
 
     # ------------------------------------------------------------------
@@ -232,23 +245,25 @@ class TheSportsDBService:
         for e in entries:
             if not isinstance(e, dict):
                 continue
-            results.append(StandingEntry(
-                rank=int(e.get("intRank", 0)),
-                team_id=str(e.get("idTeam", "")),
-                team_name=str(e.get("strTeam", "")),
-                badge_url=str(e.get("strBadge", "")),
-                played=int(e.get("intPlayed", 0)),
-                won=int(e.get("intWin", 0)),
-                drawn=int(e.get("intDraw", 0)),
-                lost=int(e.get("intLoss", 0)),
-                goals_for=int(e.get("intGoalsFor", 0)),
-                goals_against=int(e.get("intGoalsAgainst", 0)),
-                goal_diff=int(e.get("intGoalDifference", 0)),
-                points=int(e.get("intPoints", 0)),
-                form=str(e.get("strForm", "")),
-                description=str(e.get("strDescription", "")),
-                raw=e,
-            ))
+            results.append(
+                StandingEntry(
+                    rank=int(e.get("intRank", 0)),
+                    team_id=str(e.get("idTeam", "")),
+                    team_name=str(e.get("strTeam", "")),
+                    badge_url=str(e.get("strBadge", "")),
+                    played=int(e.get("intPlayed", 0)),
+                    won=int(e.get("intWin", 0)),
+                    drawn=int(e.get("intDraw", 0)),
+                    lost=int(e.get("intLoss", 0)),
+                    goals_for=int(e.get("intGoalsFor", 0)),
+                    goals_against=int(e.get("intGoalsAgainst", 0)),
+                    goal_diff=int(e.get("intGoalDifference", 0)),
+                    points=int(e.get("intPoints", 0)),
+                    form=str(e.get("strForm", "")),
+                    description=str(e.get("strDescription", "")),
+                    raw=e,
+                )
+            )
         return results
 
     # ------------------------------------------------------------------
@@ -269,7 +284,9 @@ class TheSportsDBService:
             return []
         return self._parse_events(data["events"])
 
-    async def get_round_events(self, league_id: str, season: str, round_num: str) -> list[EventResult]:
+    async def get_round_events(
+        self, league_id: str, season: str, round_num: str
+    ) -> list[EventResult]:
         """Get all events for a specific round."""
         data = await self._get(
             f"eventsround.php?id={league_id}&s={season}&r={round_num}",
@@ -294,24 +311,30 @@ class TheSportsDBService:
                 continue
             home_score = e.get("intHomeScore")
             away_score = e.get("intAwayScore")
-            results.append(EventResult(
-                id=str(e.get("idEvent", "")),
-                event_name=str(e.get("strEvent", "")),
-                home_team=str(e.get("strHomeTeam", "")),
-                away_team=str(e.get("strAwayTeam", "")),
-                home_team_id=str(e.get("idHomeTeam", "")),
-                away_team_id=str(e.get("idAwayTeam", "")),
-                home_score=int(home_score) if home_score and home_score != "0" else (int(home_score) if home_score else None),
-                away_score=int(away_score) if away_score and away_score != "0" else (int(away_score) if away_score else None),
-                round=str(e.get("intRound", "")),
-                season=str(e.get("strSeason", "")),
-                date=str(e.get("dateEvent", "")),
-                time=str(e.get("strTime", "")),
-                league_id=str(e.get("idLeague", "")),
-                league_name=str(e.get("strLeague", "")),
-                status=str(e.get("strStatus", "scheduled")),
-                raw=e,
-            ))
+            results.append(
+                EventResult(
+                    id=str(e.get("idEvent", "")),
+                    event_name=str(e.get("strEvent", "")),
+                    home_team=str(e.get("strHomeTeam", "")),
+                    away_team=str(e.get("strAwayTeam", "")),
+                    home_team_id=str(e.get("idHomeTeam", "")),
+                    away_team_id=str(e.get("idAwayTeam", "")),
+                    home_score=int(home_score)
+                    if home_score and home_score != "0"
+                    else (int(home_score) if home_score else None),
+                    away_score=int(away_score)
+                    if away_score and away_score != "0"
+                    else (int(away_score) if away_score else None),
+                    round=str(e.get("intRound", "")),
+                    season=str(e.get("strSeason", "")),
+                    date=str(e.get("dateEvent", "")),
+                    time=str(e.get("strTime", "")),
+                    league_id=str(e.get("idLeague", "")),
+                    league_name=str(e.get("strLeague", "")),
+                    status=str(e.get("strStatus", "scheduled")),
+                    raw=e,
+                )
+            )
         return results
 
     # ------------------------------------------------------------------
@@ -322,7 +345,8 @@ class TheSportsDBService:
         """Get venue info by ID."""
         data = await self._get(f"lookupvenue.php?id={venue_id}", ttl=CACHE_TTL_LONG)
         if data and "venues" in data and data["venues"]:
-            return data["venues"][0]
+            venue: dict = data["venues"][0]
+            return venue
         return None
 
     # ------------------------------------------------------------------
@@ -333,5 +357,6 @@ class TheSportsDBService:
         """Get all leagues (returns only id + name + sport)."""
         data = await self._get("all_leagues.php", ttl=CACHE_TTL_LONG)
         if data and "leagues" in data and data["leagues"]:
-            return data["leagues"]
+            leagues: list[dict] = data["leagues"]
+            return leagues
         return []

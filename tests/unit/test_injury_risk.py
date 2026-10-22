@@ -33,8 +33,12 @@ class TestPredictInjuryRisk:
     def test_low_risk_profile(self):
         irp = InjuryRiskPredictor()
         profile = {
-            "acwr": 1.0, "recent_sprint_count": 5, "recent_distance_km": 3.0,
-            "fatigue_index": 2.0, "position": "GK", "days_since_last_rest": 1,
+            "acwr": 1.0,
+            "recent_sprint_count": 5,
+            "recent_distance_km": 3.0,
+            "fatigue_index": 2.0,
+            "position": "GK",
+            "days_since_last_rest": 1,
         }
         result = irp.predict_injury_risk(profile)
         assert result["risk_score"] < 0.4
@@ -43,8 +47,12 @@ class TestPredictInjuryRisk:
     def test_high_risk_profile(self):
         irp = InjuryRiskPredictor()
         profile = {
-            "acwr": 1.6, "recent_sprint_count": 30, "recent_distance_km": 12.0,
-            "fatigue_index": 25.0, "position": "MID", "days_since_last_rest": 15,
+            "acwr": 1.6,
+            "recent_sprint_count": 30,
+            "recent_distance_km": 12.0,
+            "fatigue_index": 25.0,
+            "position": "MID",
+            "days_since_last_rest": 15,
         }
         result = irp.predict_injury_risk(profile)
         assert result["risk_score"] >= 0.4
@@ -53,16 +61,26 @@ class TestPredictInjuryRisk:
     def test_risk_factors_populated(self):
         irp = InjuryRiskPredictor()
         profile = {
-            "acwr": 1.6, "recent_sprint_count": 28, "recent_distance_km": 10.0,
-            "fatigue_index": 20.0, "position": "FWD", "days_since_last_rest": 12,
+            "acwr": 1.6,
+            "recent_sprint_count": 28,
+            "recent_distance_km": 10.0,
+            "fatigue_index": 20.0,
+            "position": "FWD",
+            "days_since_last_rest": 12,
         }
         result = irp.predict_injury_risk(profile)
         assert len(result["key_risk_factors"]) > 0
 
     def test_minimal_profile(self):
         irp = InjuryRiskPredictor()
-        profile = {"acwr": 1.0, "recent_sprint_count": 0, "recent_distance_km": 0,
-                   "fatigue_index": 0, "position": "DEF", "days_since_last_rest": 1}
+        profile = {
+            "acwr": 1.0,
+            "recent_sprint_count": 0,
+            "recent_distance_km": 0,
+            "fatigue_index": 0,
+            "position": "DEF",
+            "days_since_last_rest": 1,
+        }
         result = irp.predict_injury_risk(profile)
         assert 0 <= result["risk_score"] <= 1
 

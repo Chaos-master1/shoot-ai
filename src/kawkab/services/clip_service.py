@@ -7,7 +7,6 @@ Uses FFmpeg for fast, lossless extraction.
 from __future__ import annotations
 
 import asyncio
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -74,15 +73,24 @@ class ClipExtractionService:
         cmd = [
             "ffmpeg",
             "-y",
-            "-ss", f"{start_time:.2f}",
-            "-i", str(video_path),
-            "-t", f"{duration:.2f}",
-            "-c:v", "libx264",
-            "-crf", str(crf),
-            "-preset", preset,
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-movflags", "+faststart",
+            "-ss",
+            f"{start_time:.2f}",
+            "-i",
+            str(video_path),
+            "-t",
+            f"{duration:.2f}",
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(crf),
+            "-preset",
+            preset,
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
             str(output_path),
         ]
 
@@ -123,23 +131,25 @@ class ClipExtractionService:
         for i, ts in enumerate(timestamps):
             start = ts.get("start", 0)
             end = ts.get("end", start + 5)
-            desc = ts.get("description", f"Evidence clip {i+1}")
+            desc = ts.get("description", f"Evidence clip {i + 1}")
 
             clip_path = await self.extract_clip(
                 video_path=video_path,
                 start_time=start,
                 end_time=end,
-                output_name=f"evidence_{i+1}_{start:.0f}s.mp4",
+                output_name=f"evidence_{i + 1}_{start:.0f}s.mp4",
                 quality="medium",
             )
             if clip_path:
-                results.append({
-                    "start": start,
-                    "end": end,
-                    "description": desc,
-                    "path": str(clip_path),
-                    "filename": clip_path.name,
-                })
+                results.append(
+                    {
+                        "start": start,
+                        "end": end,
+                        "description": desc,
+                        "path": str(clip_path),
+                        "filename": clip_path.name,
+                    }
+                )
         return results
 
     async def extract_event_clips(
@@ -167,16 +177,18 @@ class ClipExtractionService:
                 video_path=video_path,
                 start_time=ts - context_seconds,
                 end_time=ts + context_seconds,
-                output_name=f"event_{i+1}_{event_type}_{ts:.0f}s.mp4",
+                output_name=f"event_{i + 1}_{event_type}_{ts:.0f}s.mp4",
                 quality="medium",
             )
             if clip_path:
-                results.append({
-                    "event_index": i,
-                    "event_type": event_type,
-                    "team": team,
-                    "timestamp": ts,
-                    "clip_path": str(clip_path),
-                    "filename": clip_path.name,
-                })
+                results.append(
+                    {
+                        "event_index": i,
+                        "event_type": event_type,
+                        "team": team,
+                        "timestamp": ts,
+                        "clip_path": str(clip_path),
+                        "filename": clip_path.name,
+                    }
+                )
         return results

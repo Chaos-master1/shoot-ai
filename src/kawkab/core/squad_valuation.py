@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from typing import Any
-
 
 POSITION_BASELINES: dict[str, float] = {
     "gk": 5.0,
@@ -203,11 +200,24 @@ def estimate_player_transfer_fee(
     intl_premium = 1.2 if is_international else 1.0
     injury_discount = {"low": 1.0, "moderate": 0.8, "high": 0.5}.get(injury_history, 1.0)
 
-    raw = baseline * age_factor * (1.0 + perf / 150.0) * contract_factor * league_factor * trend_mult * intl_premium * injury_discount
+    raw = (
+        baseline
+        * age_factor
+        * (1.0 + perf / 150.0)
+        * contract_factor
+        * league_factor
+        * trend_mult
+        * intl_premium
+        * injury_discount
+    )
     estimated = round(raw, 2)
 
     minutes = performance_stats.get("minutes_played", 0)
-    if minutes >= 1500 and contract_years_remaining >= 2 and league_tier in ("premier_league", "la_liga", "bundesliga"):
+    if (
+        minutes >= 1500
+        and contract_years_remaining >= 2
+        and league_tier in ("premier_league", "la_liga", "bundesliga")
+    ):
         confidence = "high"
     elif minutes >= 500:
         confidence = "medium"
@@ -225,7 +235,11 @@ def estimate_player_transfer_fee(
         "international_premium": intl_premium,
         "injury_discount": injury_discount,
         "confidence": confidence,
-        "fee_range": {"low": round(estimated * 0.6, 2), "mid": round(estimated * 0.85, 2), "high": round(estimated * 1.2, 2)},
+        "fee_range": {
+            "low": round(estimated * 0.6, 2),
+            "mid": round(estimated * 0.85, 2),
+            "high": round(estimated * 1.2, 2),
+        },
     }
 
 
@@ -246,7 +260,9 @@ def estimate_player_value(
 
     raw = baseline * age_mult * (1.0 + perf / 200.0) * contract_mult * league_mult
     estimated = round(raw, 2)
-    conf = _confidence_label(perf, performance_stats.get("minutes_played", 0), contract_years_remaining)
+    conf = _confidence_label(
+        perf, performance_stats.get("minutes_played", 0), contract_years_remaining
+    )
 
     return PlayerValuation(
         player_id=player_id,
@@ -301,8 +317,10 @@ def estimate_squad_value(
         else:
             age_dist["veteran"] += 1
 
-    avg_perf = sum(v.performance_score for v in valuations) / len(valuations) if valuations else 0
-    total_baseline = sum(v.position_baseline * v.age_multiplier * _league_multiplier(league_tier) for v in valuations)
+    _ = sum(v.performance_score for v in valuations) / len(valuations) if valuations else 0
+    total_baseline = sum(
+        v.position_baseline * v.age_multiplier * _league_multiplier(league_tier) for v in valuations
+    )
     value_ratio = total / total_baseline if total_baseline > 0 else 1.0
 
     if value_ratio < 0.8:

@@ -1,6 +1,7 @@
 """Tests for pressing efficiency module."""
 
 import pytest
+
 from kawkab.core.pressing_efficiency import PressingEfficiencyAnalyzer
 
 
@@ -15,7 +16,15 @@ class TestPressingEfficiency:
         """Basic detection: 1 trap, followed by a shot."""
         events = [
             {"type": "tackle", "team": "home", "timestamp": 10.0, "x": 70, "y": 34},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.2, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.2,
+                "is_goal": False,
+            },
         ]
         pea = PressingEfficiencyAnalyzer()
         result = pea.compute_trap_to_shot_rate(events)
@@ -27,7 +36,15 @@ class TestPressingEfficiency:
         """1 trap followed by a goal."""
         events = [
             {"type": "interception", "team": "home", "timestamp": 10.0, "x": 70, "y": 34},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.4, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.4,
+                "is_goal": True,
+            },
         ]
         pea = PressingEfficiencyAnalyzer()
         result = pea.compute_trap_to_goal_rate(events)
@@ -88,8 +105,20 @@ class TestPressingEfficiency:
         """Multiple traps, all leading to shots."""
         events = []
         for i in range(3):
-            events.append({"type": "tackle", "team": "home", "timestamp": float(10 + i * 5), "x": 70, "y": 34})
-            events.append({"type": "shot", "team": "home", "timestamp": float(12 + i * 5), "x": 95, "y": 34, "xg": 0.1, "is_goal": False})
+            events.append(
+                {"type": "tackle", "team": "home", "timestamp": float(10 + i * 5), "x": 70, "y": 34}
+            )
+            events.append(
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "timestamp": float(12 + i * 5),
+                    "x": 95,
+                    "y": 34,
+                    "xg": 0.1,
+                    "is_goal": False,
+                }
+            )
         pea = PressingEfficiencyAnalyzer()
         result = pea.compute_trap_to_shot_rate(events)
         assert result["home"]["traps"] == 3
@@ -113,11 +142,27 @@ class TestPressingEfficiency:
         """Mixed: some traps produce shots, some don't."""
         events = [
             {"type": "tackle", "team": "home", "timestamp": 10.0, "x": 70, "y": 34},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.1, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.1,
+                "is_goal": False,
+            },
             {"type": "foul", "team": "home", "timestamp": 20.0, "x": 75, "y": 34},
             {"type": "pass", "team": "home", "timestamp": 22.0, "x": 60, "y": 34},
             {"type": "tackle", "team": "home", "timestamp": 30.0, "x": 65, "y": 34},
-            {"type": "shot", "team": "home", "timestamp": 32.0, "x": 90, "y": 34, "xg": 0.2, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 32.0,
+                "x": 90,
+                "y": 34,
+                "xg": 0.2,
+                "is_goal": True,
+            },
         ]
         pea = PressingEfficiencyAnalyzer()
         result = pea.compute_trap_to_shot_rate(events)
@@ -128,9 +173,18 @@ class TestPressingEfficiency:
     def test_with_real_pressing_traps_module_import(self):
         """Import the real pressing_traps module alongside this one."""
         from kawkab.core.pressing_traps import detect_pressing_traps
+
         events = [
             {"type": "tackle", "team": "home", "timestamp": 10.0, "x": 80, "y": 34},
-            {"type": "shot", "team": "home", "timestamp": 12.0, "x": 95, "y": 34, "xg": 0.3, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 12.0,
+                "x": 95,
+                "y": 34,
+                "xg": 0.3,
+                "is_goal": True,
+            },
         ]
         report = detect_pressing_traps(events, "home")
         assert report is not None
@@ -160,7 +214,15 @@ class TestPressingEfficiencyAway:
     def test_away_team_efficiency(self):
         events = [
             {"type": "tackle", "team": "away", "timestamp": 10.0, "x": 70, "y": 34},
-            {"type": "shot", "team": "away", "timestamp": 12.0, "x": 5, "y": 34, "xg": 0.2, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "away",
+                "timestamp": 12.0,
+                "x": 5,
+                "y": 34,
+                "xg": 0.2,
+                "is_goal": True,
+            },
         ]
         pea = PressingEfficiencyAnalyzer()
         ts = pea.compute_trap_to_shot_rate(events)

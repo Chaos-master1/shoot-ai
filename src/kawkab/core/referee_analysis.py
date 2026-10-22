@@ -6,7 +6,6 @@ inconsistency scores, and a match-level foul heatmap.
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
@@ -21,7 +20,9 @@ class RefereeProfile:
     home_team_advantage: float = 1.0
     most_common_foul_types: list[dict] = field(default_factory=list)
     penalty_rate: float = 0.0
-    card_timing_distribution: dict = field(default_factory=lambda: {"first_half": 0, "second_half": 0})
+    card_timing_distribution: dict = field(
+        default_factory=lambda: {"first_half": 0, "second_half": 0}
+    )
     inconsistency_score: float = 0.0
     trend: str = "stable"
 
@@ -65,7 +66,9 @@ class RefereeAnalysisReport:
         if self.bias_indicators:
             lines.append("Bias indicators:")
             for b in self.bias_indicators[:3]:
-                lines.append(f"  - {b['metric']}: home={b['home_value']}, away={b['away_value']} (diff={b['difference']})")
+                lines.append(
+                    f"  - {b['metric']}: home={b['home_value']}, away={b['away_value']} (diff={b['difference']})"
+                )
         return "\n".join(lines)
 
 
@@ -108,8 +111,16 @@ def analyze_referee(
         total_minutes += match_minutes
         n_fouls = len(foul_events)
         total_fouls += n_fouls
-        n_yellows = sum(1 for c in card_events if c.get("type", c.get("card_type", "")) in ("yellow", "yellow_card"))
-        n_reds = sum(1 for c in card_events if c.get("type", c.get("card_type", "")) in ("red", "red_card", "straight_red"))
+        n_yellows = sum(
+            1
+            for c in card_events
+            if c.get("type", c.get("card_type", "")) in ("yellow", "yellow_card")
+        )
+        n_reds = sum(
+            1
+            for c in card_events
+            if c.get("type", c.get("card_type", "")) in ("red", "red_card", "straight_red")
+        )
         total_yellows += n_yellows
         total_reds += n_reds
         per_match_cards.append(n_yellows + n_reds)
@@ -118,7 +129,12 @@ def analyze_referee(
             foul_type = foul.get("type", foul.get("foul_type", "unknown"))
             foul_type_counts[foul_type] += 1
 
-            zone_key = _zone_from_position(foul.get("x", pitch_width / 2), foul.get("y", pitch_length / 2), pitch_length, pitch_width)
+            zone_key = _zone_from_position(
+                foul.get("x", pitch_width / 2),
+                foul.get("y", pitch_length / 2),
+                pitch_length,
+                pitch_width,
+            )
             foul_heatmap[zone_key] += 1
 
             team = foul.get("team", "")
@@ -148,24 +164,32 @@ def analyze_referee(
                 foul_outcome_data[associated_foul]["card_count"] += 1
                 foul_outcome_data[associated_foul]["card_types"][card_type] += 1
 
-        penalties = sum(1 for ev in match.get("events", []) if ev.get("type") in ("penalty", "penalty_awarded"))
+        penalties = sum(
+            1 for ev in match.get("events", []) if ev.get("type") in ("penalty", "penalty_awarded")
+        )
         total_penalties += penalties
 
     n_matches = len(matches_data)
     total_hours = total_minutes / 90.0
 
-    home_team_advantage = (home_fouls / max(away_fouls, 1))
+    home_team_advantage = home_fouls / max(away_fouls, 1)
 
     foul_type_list = sorted(
-        [{"type": ft, "count": c, "pct": round(100 * c / max(total_fouls, 1), 1)} for ft, c in foul_type_counts.items()],
-        key=lambda x: x["count"], reverse=True,
+        [
+            {"type": ft, "count": c, "pct": round(100 * c / max(total_fouls, 1), 1)}
+            for ft, c in foul_type_counts.items()
+        ],
+        key=lambda x: int(str(x["count"])),
+        reverse=True,
     )
 
     inconsistency_score = 0.0
     if len(per_match_cards) >= 3:
         mean_cards = sum(per_match_cards) / len(per_match_cards)
         variance = sum((c - mean_cards) ** 2 for c in per_match_cards) / len(per_match_cards)
-        max_possible_var = mean_cards * (max(per_match_cards) - mean_cards) if max(per_match_cards) > 0 else 1
+        max_possible_var = (
+            mean_cards * (max(per_match_cards) - mean_cards) if max(per_match_cards) > 0 else 1
+        )
         inconsistency_score = min(1.0, variance / max(max_possible_var, 1))
 
     trend = "stable"

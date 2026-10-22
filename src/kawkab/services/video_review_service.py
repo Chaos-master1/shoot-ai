@@ -16,13 +16,13 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class AnnotationKind(str, Enum):
+class AnnotationKind(StrEnum):
     """Type of in-frame annotation."""
 
     ARROW = "arrow"
@@ -32,7 +32,7 @@ class AnnotationKind(str, Enum):
     TEXT = "text"
 
 
-class ClipTag(str, Enum):
+class ClipTag(StrEnum):
     """Predefined clip tags (free-form strings also allowed)."""
 
     BUILD_UP = "build_up"

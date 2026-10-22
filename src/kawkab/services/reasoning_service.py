@@ -10,14 +10,14 @@ This is the "Detective" layer of Kawkab AI. It:
 
 from __future__ import annotations
 
-import asyncio
-import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from kawkab.core.logging import get_logger
-from kawkab.services.knowledge_service import KnowledgeService, TacticalRule, Drill
-from kawkab.services.analysis_service import MatchAnalysis
+from kawkab.services.analysis_service import MatchAnalysis, TeamStats
+from kawkab.services.knowledge_service import KnowledgeService, TacticalRule
+from kawkab.services.reasoning import checkers as _checkers
+from kawkab.services.reasoning.metrics import evaluate_hypothesis, precompute_event_stats
 
 logger = get_logger(__name__)
 
@@ -37,6 +37,19 @@ class Diagnosis:
     explanation_ar: str
     recommended_drills: list[str] = field(default_factory=list)
     video_timestamps: list[dict] = field(default_factory=list)
+    # Hypothesis-level provenance (Phase B): each entry records what the
+    # rule's hypotheses required, what was observed, whether criteria
+    # were met, and whether that earned a confidence boost. See
+    # reasoning.metrics.evaluate_hypothesis.
+    hypothesis_evaluation: list[dict[str, Any]] = field(default_factory=list)
+    # Pattern type that produced this diagnosis (provenance).
+    pattern_type: str = ""
+    # How many distinct matches contributed the events behind this
+    # diagnosis (multi-match mode).
+    match_count: int = 1
+    # Confidence tier: "confirmed" only when the rule's min_matches
+    # threshold is met by real distinct-match evidence.
+    confirmation: str = "provisional"
 
 
 @dataclass
@@ -50,6 +63,10 @@ class DiagnosisReport:
     priority_actions: list[str]
     priority_actions_ar: list[str]
     confidence: float
+    # Multi-match provenance: distinct match ids pooled, and whether the
+    # report was produced in multi-match mode.
+    match_ids: list[int] = field(default_factory=list)
+    multi_match: bool = False
 
 
 class ReasoningService:
@@ -76,6 +93,7 @@ class ReasoningService:
         analysis: MatchAnalysis,
         events: list[dict] | None = None,
         language: str = "en",
+        match_ids: list[int] | None = None,
     ) -> DiagnosisReport:
         """Run full tactical diagnosis on match analysis.
 
@@ -83,37 +101,137 @@ class ReasoningService:
             analysis: Output from AnalysisService.analyze_match
             events: Optional list of events (uses analysis.events if None)
             language: "en" or "ar" for explanations
+            match_ids: Distinct match ids contributing events. More than
+                one id switches to multi-match mode (see diagnose_matches).
 
         Returns:
             DiagnosisReport with ranked diagnoses and recommendations
         """
+        ids = match_ids if match_ids is not None else [analysis.match_id]
+        return await self._diagnose(
+            [analysis],
+            events if events is not None else analysis.events,
+            language,
+            ids,
+        )
+
+    async def diagnose_matches(
+        self,
+        analyses: list[MatchAnalysis],
+        language: str = "en",
+        match_ids: list[int] | None = None,
+    ) -> DiagnosisReport:
+        """Multi-match diagnosis: pool events across distinct matches.
+
+        The knowledge-base rules declare ``min_matches`` thresholds
+        (all 40 rule files set 3). Pooling several matches raises the
+        evidence base and flips diagnoses from "provisional" to
+        "confirmed" once a rule's threshold is met. Diagnoses are
+        always labeled with how many matches contributed.
+        """
+        if not analyses:
+            raise ValueError("diagnose_matches requires at least one analysis")
+        ids = match_ids if match_ids is not None else [a.match_id for a in analyses]
+        pooled_events: list[dict] = []
+        for a in analyses:
+            pooled_events.extend(a.events or [])
+        return await self._diagnose(
+            [self._aggregate_analyses(analyses)], pooled_events, language, ids
+        )
+
+    @staticmethod
+    def _aggregate_analyses(analyses: list[MatchAnalysis]) -> MatchAnalysis:
+        """Merge several match analyses into one pooled analysis.
+
+        Numeric team stats are summed; possession is averaged; events
+        are concatenated by the caller. First non-empty formation wins
+        (formation snapshots are per-match observations, not additive).
+        """
+        if len(analyses) == 1:
+            return analyses[0]
+        base = analyses[0]
+        home = TeamStats(team_name=base.home_team.team_name)
+        away = TeamStats(team_name=base.away_team.team_name)
+        for a in analyses:
+            for tgt, src in ((home, a.home_team), (away, a.away_team)):
+                tgt.possession_pct += src.possession_pct
+                tgt.passes_attempted += src.passes_attempted
+                tgt.passes_completed += src.passes_completed
+                tgt.shots += src.shots
+                tgt.shots_on_target += src.shots_on_target
+                tgt.tackles += src.tackles
+                tgt.corners += src.corners
+                tgt.fouls += src.fouls
+        n = len(analyses)
+        home.possession_pct /= n
+        away.possession_pct /= n
+        formations: dict[Any, Any] = next((a.formations for a in analyses if a.formations), {})
+        players: dict[Any, Any] = {}
+        for a in analyses:
+            players.update(a.players or {})
+        return MatchAnalysis(
+            match_id=base.match_id,
+            duration_seconds=max(a.duration_seconds or 0.0 for a in analyses),
+            home_team=home,
+            away_team=away,
+            players=players,
+            events=[],
+            formations=formations,
+        )
+
+    async def _diagnose(
+        self,
+        analyses: list[MatchAnalysis],
+        events: list[dict],
+        language: str,
+        match_ids: list[int],
+    ) -> DiagnosisReport:
+        """Shared diagnosis pipeline for single- and multi-match mode."""
         await self.initialize()
 
-        events = events or analysis.events
+        analysis = analyses[0]
+        match_count = max(1, len(set(match_ids)))
+        multi_match = match_count > 1
 
         logger.info(
-            f"Diagnosing match {analysis.match_id}: "
+            f"Diagnosing match {analysis.match_id} ({match_count} match(es)): "
             f"{len(events)} events, "
             f"possession {analysis.home_team.possession_pct:.1f}%/{analysis.away_team.possession_pct:.1f}%"
         )
 
-        event_stats = self._precompute_event_stats(events)
+        event_stats = precompute_event_stats(events)
 
         diagnoses = []
+        unmatched_patterns: list[str] = []
         all_rules = self.kb.get_all_rules()
 
         for rule in all_rules:
-            diagnosis = await self._test_rule(rule, analysis, event_stats)
-            if diagnosis and diagnosis.confidence > 0.3:
+            diagnosis = await self._test_rule(rule, analysis, event_stats, match_count)
+            if diagnosis is None:
+                sig_type = str(rule.pattern_signature.get("type", ""))
+                if sig_type and sig_type not in self._dispatch_map():
+                    unmatched_patterns.append(sig_type)
+                continue
+            if diagnosis.confidence > 0.3:
                 diagnoses.append(diagnosis)
+            elif diagnosis.pattern_type not in self._dispatch_map():
+                unmatched_patterns.append(diagnosis.pattern_type)
+
+        if unmatched_patterns:
+            # Honesty: a rule whose pattern has no checker can never
+            # fire. Surface that fact in the log (and via the report's
+            # metadata) instead of silently ignoring the rule file.
+            logger.warning(
+                f"{len(set(unmatched_patterns))} KB pattern type(s) have no "
+                f"checker implemented: {sorted(set(unmatched_patterns))[:10]}"
+            )
 
         diagnoses.sort(key=lambda d: d.confidence, reverse=True)
 
         priority_actions = self._build_priority_actions(diagnoses, language)
         overall = self._build_overall_assessment(diagnoses, analysis, language)
         overall_conf = (
-            sum(d.confidence for d in diagnoses[:5]) / min(5, len(diagnoses))
-            if diagnoses else 0.0
+            sum(d.confidence for d in diagnoses[:5]) / min(5, len(diagnoses)) if diagnoses else 0.0
         )
 
         logger.info(
@@ -129,11 +247,13 @@ class ReasoningService:
             priority_actions=priority_actions["en"],
             priority_actions_ar=priority_actions["ar"],
             confidence=overall_conf,
+            match_ids=list(dict.fromkeys(match_ids)),
+            multi_match=multi_match,
         )
 
     def _precompute_event_stats(self, events: list[dict]) -> dict:
         """Single-pass event analysis for all check methods."""
-        stats = {
+        stats: dict[str, Any] = {
             "goals": [],
             "turnovers": [],
             "shots": [],
@@ -167,7 +287,7 @@ class ReasoningService:
             etype = ev.get("type", "")
             zone = ev.get("zone", "")
             timestamp = ev.get("timestamp", 0)
-            team = ev.get("team", "")
+            _ = ev.get("team", "")
             situation = ev.get("situation", "")
             outcome = ev.get("outcome", "")
 
@@ -209,50 +329,143 @@ class ReasoningService:
 
         return stats
 
+    def _run_checker(
+        self,
+        rule: TacticalRule,
+        analysis: MatchAnalysis,
+        event_stats: dict,
+        match_count: int = 1,
+    ) -> tuple[float, dict] | None:
+        """Run a rule's pattern checker and return its raw observation.
+
+        This is the *observation* half of ``_test_rule``: no confidence
+        gate, no volume gate, no hypothesis boosts. Measurement code that
+        must compare the same quantity before and after an intervention
+        uses ``observe_rule`` (which wraps this) rather than re-deriving
+        the metric from a different bucket, so the number it compares is
+        the number the diagnosis actually observed.
+
+        Returns ``(confidence, evidence)`` or ``None`` when the rule's
+        pattern type has no checker.
+        """
+        pattern_type = rule.pattern_signature.get("type", "")
+        checker = self._dispatch_map().get(pattern_type)
+        if checker is None:
+            return None
+        confidence, evidence = checker(self, rule, analysis, event_stats, match_count)
+        return float(confidence), evidence
+
+    async def observe_rule(
+        self,
+        rule_id: str,
+        analysis: MatchAnalysis,
+        events: list[dict] | None = None,
+        match_count: int = 1,
+    ) -> dict[str, Any] | None:
+        """Evaluate one rule's checker on one match, without the gates.
+
+        Used by intervention efficacy: the delta it reports must be the
+        rule's own observed quantity, computed by the same checker the
+        diagnosis used. Deliberately bypasses the confidence and volume
+        gates -- those decide whether a *diagnosis* is claimable, not
+        whether a quantity can be measured.
+
+        Returns None when the rule or its pattern checker is unknown
+        (that is a contract gap, not a zero). Otherwise:
+
+            {
+              "rule_id", "pattern_type", "confidence",
+              "evidence": {...},
+              "hypotheses": [evaluate_hypothesis(...), ...],
+              "event_stats": {...},
+            }
+        """
+        await self.initialize()
+        rule = self.kb.get_rule(rule_id)
+        if rule is None:
+            return None
+
+        event_stats = precompute_event_stats(events or [])
+        observed = self._run_checker(rule, analysis, event_stats, match_count)
+        if observed is None:
+            return None
+        confidence, evidence = observed
+        hypotheses = [
+            evaluate_hypothesis(h, evidence, event_stats)
+            for h in (rule.hypotheses or [])
+            if isinstance(h, dict)
+        ]
+        return {
+            "rule_id": rule.rule_id,
+            "pattern_type": str(rule.pattern_signature.get("type", "")),
+            "confidence": round(confidence, 3),
+            "evidence": evidence,
+            "hypotheses": hypotheses,
+            "event_stats": event_stats,
+        }
+
     async def _test_rule(
         self,
         rule: TacticalRule,
         analysis: MatchAnalysis,
         event_stats: dict,
+        match_count: int = 1,
     ) -> Diagnosis | None:
-        """Test if a rule's pattern matches the match data.
+        """Test if a rule's pattern matches the (possibly pooled) data.
 
-        Returns None if rule doesn't apply, else a Diagnosis with
-        confidence based on how well the pattern matches.
+        Returns None if rule doesn't apply, else a Diagnosis whose
+        confidence = base pattern strength + hypothesis boosts earned
+        from observable evidence, with full provenance attached.
         """
         sig = rule.pattern_signature
         pattern_type = sig.get("type", "")
 
-        confidence = 0.0
-        evidence = {}
-
-        if pattern_type == "zone_based_goal_concession":
-            confidence, evidence = self._check_zone_concession(rule, analysis, event_stats)
-        elif pattern_type == "zone_based_possession_loss":
-            confidence, evidence = self._check_possession_loss(rule, analysis, event_stats)
-        elif pattern_type == "through_balls_behind_defense":
-            confidence, evidence = self._check_high_line(rule, analysis, event_stats)
-        elif pattern_type == "counter_attack_conceded":
-            confidence, evidence = self._check_counter_attack(rule, analysis, event_stats)
-        elif pattern_type == "set_piece_goals_conceded":
-            confidence, evidence = self._check_set_piece(rule, analysis, event_stats)
-        elif pattern_type == "low_final_third_entries":
-            confidence, evidence = self._check_final_third(rule, analysis, event_stats)
-        elif pattern_type == "fullback_isolated_1v1":
-            confidence, evidence = self._check_fullback_iso(rule, analysis, event_stats)
-        elif pattern_type == "striker_isolated":
-            confidence, evidence = self._check_striker_iso(rule, analysis, event_stats)
-        elif pattern_type == "high_turnover_rate":
-            confidence, evidence = self._check_turnovers(rule, analysis, event_stats)
-        elif pattern_type == "late_game_decline":
-            confidence, evidence = self._check_late_game(rule, analysis, event_stats)
-        elif pattern_type == "poor_wide_play":
-            confidence, evidence = self._check_wide_play(rule, analysis, event_stats)
-        else:
+        observed = self._run_checker(rule, analysis, event_stats, match_count)
+        if observed is None:
             return None
+        confidence, evidence = observed
 
         if confidence < 0.3:
             return None
+
+        # Volume gates from the rule's own pattern signature. Rule
+        # files use several spellings (min_events, min_goals): each
+        # demands that the largest single concrete quantity in the
+        # evidence reach the declared minimum before the pattern is
+        # claimable at all. Ratios (min_percentage) are the checkers'
+        # own concern.
+        thresholds = sig.get("thresholds", {})
+        for volume_key in ("min_events", "min_goals"):
+            minimum = thresholds.get(volume_key)
+            if minimum:
+                quantities = [v for v in evidence.values() if isinstance(v, (int, float))]
+                if not quantities or max(quantities) < minimum:
+                    return None
+
+        # min_matches gating (multi-match mode): the rule declares how
+        # many distinct matches a pattern must span before the
+        # diagnosis counts as confirmed. Provisional diagnoses are
+        # still reported — honestly labeled — never suppressed.
+        min_matches = sig.get("thresholds", {}).get("min_matches", 1)
+        confirmation = "confirmed" if match_count >= min_matches else "provisional"
+
+        # Hypothesis evaluation with provenance: every declared
+        # hypothesis gets a criteria record (required metric, raw
+        # threshold, observed value, met/known). Boosts apply only to
+        # hypotheses whose criteria were all observable AND met —
+        # unobservable evidence never earns confidence.
+        hyp_results = [
+            evaluate_hypothesis(h, evidence, event_stats)
+            for h in rule.hypotheses
+            if isinstance(h, dict)
+        ]
+        boost = sum(r["boost_applied"] for r in hyp_results)
+        confidence = min(1.0, confidence + boost)
+        evidence["_hypotheses_evaluated"] = len(hyp_results)
+        evidence["_confidence_boost_applied"] = round(boost, 3)
+        evidence["_pattern_type"] = pattern_type
+        evidence["_match_count"] = match_count
+        evidence["_confirmation"] = confirmation
 
         primary_hyp = rule.hypotheses[0] if rule.hypotheses else None
         if isinstance(primary_hyp, dict):
@@ -268,12 +481,16 @@ class ReasoningService:
                 recommended_drill_ids = primary_hyp.get("recommended_drills", [])
             elif primary_hyp.recommended_drills:
                 recommended_drill_ids = primary_hyp.recommended_drills
-        if not recommended_drill_ids and rule.recommended_drills and isinstance(rule.recommended_drills, list):
-            if isinstance(rule.recommended_drills[0], dict):
-                recommended_drill_ids = [
-                    d.get("drill_id") for d in rule.recommended_drills
-                    if isinstance(d, dict) and d.get("drill_id")
-                ]
+        if (
+            not recommended_drill_ids
+            and rule.recommended_drills
+            and isinstance(rule.recommended_drills, list)
+        ) and isinstance(rule.recommended_drills[0], dict):
+            recommended_drill_ids = [
+                d.get("drill_id")
+                for d in rule.recommended_drills
+                if isinstance(d, dict) and d.get("drill_id")
+            ]
 
         return Diagnosis(
             rule_id=rule.rule_id,
@@ -286,7 +503,114 @@ class ReasoningService:
             explanation=explanation_en,
             explanation_ar=explanation_ar,
             recommended_drills=recommended_drill_ids,
+            hypothesis_evaluation=hyp_results,
+            pattern_type=pattern_type,
+            match_count=match_count,
+            confirmation=confirmation,
         )
+
+    _DISPATCH: dict[str, Any] | None = None
+
+    @classmethod
+    def _dispatch_map(cls) -> dict[str, Any]:
+        """pattern_signature.type -> checker, covering all KB patterns.
+
+        Built once, lazily. Legacy pattern types route through adapter
+        wrappers around the original methods (their pre-existing call
+        contracts are preserved for tests); every other KB pattern type
+        routes to a function in ``reasoning.checkers``. A rule file
+        whose pattern has no checker can never fire — the diagnose
+        pipeline warns loudly about any such pattern instead of
+        silently skipping it.
+        """
+        if cls._DISPATCH is None:
+
+            def _legacy(method_name):
+                """Adapt (rule, analysis, stats) methods to the uniform protocol."""
+
+                def _run(svc, rule, analysis, stats, match_count=1):
+                    return getattr(svc, method_name)(rule, analysis, stats)
+
+                _run.__name__ = method_name
+                _run.__qualname__ = f"ReasoningService._legacy.{method_name}"
+                return _run
+
+            def _check_adapter(func):
+                """Adapt (analysis, stats, match_count) checkers to the protocol."""
+
+                def _run(svc, rule, analysis, stats, match_count=1):
+                    return func(analysis, stats, match_count)
+
+                _run.__name__ = getattr(func, "__name__", "checker")
+                _run.__qualname__ = f"checkers.{_run.__name__}"
+                return _run
+
+            cls._DISPATCH = {
+                # legacy 11 — adapters over the original methods
+                "zone_based_goal_concession": _legacy("_check_zone_concession"),
+                "zone_based_possession_loss": _legacy("_check_possession_loss"),
+                "through_balls_behind_defense": _legacy("_check_high_line"),
+                "counter_attack_conceded": _legacy("_check_counter_attack"),
+                "set_piece_goals_conceded": _legacy("_check_set_piece"),
+                "low_final_third_entries": _legacy("_check_final_third"),
+                "fullback_isolated_1v1": _legacy("_check_fullback_iso"),
+                "striker_isolated": _legacy("_check_striker_iso"),
+                "high_turnover_rate": _legacy("_check_turnovers"),
+                "late_game_decline": _legacy("_check_late_game"),
+                "poor_wide_play": _legacy("_check_wide_play"),
+                # Phase B — full-checker functions in reasoning.checkers,
+                # adapted to the uniform checker protocol
+                "low_passing_accuracy": _check_adapter(_checkers.check_low_passing_accuracy),
+                "low_shot_conversion": _check_adapter(_checkers.check_low_shot_conversion),
+                "poor_corner_kicks": _check_adapter(_checkers.check_poor_corner_kicks),
+                "low_dribble_success": _check_adapter(_checkers.check_low_dribble_success),
+                "low_vertical_progression": _check_adapter(
+                    _checkers.check_low_vertical_progression
+                ),
+                "high_possession_low_progression": _check_adapter(
+                    _checkers.check_high_possession_low_progression
+                ),
+                "lopsided_attack": _check_adapter(_checkers.check_lopsided_attack),
+                "low_creative_actions": _check_adapter(_checkers.check_low_creative_actions),
+                "reception_in_zone_gap": _check_adapter(_checkers.check_reception_in_zone_gap),
+                "aerial_duel_loss_defensive": _check_adapter(
+                    _checkers.check_aerial_duel_loss_defensive
+                ),
+                "poor_defensive_transition": _check_adapter(
+                    _checkers.check_poor_defensive_transition
+                ),
+                "press_broken_by_simple_pass": _check_adapter(
+                    _checkers.check_press_broken_by_simple_pass
+                ),
+                "high_foul_rate": _check_adapter(_checkers.check_high_foul_rate),
+                "turnover_in_defensive_third": _check_adapter(
+                    _checkers.check_turnover_in_defensive_third
+                ),
+                "low_compactness": _check_adapter(_checkers.check_low_compactness),
+                "low_offside_pressure": _check_adapter(_checkers.check_low_offside_pressure),
+                "offside_trap_ineffective": _check_adapter(
+                    _checkers.check_offside_trap_ineffective
+                ),
+                "offside_failed": _check_adapter(_checkers.check_offside_failed),
+                "no_pressure_after_loss": _check_adapter(_checkers.check_no_pressure_after_loss),
+                "slow_recovery_after_loss": _check_adapter(
+                    _checkers.check_slow_recovery_after_loss
+                ),
+                "late_goals_conceded": _check_adapter(_checkers.check_late_goals_conceded),
+                "defensive_disorganization": _check_adapter(
+                    _checkers.check_defensive_disorganization
+                ),
+                "winger_not_tracking_back": _check_adapter(
+                    _checkers.check_winger_not_tracking_back
+                ),
+                "striker_passive_press": _check_adapter(_checkers.check_striker_passive_press),
+                "midfield_disconnected": _check_adapter(_checkers.check_midfield_disconnected),
+                "gk_distribution_loss": _check_adapter(_checkers.check_gk_distribution_loss),
+                "fullback_not_attacking": _check_adapter(_checkers.check_fullback_not_attacking),
+                "cb_positioning_error": _check_adapter(_checkers.check_cb_positioning_error),
+                "low_aerial_win_rate": _check_adapter(_checkers.check_low_aerial_win_rate),
+            }
+        return cls._DISPATCH
 
     def _ensure_event_stats(self, event_stats: dict | list) -> dict:
         if isinstance(event_stats, list):
@@ -299,8 +623,7 @@ class ReasoningService:
         """Check for goals conceded from a specific zone (e.g., left channel)."""
         event_stats = self._ensure_event_stats(event_stats)
         zone_events = [
-            e for e in event_stats["goals"]
-            if e.get("zone") == rule.pattern_signature.get("zone")
+            e for e in event_stats["goals"] if e.get("zone") == rule.pattern_signature.get("zone")
         ]
         all_goals = event_stats["goals"]
         if not all_goals:
@@ -320,10 +643,7 @@ class ReasoningService:
     ) -> tuple[float, dict]:
         """Check for high possession loss in defensive third."""
         event_stats = self._ensure_event_stats(event_stats)
-        def_turnovers = [
-            e for e in event_stats["turnovers"]
-            if e.get("zone") == "defensive_third"
-        ]
+        def_turnovers = [e for e in event_stats["turnovers"] if e.get("zone") == "defensive_third"]
         all_turnovers = event_stats["turnovers"]
         if not all_turnovers:
             return 0.0, {}
@@ -409,14 +729,11 @@ class ReasoningService:
     ) -> tuple[float, dict]:
         """Check for isolated fullback situations."""
         event_stats = self._ensure_event_stats(event_stats)
-        iso_events = [
-            e for e in event_stats["1v1_situations"]
-            if e.get("position") == "fullback"
-        ]
+        iso_events = [e for e in event_stats["1v1_situations"] if e.get("position") == "fullback"]
         if len(iso_events) >= 5:
-            opp_success = sum(
-                1 for e in iso_events if e.get("outcome") == "beaten"
-            ) / len(iso_events)
+            opp_success = sum(1 for e in iso_events if e.get("outcome") == "beaten") / len(
+                iso_events
+            )
             if opp_success > 0.55:
                 return 0.6, {
                     "1v1_count": len(iso_events),
@@ -502,19 +819,19 @@ class ReasoningService:
         actions_ar = []
         for i, diag in enumerate(diagnoses[:5]):
             if diag.recommended_drills:
-                drills = [
-                    self.kb.get_drill(d_id) for d_id in diag.recommended_drills[:2]
-                ]
-                drills = [d for d in drills if d is not None]
-                if drills:
-                    drill_names_en = ", ".join(d.name for d in drills)
-                    drill_names_ar = ", ".join(getattr(d, "name_ar", None) or d.name for d in drills)
+                drills = [self.kb.get_drill(d_id) for d_id in diag.recommended_drills[:2]]
+                typed_drills = [d for d in drills if d is not None]
+                if typed_drills:
+                    drill_names_en = ", ".join(str(d.name) for d in typed_drills)
+                    drill_names_ar = ", ".join(
+                        str(getattr(d, "name_ar", None) or d.name) for d in typed_drills
+                    )
                     actions_en.append(
-                        f"Priority {i+1}: {drill_names_en} "
+                        f"Priority {i + 1}: {drill_names_en} "
                         f"(addresses {diag.rule_name}, confidence {diag.confidence:.0%})"
                     )
                     actions_ar.append(
-                        f"الأولوية {i+1}: {drill_names_ar} "
+                        f"الأولوية {i + 1}: {drill_names_ar} "
                         f"(يعالج: {diag.rule_name_ar}, الثقة {diag.confidence:.0%})"
                     )
         if not actions_en:

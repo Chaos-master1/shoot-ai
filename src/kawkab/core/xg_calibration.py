@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 
@@ -27,9 +25,7 @@ def compute_calibration_curve(
         return CalibrationCurve(bins=[], observed=[], predicted=[], mse=0.0, ece=0.0)
 
     bin_edges = np.linspace(0.0, 1.0, n_bins + 1)
-    bin_indices = np.clip(
-        np.searchsorted(bin_edges[1:], preds, side="left"), 0, n_bins - 1
-    )
+    bin_indices = np.clip(np.searchsorted(bin_edges[1:], preds, side="left"), 0, n_bins - 1)
 
     bin_midpoints: list[float] = []
     observed_rates: list[float] = []
@@ -89,7 +85,7 @@ def platt_scale(
         grad_b = np.sum(T[1] * (1.0 - outc) * p - T[0] * outc * (1.0 - p))
 
         w = p * (1.0 - p)
-        hess_a = np.sum(T[1] * (1.0 - outc) * w * logit_p ** 2 + T[0] * outc * w * logit_p ** 2)
+        hess_a = np.sum(T[1] * (1.0 - outc) * w * logit_p**2 + T[0] * outc * w * logit_p**2)
         hess_b = np.sum(T[1] * (1.0 - outc) * w + T[0] * outc * w)
         hess_ab = np.sum(T[1] * (1.0 - outc) * w * logit_p + T[0] * outc * w * logit_p)
 
@@ -124,9 +120,7 @@ def compute_brier_score(predictions: list[float], outcomes: list[int]) -> float:
     return float(np.mean((preds - outc) ** 2))
 
 
-def compute_log_loss(
-    predictions: list[float], outcomes: list[int], eps: float = 1e-15
-) -> float:
+def compute_log_loss(predictions: list[float], outcomes: list[int], eps: float = 1e-15) -> float:
     preds = np.array(predictions, dtype=np.float64)
     outc = np.array(outcomes, dtype=np.float64)
     if len(preds) == 0:
@@ -147,10 +141,10 @@ def compute_auc_roc(predictions: list[float], outcomes: list[int]) -> float:
 
     pos_preds = preds[outc == 1]
     neg_preds = preds[outc == 0]
-    concordant = 0
+    concordant = 0.0
     for p in pos_preds:
-        concordant += int(np.sum(neg_preds < p))
-        concordant += 0.5 * int(np.sum(neg_preds == p))
+        concordant += float(np.sum(neg_preds < p))
+        concordant += 0.5 * float(np.sum(neg_preds == p))
 
     total_pairs = n_pos * max(n_neg, 1)
     if total_pairs == 0:

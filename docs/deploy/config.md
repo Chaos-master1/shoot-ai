@@ -7,7 +7,7 @@
 | `KAWKAB_JWT_SECRET` | (required) | JWT signing secret |
 | `KAWKAB_CLOUD_DB` | `~/.kawkab/cloud.db` | Cloud DB path |
 | `KAWKAB_CLOUD_URL` | `http://localhost:8741` | Server URL |
-| `KAWKAB_DB_PASSWORD` | `changeme` | PostgreSQL password |
+| `KAWKAB_DB_PASSWORD` | (required) | PostgreSQL password -- docker-compose.yml and k8s/deployment.yaml no longer fall back to a default; both fail with a clear error if this isn't set |
 | `KAWKAB_GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
 | `KAWKAB_GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
 | `KAWKAB_GITHUB_CLIENT_ID` | — | GitHub OAuth client ID |

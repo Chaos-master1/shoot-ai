@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/yourusername/kawkab-ai
+git clone https://github.com/wizard404error/shoot-ai
 cd kawkab-ai
 pip install -e ".[dev,tactical,graph,test,cloud]"
 ```

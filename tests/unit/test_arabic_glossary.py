@@ -79,7 +79,9 @@ class TestGlossary:
         for entry in glossary.all_entries():
             if entry.transliteration:
                 for ch in entry.transliteration:
-                    assert ord(ch) < 128 or ch in "āīūĀĪŌḍḥṣṭẓġšḫʿʾʿ", f"non-ASCII in transliteration: {entry.transliteration}"
+                    assert ord(ch) < 128 or ch in "āīūĀĪŌḍḥṣṭẓġšḫʿʾʿ", (
+                        f"non-ASCII in transliteration: {entry.transliteration}"
+                    )
 
     def test_at_least_50_terms(self, glossary: ArabicGlossary) -> None:
         assert len(glossary) >= 50, f"Only {len(glossary)} terms found"

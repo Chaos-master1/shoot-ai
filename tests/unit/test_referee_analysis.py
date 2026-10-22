@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-from kawkab.core.referee_analysis import analyze_referee, RefereeProfile, RefereeAnalysisReport
+from kawkab.core.referee_analysis import analyze_referee
 
 
 def make_match(
@@ -33,10 +32,12 @@ class TestRefereeAnalysis:
     def test_cards_per_game_computed(self):
         matches = [
             make_match(card_events=[{"type": "yellow", "minute": 20, "team": "Home"}]),
-            make_match(card_events=[
-                {"type": "yellow", "minute": 30, "team": "Away"},
-                {"type": "red", "minute": 50, "team": "Home"},
-            ]),
+            make_match(
+                card_events=[
+                    {"type": "yellow", "minute": 30, "team": "Away"},
+                    {"type": "red", "minute": 50, "team": "Home"},
+                ]
+            ),
         ]
         report = analyze_referee("Ref B", matches)
         assert report.referee.matches_officiated == 2
@@ -46,21 +47,25 @@ class TestRefereeAnalysis:
 
     def test_home_team_advantage_computed(self):
         matches = [
-            make_match(foul_events=[
-                {"type": "tackle", "team": "Home", "x": 30, "y": 50},
-                {"type": "tackle", "team": "Home", "x": 40, "y": 50},
-                {"type": "tackle", "team": "Away", "x": 50, "y": 50},
-            ]),
+            make_match(
+                foul_events=[
+                    {"type": "tackle", "team": "Home", "x": 30, "y": 50},
+                    {"type": "tackle", "team": "Home", "x": 40, "y": 50},
+                    {"type": "tackle", "team": "Away", "x": 50, "y": 50},
+                ]
+            ),
         ]
         report = analyze_referee("Ref C", matches)
         assert report.referee.home_team_advantage == 2.0
 
     def test_card_timing_distribution(self):
         matches = [
-            make_match(card_events=[
-                {"type": "yellow", "minute": 20, "team": "Home"},
-                {"type": "yellow", "minute": 55, "team": "Away"},
-            ]),
+            make_match(
+                card_events=[
+                    {"type": "yellow", "minute": 20, "team": "Home"},
+                    {"type": "yellow", "minute": 55, "team": "Away"},
+                ]
+            ),
         ]
         report = analyze_referee("Ref D", matches)
         assert report.referee.card_timing_distribution["first_half"] == 1
@@ -85,9 +90,11 @@ class TestRefereeAnalysis:
 
     def test_summary_text_produces_output(self):
         matches = [
-            make_match(foul_events=[
-                {"type": "tackle", "team": "Home", "x": 30, "y": 50},
-            ]),
+            make_match(
+                foul_events=[
+                    {"type": "tackle", "team": "Home", "x": 30, "y": 50},
+                ]
+            ),
         ]
         report = analyze_referee("Ref F", matches)
         summary = report.summary_text()
@@ -115,21 +122,25 @@ class TestRefereeAnalysis:
 
     def test_foul_heatmap_generated(self):
         matches = [
-            make_match(foul_events=[
-                {"type": "tackle", "team": "Home", "x": 30, "y": 50},
-                {"type": "push", "team": "Away", "x": 60, "y": 80},
-            ]),
+            make_match(
+                foul_events=[
+                    {"type": "tackle", "team": "Home", "x": 30, "y": 50},
+                    {"type": "push", "team": "Away", "x": 60, "y": 80},
+                ]
+            ),
         ]
         report = analyze_referee("Ref I", matches)
         assert len(report.match_foul_heatmap) > 0
 
     def test_most_common_foul_types(self):
         matches = [
-            make_match(foul_events=[
-                {"type": "tackle", "team": "Home", "x": 30, "y": 50},
-                {"type": "tackle", "team": "Away", "x": 50, "y": 50},
-                {"type": "push", "team": "Home", "x": 40, "y": 50},
-            ]),
+            make_match(
+                foul_events=[
+                    {"type": "tackle", "team": "Home", "x": 30, "y": 50},
+                    {"type": "tackle", "team": "Away", "x": 50, "y": 50},
+                    {"type": "push", "team": "Home", "x": 40, "y": 50},
+                ]
+            ),
         ]
         report = analyze_referee("Ref J", matches)
         assert len(report.referee.most_common_foul_types) >= 2
@@ -148,23 +159,30 @@ class TestRefereeAnalysis:
 
     def test_trend_detected_for_many_matches(self):
         matches = [
-            make_match(card_events=[
-                {"type": "yellow", "minute": 20, "team": "H", "foul_type": "tackle"},
-            ]) for _ in range(6)
+            make_match(
+                card_events=[
+                    {"type": "yellow", "minute": 20, "team": "H", "foul_type": "tackle"},
+                ]
+            )
+            for _ in range(6)
         ]
         report = analyze_referee("Ref M", matches)
         assert report.referee.trend in ("stable", "increasing", "decreasing")
 
     def test_inconsistency_score_with_variance(self):
         matches = [
-            make_match(card_events=[
-                {"type": "yellow", "minute": 20, "team": "H", "foul_type": "t"},
-            ]),
-            make_match(card_events=[
-                {"type": "yellow", "minute": 30, "team": "A", "foul_type": "t"},
-                {"type": "red", "minute": 50, "team": "H", "foul_type": "t"},
-                {"type": "yellow", "minute": 70, "team": "H", "foul_type": "t"},
-            ]),
+            make_match(
+                card_events=[
+                    {"type": "yellow", "minute": 20, "team": "H", "foul_type": "t"},
+                ]
+            ),
+            make_match(
+                card_events=[
+                    {"type": "yellow", "minute": 30, "team": "A", "foul_type": "t"},
+                    {"type": "red", "minute": 50, "team": "H", "foul_type": "t"},
+                    {"type": "yellow", "minute": 70, "team": "H", "foul_type": "t"},
+                ]
+            ),
             make_match(),
         ]
         report = analyze_referee("Ref N", matches)

@@ -1,6 +1,5 @@
 """Tests for spatial hash — O(1) neighbor lookups in 2D and 3D."""
 
-import numpy as np
 import pytest
 
 from kawkab.utils.spatial_hash import (

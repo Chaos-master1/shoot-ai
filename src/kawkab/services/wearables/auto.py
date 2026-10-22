@@ -18,10 +18,8 @@ session files (which can be several MB).
 from __future__ import annotations
 
 from os.path import splitext
-from typing import Optional
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.base import BaseWearableParser
 from kawkab.services.wearables.catapult_csv import CatapultCsvParser
 from kawkab.services.wearables.fit_parser import FitParser
@@ -35,7 +33,7 @@ logger = get_logger(__name__)
 _SNIFF_BYTES = 4096
 
 
-def detect_parser(file_path: str) -> Optional[BaseWearableParser]:
+def detect_parser(file_path: str) -> BaseWearableParser | None:
     """Pick a parser for ``file_path`` or return None if unknown format."""
     ext = splitext(file_path)[1].lower()
 
@@ -55,10 +53,10 @@ def detect_parser(file_path: str) -> Optional[BaseWearableParser]:
     return None
 
 
-def _detect_csv(file_path: str) -> Optional[BaseWearableParser]:
+def _detect_csv(file_path: str) -> BaseWearableParser | None:
     """Sniff the header to distinguish Catapult / Sonra / Polar CSV."""
     try:
-        with open(file_path, "r", encoding="utf-8-sig", errors="ignore") as f:
+        with open(file_path, encoding="utf-8-sig", errors="ignore") as f:
             head = f.read(_SNIFF_BYTES).lower()
     except OSError as e:
         logger.error(f"auto-detect: cannot read {file_path}: {e}")

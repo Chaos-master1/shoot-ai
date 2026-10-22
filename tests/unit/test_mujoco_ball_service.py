@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import sys
-import math
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -98,7 +97,9 @@ class TestPresets:
 
 class TestTrajectoryResult:
     def test_default_method(self):
-        t = TrajectoryResult(points=[], landing_x=0, landing_y=0, max_height=0, duration_s=0, final_speed_mps=0)
+        t = TrajectoryResult(
+            points=[], landing_x=0, landing_y=0, max_height=0, duration_s=0, final_speed_mps=0
+        )
         assert t.method == "analytical"
 
     def test_trajectory_point_fields(self):
@@ -160,9 +161,15 @@ class TestSimulateAnalytical:
     @pytest.mark.asyncio
     async def test_custom_params(self, svc):
         result = await svc.simulate(
-            initial_speed=30.0, launch_angle_deg=25.0, spin_rps=3.0,
-            direction_deg=10.0, duration_s=3.0, drag_coeff=0.3,
-            magnus_coeff=0.0005, ball_mass=0.45, ball_radius=0.12,
+            initial_speed=30.0,
+            launch_angle_deg=25.0,
+            spin_rps=3.0,
+            direction_deg=10.0,
+            duration_s=3.0,
+            drag_coeff=0.3,
+            magnus_coeff=0.0005,
+            ball_mass=0.45,
+            ball_radius=0.12,
         )
         assert result.method == "analytical"
         assert len(result.points) > 0

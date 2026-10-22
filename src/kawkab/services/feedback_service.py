@@ -12,9 +12,8 @@ All data is stored locally in SQLite for privacy.
 
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from kawkab.core.logging import get_logger
@@ -34,14 +33,14 @@ class CoachFeedback:
     report_rating: int | None = None  # 1-5
     ui_rating: int | None = None  # 1-5
     comments: str = ""
-    issues: list[dict] = None
+    issues: list[dict] = field(default_factory=list)
     created_at: str = ""
 
     def __post_init__(self):
         if self.issues is None:
             self.issues = []
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -61,7 +60,7 @@ class IssueReport:
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -82,7 +81,7 @@ class UsageSession:
 
     def __post_init__(self):
         if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
+            self.created_at = datetime.now(UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -115,7 +114,9 @@ class FeedbackService:
         """Submit an issue report. Returns issue ID."""
         if self.storage is not None:
             issue_id = await self.storage.save_issue(issue.to_dict())
-            logger.warning(f"Issue reported: ID={issue_id}, category={issue.category}, severity={issue.severity}")
+            logger.warning(
+                f"Issue reported: ID={issue_id}, category={issue.category}, severity={issue.severity}"
+            )
             return issue_id
         else:
             self._pending_issues.append(issue)

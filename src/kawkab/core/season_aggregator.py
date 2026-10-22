@@ -6,8 +6,6 @@ comparisons similar to professional platforms.
 
 from __future__ import annotations
 
-import math
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -148,14 +146,20 @@ class HeadToHeadComparison:
             "team_b": self.team_b_name,
             "possession": {"a": round(self.possession_a, 1), "b": round(self.possession_b, 1)},
             "passes": {"a": self.passes_a, "b": self.passes_b},
-            "pass_accuracy": {"a": round(self.pass_accuracy_a, 3), "b": round(self.pass_accuracy_b, 3)},
+            "pass_accuracy": {
+                "a": round(self.pass_accuracy_a, 3),
+                "b": round(self.pass_accuracy_b, 3),
+            },
             "shots": {"a": self.shots_a, "b": self.shots_b},
             "shots_on_target": {"a": self.shots_on_target_a, "b": self.shots_on_target_b},
             "xg": {"a": round(self.xg_a, 2), "b": round(self.xg_b, 2)},
             "tackles": {"a": self.tackles_a, "b": self.tackles_b},
             "distance_km": {"a": round(self.distance_a_km, 1), "b": round(self.distance_b_km, 1)},
             "progressive_passes": {"a": self.progressive_passes_a, "b": self.progressive_passes_b},
-            "pitch_control": {"a": round(self.pitch_control_a, 1), "b": round(self.pitch_control_b, 1)},
+            "pitch_control": {
+                "a": round(self.pitch_control_a, 1),
+                "b": round(self.pitch_control_b, 1),
+            },
             "avg_rating": {"a": round(self.avg_rating_a, 1), "b": round(self.avg_rating_b, 1)},
         }
 
@@ -241,8 +245,8 @@ class SeasonAggregator:
 
                     if rating:
                         p.avg_rating = (
-                            (p.avg_rating * (p.matches_played - 1) + rating) / p.matches_played
-                        )
+                            p.avg_rating * (p.matches_played - 1) + rating
+                        ) / p.matches_played
 
         n = max(match_count, 1)
         avg_rating = rating_sum / n if rating_sum else 0.0
@@ -271,11 +275,21 @@ class SeasonAggregator:
             return HeadToHeadComparison(team_a_name=team_a_name, team_b_name=team_b_name)
 
         stats_a = self.aggregate_team_season(
-            [m for m in match_data if m.get("home_team", {}).get("team_name") == team_a_name or m.get("away_team", {}).get("team_name") == team_a_name],
+            [
+                m
+                for m in match_data
+                if m.get("home_team", {}).get("team_name") == team_a_name
+                or m.get("away_team", {}).get("team_name") == team_a_name
+            ],
             team_a_name,
         )
         stats_b = self.aggregate_team_season(
-            [m for m in match_data if m.get("home_team", {}).get("team_name") == team_b_name or m.get("away_team", {}).get("team_name") == team_b_name],
+            [
+                m
+                for m in match_data
+                if m.get("home_team", {}).get("team_name") == team_b_name
+                or m.get("away_team", {}).get("team_name") == team_b_name
+            ],
             team_b_name,
         )
 

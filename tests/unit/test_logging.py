@@ -1,8 +1,5 @@
 """Tests for logging setup."""
 
-import tempfile
-from pathlib import Path
-
 from kawkab.core.logging import get_logger, setup_logging
 
 

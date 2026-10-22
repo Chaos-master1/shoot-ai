@@ -155,16 +155,25 @@ class OffBallAnalyzer:
 
                 frame_idx = min(i, len(ball_positions) - 1)
                 ball = ball_positions[frame_idx]
-                possession = possession_by_frame[frame_idx] if frame_idx < len(possession_by_frame) else False
+                possession = (
+                    possession_by_frame[frame_idx]
+                    if frame_idx < len(possession_by_frame)
+                    else False
+                )
 
                 if ball and not possession:
                     def_dist = math.sqrt((x - ball[0]) ** 2 + (y - ball[1]) ** 2)
                     def_dist_sum += def_dist
                     def_dist_count += 1
 
-                    if speed >= self.SPACE_CREATION_SPEED_THRESHOLD_MS and dist >= self.SPACE_CREATION_DISTANCE_M:
+                    if (
+                        speed >= self.SPACE_CREATION_SPEED_THRESHOLD_MS
+                        and dist >= self.SPACE_CREATION_DISTANCE_M
+                    ):
                         # Moving away from ball while defending = space creation
-                        prev_ball_dist = math.sqrt((prev_x - ball[0]) ** 2 + (prev_y - ball[1]) ** 2)
+                        prev_ball_dist = math.sqrt(
+                            (prev_x - ball[0]) ** 2 + (prev_y - ball[1]) ** 2
+                        )
                         curr_ball_dist = math.sqrt((x - ball[0]) ** 2 + (y - ball[1]) ** 2)
                         if curr_ball_dist > prev_ball_dist * 1.1:
                             space_creation += 1
@@ -179,7 +188,9 @@ class OffBallAnalyzer:
 
                     # Decoy run: moving away from ball while teammate has it
                     if support_dist > 15.0 and speed >= self.SPACE_CREATION_SPEED_THRESHOLD_MS:
-                        prev_ball_dist = math.sqrt((prev_x - ball[0]) ** 2 + (prev_y - ball[1]) ** 2)
+                        prev_ball_dist = math.sqrt(
+                            (prev_x - ball[0]) ** 2 + (prev_y - ball[1]) ** 2
+                        )
                         curr_ball_dist = math.sqrt((x - ball[0]) ** 2 + (y - ball[1]) ** 2)
                         if curr_ball_dist > prev_ball_dist * 1.05:
                             decoy_runs += 1
@@ -206,13 +217,17 @@ class OffBallAnalyzer:
                 time_in_high_activity=(
                     (high_activity_frames / max(len(frames), 1))
                     * (frames[-1]["timestamp"] - frames[0]["timestamp"])
-                ) if len(frames) > 1 else 0,
+                )
+                if len(frames) > 1
+                else 0,
             )
 
         if not player_metrics:
             return OffBallMatchReport(team=team)
 
-        total_dist_km = sum(p.total_distance_without_ball_m for p in player_metrics.values()) / 1000.0
+        total_dist_km = (
+            sum(p.total_distance_without_ball_m for p in player_metrics.values()) / 1000.0
+        )
         total_space = sum(p.space_creation_runs for p in player_metrics.values())
         avg_eff = sum(p.movement_efficiency for p in player_metrics.values()) / len(player_metrics)
 

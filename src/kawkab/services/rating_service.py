@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 
 class RatingService:
     def compute_ratings(self, events: list[dict], players: list[dict]) -> list[dict]:
         from collections import defaultdict
-        player_stats: dict[int, dict] = defaultdict(lambda: {
-            "passes": 0, "passes_completed": 0, "shots": 0, "goals": 0,
-            "tackles": 0, "carries": 0, "dribbles": 0, "track_id": 0,
-        })
+
+        player_stats: dict[int, dict] = defaultdict(
+            lambda: {
+                "passes": 0,
+                "passes_completed": 0,
+                "shots": 0,
+                "goals": 0,
+                "tackles": 0,
+                "carries": 0,
+                "dribbles": 0,
+                "track_id": 0,
+            }
+        )
 
         player_names: dict[int, str] = {}
         player_teams: dict[int, str] = {}
@@ -49,16 +56,24 @@ class RatingService:
             tackle_rating = stats["tackles"] * 5
             carry_rating = stats["carries"] * 2 + stats["dribbles"] * 3
             volume = 1 + stats["passes"] + stats["shots"] + stats["tackles"]
-            raw = (pass_acc * 30 + shot_rating * 25 + tackle_rating * 15 + carry_rating * 20 + min(volume, 50)) / 100.0
+            raw = (
+                pass_acc * 30
+                + shot_rating * 25
+                + tackle_rating * 15
+                + carry_rating * 20
+                + min(volume, 50)
+            ) / 100.0
             rating = min(max(raw, 0.0), 100.0)
-            results.append({
-                "track_id": tid,
-                "name": player_names.get(tid, f"Player {tid}"),
-                "team": player_teams.get(tid, ""),
-                "rating": round(rating, 1),
-                "pass_accuracy": round(pass_acc, 3),
-                "shot_impact": round(shot_rating / 100.0, 3),
-                "tackles": stats["tackles"],
-            })
+            results.append(
+                {
+                    "track_id": tid,
+                    "name": player_names.get(tid, f"Player {tid}"),
+                    "team": player_teams.get(tid, ""),
+                    "rating": round(rating, 1),
+                    "pass_accuracy": round(pass_acc, 3),
+                    "shot_impact": round(shot_rating / 100.0, 3),
+                    "tackles": stats["tackles"],
+                }
+            )
 
         return results

@@ -63,9 +63,15 @@ class TestAddContract:
 
     def test_add_with_all_fields(self, svc: ContractTracker) -> None:
         cid = svc.add_contract(
-            1, "Player One", "permanent", "2024-01-01", "2027-06-30",
-            club_option_years=1, release_clause_millions=50.0,
-            wage_weekly_pounds=100000, agent_name="John Doe",
+            1,
+            "Player One",
+            "permanent",
+            "2024-01-01",
+            "2027-06-30",
+            club_option_years=1,
+            release_clause_millions=50.0,
+            wage_weekly_pounds=100000,
+            agent_name="John Doe",
         )
         assert cid > 0
 
@@ -104,7 +110,9 @@ class TestContractSummary:
 
 class TestContractAlerts:
     def test_player_option_alerts(self, svc: ContractTracker) -> None:
-        svc.add_contract(1, "With Option", "permanent", "2024-01-01", "2027-06-30", player_option_years=2)
+        svc.add_contract(
+            1, "With Option", "permanent", "2024-01-01", "2027-06-30", player_option_years=2
+        )
         alerts = svc.get_contract_alerts()
         opts = [a for a in alerts if a["type"] == "player_option"]
         assert len(opts) >= 1

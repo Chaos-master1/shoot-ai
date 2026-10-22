@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import json
-import math
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from kawkab.core.model_comparison import compare_xg_models, _compute_metrics
-
+from kawkab.core.model_comparison import _compute_metrics
 
 DRIFT_THRESHOLD_BRIER = 0.05
 DRIFT_THRESHOLD_LOG_LOSS = 0.10
@@ -49,11 +46,10 @@ class ModelMonitor:
     def __init__(self, storage_dir: str | None = None):
         self._snapshots: list[ModelSnapshot] = []
         self._baseline: dict[str, ModelSnapshot] = {}
+        self._storage_dir: Path | None = None
         if storage_dir:
             self._storage_dir = Path(storage_dir)
             self._storage_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._storage_dir = None
 
     def record_snapshot(
         self,
@@ -94,31 +90,35 @@ class ModelMonitor:
 
             brier_change = abs(snap.brier_score - baseline.brier_score)
             if brier_change > DRIFT_THRESHOLD_BRIER:
-                alerts.append(DriftAlert(
-                    model_name=snap.model_name,
-                    metric="brier_score",
-                    current_value=snap.brier_score,
-                    baseline_value=baseline.brier_score,
-                    threshold=DRIFT_THRESHOLD_BRIER,
-                    severity="HIGH" if brier_change > DRIFT_THRESHOLD_BRIER * 2 else "MEDIUM",
-                    timestamp=snap.timestamp,
-                    message=f"{snap.model_name} Brier score changed by {brier_change:.4f} "
-                            f"({baseline.brier_score:.4f} -> {snap.brier_score:.4f})",
-                ))
+                alerts.append(
+                    DriftAlert(
+                        model_name=snap.model_name,
+                        metric="brier_score",
+                        current_value=snap.brier_score,
+                        baseline_value=baseline.brier_score,
+                        threshold=DRIFT_THRESHOLD_BRIER,
+                        severity="HIGH" if brier_change > DRIFT_THRESHOLD_BRIER * 2 else "MEDIUM",
+                        timestamp=snap.timestamp,
+                        message=f"{snap.model_name} Brier score changed by {brier_change:.4f} "
+                        f"({baseline.brier_score:.4f} -> {snap.brier_score:.4f})",
+                    )
+                )
 
             ll_change = abs(snap.log_loss - baseline.log_loss)
             if ll_change > DRIFT_THRESHOLD_LOG_LOSS:
-                alerts.append(DriftAlert(
-                    model_name=snap.model_name,
-                    metric="log_loss",
-                    current_value=snap.log_loss,
-                    baseline_value=baseline.log_loss,
-                    threshold=DRIFT_THRESHOLD_LOG_LOSS,
-                    severity="HIGH" if ll_change > DRIFT_THRESHOLD_LOG_LOSS * 2 else "MEDIUM",
-                    timestamp=snap.timestamp,
-                    message=f"{snap.model_name} log-loss changed by {ll_change:.4f} "
-                            f"({baseline.log_loss:.4f} -> {snap.log_loss:.4f})",
-                ))
+                alerts.append(
+                    DriftAlert(
+                        model_name=snap.model_name,
+                        metric="log_loss",
+                        current_value=snap.log_loss,
+                        baseline_value=baseline.log_loss,
+                        threshold=DRIFT_THRESHOLD_LOG_LOSS,
+                        severity="HIGH" if ll_change > DRIFT_THRESHOLD_LOG_LOSS * 2 else "MEDIUM",
+                        timestamp=snap.timestamp,
+                        message=f"{snap.model_name} log-loss changed by {ll_change:.4f} "
+                        f"({baseline.log_loss:.4f} -> {snap.log_loss:.4f})",
+                    )
+                )
         return alerts
 
     def get_recent_performance(self, model_name: str, n_last: int = 10) -> list[ModelSnapshot]:
@@ -126,9 +126,7 @@ class ModelMonitor:
 
     def get_trend(self, model_name: str, metric: str = "brier_score") -> list[tuple[float, float]]:
         return [
-            (s.timestamp, getattr(s, metric))
-            for s in self._snapshots
-            if s.model_name == model_name
+            (s.timestamp, getattr(s, metric)) for s in self._snapshots if s.model_name == model_name
         ]
 
     def _persist(self):
@@ -215,7 +213,7 @@ class ModelMonitoringService:
         }
 
     def get_monitoring_dashboard(self) -> dict[str, Any]:
-        models_seen = set(s.model_name for s in self.monitor._snapshots)
+        models_seen = {s.model_name for s in self.monitor._snapshots}
         dashboard: dict[str, Any] = {
             "models": {},
             "total_evaluations": len(self.monitor._snapshots),
@@ -233,8 +231,8 @@ class ModelMonitoringService:
             brier_trend = [v for _, v in trend[-10:]] if trend else []
             brier_direction = "stable"
             if len(brier_trend) >= 3:
-                first_half = np.mean(brier_trend[:len(brier_trend)//2])
-                second_half = np.mean(brier_trend[len(brier_trend)//2:])
+                first_half = np.mean(brier_trend[: len(brier_trend) // 2])
+                second_half = np.mean(brier_trend[len(brier_trend) // 2 :])
                 if second_half > first_half + DRIFT_THRESHOLD_BRIER:
                     brier_direction = "degrading"
                 elif first_half > second_half + DRIFT_THRESHOLD_BRIER:
@@ -254,7 +252,9 @@ class ModelMonitoringService:
                 "baseline": {
                     "log_loss": baseline.log_loss if baseline else None,
                     "brier_score": baseline.brier_score if baseline else None,
-                } if baseline else None,
+                }
+                if baseline
+                else None,
                 "trend": {
                     "brier_direction": brier_direction,
                     "data_points": len(trend),
@@ -268,9 +268,7 @@ class ModelMonitoringService:
                     for a in model_alerts
                 ],
             }
-            dashboard["active_alerts"].extend(
-                a for a in model_alerts if a.severity == "HIGH"
-            )
+            dashboard["active_alerts"].extend(a for a in model_alerts if a.severity == "HIGH")
 
         return dashboard
 

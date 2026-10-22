@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -107,7 +106,8 @@ class TestSimulateAvailable:
         mock_proc.returncode = 0
         mock_proc.communicate.return_value = (b"sim output", b"")
         monkeypatch.setattr(
-            _fluidx3d_mod.asyncio, "create_subprocess_exec",
+            _fluidx3d_mod.asyncio,
+            "create_subprocess_exec",
             AsyncMock(return_value=mock_proc),
         )
         result = await available_svc.simulate_ball_aerodynamics()
@@ -122,7 +122,8 @@ class TestSimulateAvailable:
         mock_proc.returncode = 1
         mock_proc.communicate.return_value = (b"", b"sim failure")
         monkeypatch.setattr(
-            _fluidx3d_mod.asyncio, "create_subprocess_exec",
+            _fluidx3d_mod.asyncio,
+            "create_subprocess_exec",
             AsyncMock(return_value=mock_proc),
         )
         result = await available_svc.simulate_ball_aerodynamics()
@@ -133,9 +134,10 @@ class TestSimulateAvailable:
     @pytest.mark.asyncio
     async def test_timeout(self, available_svc, monkeypatch):
         mock_proc = AsyncMock()
-        mock_proc.communicate.side_effect = asyncio.TimeoutError()
+        mock_proc.communicate.side_effect = TimeoutError()
         monkeypatch.setattr(
-            _fluidx3d_mod.asyncio, "create_subprocess_exec",
+            _fluidx3d_mod.asyncio,
+            "create_subprocess_exec",
             AsyncMock(return_value=mock_proc),
         )
         result = await available_svc.simulate_ball_aerodynamics(timeout_s=0.01)
@@ -146,7 +148,8 @@ class TestSimulateAvailable:
     @pytest.mark.asyncio
     async def test_execution_exception(self, available_svc, monkeypatch):
         monkeypatch.setattr(
-            _fluidx3d_mod.asyncio, "create_subprocess_exec",
+            _fluidx3d_mod.asyncio,
+            "create_subprocess_exec",
             AsyncMock(side_effect=RuntimeError("binary not found")),
         )
         result = await available_svc.simulate_ball_aerodynamics()
@@ -160,7 +163,8 @@ class TestSimulateAvailable:
         mock_proc.returncode = 0
         mock_proc.communicate.return_value = (b"ok", b"")
         monkeypatch.setattr(
-            _fluidx3d_mod.asyncio, "create_subprocess_exec",
+            _fluidx3d_mod.asyncio,
+            "create_subprocess_exec",
             AsyncMock(return_value=mock_proc),
         )
         out_dir = str(tmp_path / "fluid_out")

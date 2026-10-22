@@ -106,7 +106,10 @@ Create a `.env` file or export these in your CI/CD environment:
 ```bash
 # Required
 KAWKAB_JWT_SECRET=<generated>
-KAWKAB_DB_URL=postgresql+asyncpg://kawkab:<password>@<host>:5432/kawkab
+# Plain postgresql:// -- cloud/database.py passes this straight to
+# asyncpg.connect(), which does not understand the SQLAlchemy
+# "postgresql+asyncpg://" dialect prefix.
+KAWKAB_DB_URL=postgresql://kawkab:<password>@<host>:5432/kawkab
 KAWKAB_DB_PASSWORD=<generated>
 
 # Optional — OAuth providers

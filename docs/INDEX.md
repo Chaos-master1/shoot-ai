@@ -23,3 +23,11 @@ python -m kawkab
 - **Model monitoring** with drift detection and auto-retrain
 - **Medical tracking** (injury DB, rehab plans, concussion protocol)
 - **Docker deployment** with PostgreSQL + nginx
+
+## Guides
+
+- **Analyst workflow** (import → data quality → validation → report): [`analyst-guide.md`](analyst-guide.md)
+- **Elite deployment for club IT** (Postgres, SAML SSO, RBAC, audit): [`elite-deployment.md`](elite-deployment.md)
+- Validation reports: [`validation/`](validation/)
+- Model cards: [`model-cards.md`](model-cards.md)
+- Deployment basics: [`deploy/`](deploy/)

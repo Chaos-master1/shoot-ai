@@ -70,16 +70,18 @@ class RaindropDetectionService:
         try:
             import torch
             import torch.nn as nn
+
             self._torch = torch
             self._nn = nn
             if self._model_path and self._model_path != "":
                 try:
-                    self._cnn_model = self._build_alexnet_30_2()
+                    cnn_model: Any = self._build_alexnet_30_2()
+                    self._cnn_model = cnn_model
                     state = torch.load(self._model_path, map_location="cpu")
                     if isinstance(state, dict) and "state_dict" in state:
                         state = state["state_dict"]
-                    self._cnn_model.load_state_dict(state, strict=False)
-                    self._cnn_model.eval()
+                    cnn_model.load_state_dict(state, strict=False)
+                    cnn_model.eval()
                     self._cnn_available = True
                     logger.info(f"Loaded raindrop CNN from {self._model_path}")
                 except Exception as e:
@@ -129,7 +131,7 @@ class RaindropDetectionService:
         winW, winH = self.WINDOW_SIZE
         for y in range(0, image.shape[0] - winH + 1, self.STEP_SIZE):
             for x in range(0, image.shape[1] - winW + 1, self.STEP_SIZE):
-                yield (x, y, image[y:y + winH, x:x + winW])
+                yield (x, y, image[y : y + winH, x : x + winW])
 
     def _cnn_classify_windows(self, image: np.ndarray) -> list[tuple[int, int, float]]:
         if not self._cnn_available or self._cnn_model is None:
@@ -186,17 +188,56 @@ class RaindropDetectionService:
             detections.append((x, y, min(0.9, circularity)))
         return detections
 
-    def _merge_overlapping(self, detections: list[tuple[int, int, float]]) -> list[tuple[int, int, int, int]]:
+    def _merge_overlapping(self, detections: list[tuple[int, int, float]]) -> list[list[int]]:
         rectangles: list[list[int]] = []
-        for x, y, conf in detections:
+        for x, y, _conf in detections:
             rect = [x, y, x + self.WINDOW_SIZE[0], y + self.WINDOW_SIZE[1]]
             rectangles.append(rect)
         if not rectangles:
             return []
-        merged, _ = cv2.groupRectangles(
-            rectangles, self.GROUP_THRESHOLD, self.GROUP_EPS
-        )
-        return [tuple(r) for r in merged] if len(merged) > 0 else []
+        merged = self._group_rectangles(rectangles, self.GROUP_THRESHOLD, self.GROUP_EPS)
+        return merged
+
+    @staticmethod
+    def _group_rectangles(
+        rect_list: list[list[int]], group_threshold: int, eps: float
+    ) -> list[list[int]]:
+        """Cluster near-identical rectangles, OpenCV-4 and OpenCV-5 compatible.
+
+        cv2.groupRectangles (objdetect module) was removed in OpenCV 5.0,
+        which crashed every call with AttributeError. This replacement
+        reproduces its semantics for the identical-rectangle clusters this
+        service produces: rectangles whose normalized coordinate difference
+        is < eps are averaged together, and a cluster is kept only when it
+        contains more than group_threshold members (i.e. >1 for the
+        service's GROUP_THRESHOLD=1), matching the old dedup behavior.
+        """
+        clusters: list[list[list[int]]] = []
+        for rect in rect_list:
+            placed = False
+            for cluster in clusters:
+                rep = cluster[0]
+                w = max(rep[2] - rep[0], 1)
+                h = max(rep[3] - rep[1], 1)
+                if (
+                    abs(rect[0] - rep[0]) < eps * w
+                    and abs(rect[1] - rep[1]) < eps * h
+                    and abs(rect[2] - rep[2]) < eps * w
+                    and abs(rect[3] - rep[3]) < eps * h
+                ):
+                    cluster.append(rect)
+                    placed = True
+                    break
+            if not placed:
+                clusters.append([rect])
+        merged: list[list[int]] = []
+        for cluster in clusters:
+            if len(cluster) <= group_threshold:
+                continue
+            n = float(len(cluster))
+            avg = [int(round(sum(r[i] for r in cluster) / n)) for i in range(4)]
+            merged.append(avg)
+        return merged
 
     def detect(self, frames: list[np.ndarray]) -> RaindropDetection:
         """Detect raindrops across multiple video frames.

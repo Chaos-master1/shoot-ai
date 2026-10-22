@@ -1,6 +1,8 @@
 """Test improved CV pipeline with smart track filtering."""
+
 import asyncio
 import os
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 from pathlib import Path
 
@@ -40,13 +42,16 @@ async def main() -> int:
         reverse=True,
     )[:10]
     for tid, info in sorted_tracks:
-        print(f"  Track {tid:3d}: {info['lifetime_pct']:5.1f}% lifetime, "
-              f"{info['frames_tracked']:4d} frames, "
-              f"conf={info['confidence_avg']:.2f}")
+        print(
+            f"  Track {tid:3d}: {info['lifetime_pct']:5.1f}% lifetime, "
+            f"{info['frames_tracked']:4d} frames, "
+            f"conf={info['confidence_avg']:.2f}"
+        )
     await cv.shutdown()
     return 0
 
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

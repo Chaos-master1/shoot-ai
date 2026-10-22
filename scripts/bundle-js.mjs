@@ -1,46 +1,58 @@
 #!/usr/bin/env node
+/**
+ * Kawkab AI frontend bundler.
+ *
+ * Reads the load order from scripts/frontend-manifest.json (NOT from
+ * index.html -- see CLAUDE.md "Frontend build" section for why), bundles
+ * those IIFE files in order with esbuild, and writes
+ * src/kawkab/web/dist/app.bundle.min.js (+ .map).
+ *
+ * Does NOT touch index.html. index.html's <script> tags (the bundle tag,
+ * qwebchannel.js, app-3d.js as a module, app-briefing.js -- wait, no:
+ * app-briefing.js is in the manifest, not a separate tag) are the
+ * permanent, hand-maintained source of truth for what loads outside the
+ * bundle. A previous version of this script derived its file list BY
+ * PARSING those tags out of index.html, then DELETED them from
+ * index.html after bundling -- which meant a second run had nothing left
+ * to parse and would have silently emitted a near-empty bundle. Keeping
+ * the manifest and index.html independently maintained (each an explicit,
+ * versioned file) makes every run idempotent: run this as many times as
+ * you want, index.html never changes.
+ *
+ * Usage: node scripts/bundle-js.mjs
+ */
 import * as esbuild from 'esbuild';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { resolve, dirname, relative } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const webDir = resolve(__dirname, '../src/kawkab/web');
-const htmlPath = resolve(webDir, 'index.html');
+const manifestPath = resolve(__dirname, 'frontend-manifest.json');
+const distDir = resolve(webDir, 'dist');
 
-const html = await readFile(htmlPath, 'utf-8');
-
-const scriptRegex = /<script[^>]*src="([^"]+)"[^>]*><\/script>/g;
-const scripts = [];
-let match;
-while ((match = scriptRegex.exec(html)) !== null) {
-  scripts.push({
-    src: match[1],
-    fullTag: match[0],
-    isDefer: /defer/i.test(match[0]),
-    isModule: /type="module"/i.test(match[0]),
-  });
+const manifest = JSON.parse(await readFile(manifestPath, 'utf-8'));
+const scriptSrcs = manifest.bundle;
+if (!Array.isArray(scriptSrcs) || scriptSrcs.length === 0) {
+  throw new Error(`${manifestPath} has no "bundle" array -- nothing to bundle.`);
 }
 
-const toBundle = scripts.filter(s =>
-  !s.src.startsWith('vendor/') &&
-  !s.src.startsWith('dist/') &&
-  !s.isModule &&
-  s.src !== 'js/qwebchannel.js'
-);
-
-console.log(`Found ${scripts.length} script tags`);
-console.log(`Bundling ${toBundle.length} files (excluding vendor, module, qwebchannel)`);
+console.log(`Bundling ${scriptSrcs.length} files from frontend-manifest.json (in order):`);
 
 let raw = '';
-for (const s of toBundle) {
-  const filePath = resolve(webDir, s.src);
-  let content = await readFile(filePath, 'utf-8');
+for (const src of scriptSrcs) {
+  const filePath = resolve(webDir, src);
+  let content;
+  try {
+    content = await readFile(filePath, 'utf-8');
+  } catch (e) {
+    throw new Error(`Manifest references ${src}, but it does not exist at ${filePath}: ${e.message}`);
+  }
   content = content.replace(/\/\/# sourceMappingURL.*/g, '');
-  raw += `// ${s.src}\n${content}\n\n`;
+  raw += `// ${src}\n${content}\n\n`;
+  console.log(`  + ${src} (${(content.length / 1024).toFixed(1)} KB)`);
 }
 
-const distDir = resolve(webDir, 'dist');
 await mkdir(distDir, { recursive: true });
 
 const result = await esbuild.transform(raw, {
@@ -52,24 +64,17 @@ const result = await esbuild.transform(raw, {
 const bundlePath = resolve(distDir, 'app.bundle.min.js');
 await writeFile(bundlePath, result.code);
 if (result.map) {
-  await writeFile(resolve(distDir, 'app.bundle.min.js.map'), JSON.stringify(result.map));
+  // esbuild's transform() already returns `map` as sourcemap JSON *text*
+  // (not an object) when sourcemap:true is passed -- JSON.stringify()-ing
+  // it again here would double-encode it into a JSON string containing an
+  // escaped JSON string, which is unreadable by source-map tooling. Write
+  // it as-is.
+  await writeFile(resolve(distDir, 'app.bundle.min.js.map'), result.map);
 }
-
-const bundleRel = 'dist/app.bundle.min.js';
-const bundleTag = '<script defer src="' + bundleRel + '"></script>';
-
-let updated = html;
-for (const s of toBundle) {
-  updated = updated.replace(s.fullTag, '');
-}
-updated = updated.replace('</body>', '  ' + bundleTag + '\n</body>');
-
-const updatedPath = resolve(webDir, 'index.html');
-await writeFile(updatedPath, updated);
 
 const savedBytes = Buffer.byteLength(raw) - result.code.length;
 const savedPct = ((1 - result.code.length / Buffer.byteLength(raw)) * 100).toFixed(1);
-console.log(`\u2713 Bundle written to dist/app.bundle.min.js`);
-console.log(`  ${toBundle.length} files concatenated`);
-console.log(`  ${Buffer.byteLength(raw).toLocaleString()} B \u2192 ${result.code.length.toLocaleString()} B (${savedPct}% reduction)`);
-console.log(`\u2713 index.html updated: ${toBundle.length} tags replaced with 1 defer bundle`);
+console.log(`\n✓ Bundle written to dist/app.bundle.min.js`);
+console.log(`  ${scriptSrcs.length} files concatenated`);
+console.log(`  ${Buffer.byteLength(raw).toLocaleString()} B → ${result.code.length.toLocaleString()} B (${savedPct}% reduction, saved ${savedBytes.toLocaleString()} B)`);
+console.log(`index.html is unchanged -- it already references dist/app.bundle.min.js directly.`);

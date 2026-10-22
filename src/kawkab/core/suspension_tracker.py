@@ -6,8 +6,6 @@ and yellow card slate clearance after N matches.
 
 from __future__ import annotations
 
-import json
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -177,15 +175,23 @@ def analyze_suspensions(
             is_suspended = True
             parts = []
             if pd["straight_reds"] > 0:
-                parts.append(f"{pd['straight_reds']} straight red(s): {straight_red_matches} match(es) each")
+                parts.append(
+                    f"{pd['straight_reds']} straight red(s): {straight_red_matches} match(es) each"
+                )
             if pd["second_yellows"] > 0:
-                parts.append(f"{pd['second_yellows']} second yellow(s): {second_yellow_matches} match(es) each")
+                parts.append(
+                    f"{pd['second_yellows']} second yellow(s): {second_yellow_matches} match(es) each"
+                )
             suspension_details = "; ".join(parts)
 
         for i, threshold in enumerate(yellow_thresholds):
             if current_yellows >= threshold and n_matches > 0:
                 is_suspended = True
-                ban = yellow_suspension_matches[i] if i < len(yellow_suspension_matches) else yellow_suspension_matches[-1]
+                ban = (
+                    yellow_suspension_matches[i]
+                    if i < len(yellow_suspension_matches)
+                    else yellow_suspension_matches[-1]
+                )
                 suspension_details = f"{ban} match suspension for {threshold} yellow cards"
                 if reds > 0:
                     suspension_details += " (also serving red card suspension)"
@@ -223,13 +229,15 @@ def analyze_suspensions(
         for threshold in yellow_thresholds:
             cards_needed = threshold - p.current_yellow_count
             if 1 <= cards_needed <= 2:
-                upcoming_risk.append({
-                    "player": p.player_name,
-                    "player_id": p.player_id,
-                    "current_yellows": p.current_yellow_count,
-                    "threshold": threshold,
-                    "cards_needed_for_suspension": cards_needed,
-                })
+                upcoming_risk.append(
+                    {
+                        "player": p.player_name,
+                        "player_id": p.player_id,
+                        "current_yellows": p.current_yellow_count,
+                        "threshold": threshold,
+                        "cards_needed_for_suspension": cards_needed,
+                    }
+                )
                 break
 
     sorted_players = sorted(players, key=lambda p: p.fair_play_score)

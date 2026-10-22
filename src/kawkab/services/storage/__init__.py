@@ -1,21 +1,13 @@
-"""Specialised storage classes for Kawkab AI data.
-Split from the original StorageService god class.
+"""Shared storage helpers.
+
+This package once hosted the "specialised storage classes" split out of
+StorageService (MatchStorage, EventStorage, ...). Those classes had zero
+production constructors — only tests exercised them, and they silently
+drifted from the real adapters — so they were removed. Both backends
+(StorageService, PostgresStorageAdapter) are the single source of truth
+for storage behavior; only the shared row-parsing helper survives here.
 """
 
-from kawkab.services.storage.base import BaseStorage
-from kawkab.services.storage.match_storage import MatchStorage
-from kawkab.services.storage.event_storage import EventStorage
-from kawkab.services.storage.player_storage import PlayerStorage
-from kawkab.services.storage.feedback_storage import FeedbackStorage
-from kawkab.services.storage.clip_storage import ClipStorage
-from kawkab.services.storage.profile_storage import ProfileStorage
+from kawkab.services.storage.base import parse_metadata_json
 
-__all__ = [
-    "BaseStorage",
-    "MatchStorage",
-    "EventStorage",
-    "PlayerStorage",
-    "FeedbackStorage",
-    "ClipStorage",
-    "ProfileStorage",
-]
+__all__ = ["parse_metadata_json"]

@@ -3,18 +3,35 @@
 from __future__ import annotations
 
 import math
-from collections import defaultdict, Counter
-from typing import Any
+from collections import Counter, defaultdict
+from typing import TYPE_CHECKING, Any
 
 from kawkab.core.game_constants import GAME
 from kawkab.core.logging import get_logger
-from kawkab.core.player_rating import compute_rating, PlayerRating
+from kawkab.core.player_rating import PlayerRating, compute_rating
 
 logger = get_logger(__name__)
 
 
 class TrackingMixin:
-    def _compute_player_stats(self, track_data, homography_matrix=None, track_merge_map: dict[int, int] | None = None):
+    # Provided by the composing AnalysisService (AnalysisServiceCore.__init__);
+    # declared here so mypy sees the assembled surface per mixin.
+    pitch_width: float
+    use_kalman: bool
+
+    if TYPE_CHECKING:
+        # Kalman variant lives on the composing AnalysisServiceCore; declared
+        # so the mixin's surface is visible to mypy (no runtime effect).
+        def _compute_player_stats_kalman(
+            self,
+            track_data: Any,
+            homography_matrix: Any,
+            max_frame_delta_m: float,
+        ) -> dict[int, dict[str, Any]]: ...
+
+    def _compute_player_stats(
+        self, track_data, homography_matrix=None, track_merge_map: dict[int, int] | None = None
+    ):
         from .core import PlayerStats
 
         def _resolve(tid):
@@ -27,24 +44,32 @@ class TrackingMixin:
         prev_positions: dict[int, tuple[float, float]] = {}
         max_speed_per_player: dict[int, float] = {}
 
-        fps = track_data.fps
-        pixels_per_meter = 720.0 / self.pitch_width
+        _ = track_data.fps
+        # Uncalibrated-distance approximation. The old 720.0/self.pitch_width
+        # constant assumed 720p frames with the pitch spanning the full frame
+        # height -- wrong by ~1.5x on 1080p sources (and more on zoomed shots).
+        # Derive the scale from the actual frame height when frames carry it;
+        # otherwise fall back to the project-wide CARRY_PIXEL_TO_METER_RATIO.
+        from kawkab.core.game_constants import GAME
+
+        _frame_h = next(
+            (f.image_height for f in track_data.frames if getattr(f, "image_height", 0)),
+            0,
+        )
+        if _frame_h:
+            pixels_per_meter = _frame_h / self.pitch_width
+        else:
+            pixels_per_meter = 1.0 / GAME.CARRY_PIXEL_TO_METER_RATIO
 
         # Read merge map from tracking_metrics if available and not explicitly provided
         if track_merge_map is None:
             metrics = getattr(track_data, "tracking_metrics", {}) or {}
             raw_map = metrics.get("stitch_merge_map", {})
-            if raw_map:
-                track_merge_map = {int(k): v for k, v in raw_map.items()}
-            else:
-                track_merge_map = {}
+            track_merge_map = {int(k): v for k, v in raw_map.items()} if raw_map else {}
 
         frame_skip = max(1, track_data.tracking_metrics.get("frame_skip", 1))
 
-        if homography_matrix is not None:
-            max_frame_delta_m = 0.5
-        else:
-            max_frame_delta_m = 25.0
+        max_frame_delta_m = 0.5 if homography_matrix is not None else 25.0
 
         use_kalman = (
             self.use_kalman
@@ -58,7 +83,9 @@ class TrackingMixin:
             )
 
         prev_timestamps: dict[int, float] = {}
-        is_skip_frame = lambda fno: fno % frame_skip != 0
+
+        def is_skip_frame(fno: int) -> bool:
+            return fno % frame_skip != 0
 
         for frame in track_data.frames:
             current_positions: dict[int, tuple[float, float]] = {}
@@ -121,15 +148,14 @@ class TrackingMixin:
 
         for tid, player in players.items():
             if track_data.duration_seconds > 0:
-                player.avg_speed_kmh = (
-                    player.distance_covered_m / track_data.duration_seconds * 3.6
-                )
+                player.avg_speed_kmh = player.distance_covered_m / track_data.duration_seconds * 3.6
             player.max_speed_kmh = max_speed_per_player.get(tid, 0.0)
 
         return players
 
-    def _compute_player_ratings(self, players, typed_events, pitch_control, track_data, homography_matrix=None):
-        from .core import PlayerStats
+    def _compute_player_ratings(
+        self, players, typed_events, pitch_control, track_data, homography_matrix=None
+    ):
 
         ratings: dict[int, PlayerRating] = {}
 
@@ -140,13 +166,23 @@ class TrackingMixin:
                 continue
             if tid not in event_by_player:
                 event_by_player[tid] = {
-                    "passes": 0, "completed_passes": 0, "progressive": 0, "key_passes": 0,
-                    "assists": 0, "shots": 0, "sot": 0,
-                    "tackles": 0, "interceptions": 0, "carries": 0,
-                    "prog_carries": 0, "goals": 0.0, "xg": 0.0,
+                    "passes": 0,
+                    "completed_passes": 0,
+                    "progressive": 0,
+                    "key_passes": 0,
+                    "assists": 0,
+                    "shots": 0,
+                    "sot": 0,
+                    "tackles": 0,
+                    "interceptions": 0,
+                    "carries": 0,
+                    "prog_carries": 0,
+                    "goals": 0.0,
+                    "xg": 0.0,
                 }
             d = event_by_player[tid]
-            from kawkab.core.events import PassEvent, ShotEvent, CarryEvent
+            from kawkab.core.events import CarryEvent, PassEvent, ShotEvent
+
             if isinstance(ev, PassEvent):
                 d["passes"] += 1
                 if ev.completed:
@@ -176,7 +212,9 @@ class TrackingMixin:
 
             passes_from_events = estats.get("passes", 0)
             completed_passes = estats.get("completed_passes", 0)
-            pass_acc = completed_passes / max(passes_from_events, 1) if passes_from_events > 0 else 0.0
+            pass_acc = (
+                completed_passes / max(passes_from_events, 1) if passes_from_events > 0 else 0.0
+            )
             rating = compute_rating(
                 pass_accuracy=pass_acc,
                 passes_completed=completed_passes,
@@ -195,7 +233,9 @@ class TrackingMixin:
                 progressive_carries=estats.get("prog_carries", 0),
                 distance_covered_m=player.distance_covered_m,
                 max_speed_kmh=player.max_speed_kmh,
-                minutes_played=track_data.duration_seconds / 60.0 if track_data.duration_seconds > 0 else 90.0,
+                minutes_played=track_data.duration_seconds / 60.0
+                if track_data.duration_seconds > 0
+                else 90.0,
                 avg_x=avg_x,
                 position=None,
                 pitch_length=self.pitch_length,
@@ -235,24 +275,20 @@ class TrackingMixin:
             for det in frame.detections:
                 if det.class_name == "sports ball" and ball_det is None:
                     ball_det = det
-                elif det.class_name == "person" and det.track_id is not None:
-                    if track_data.player_teams:
-                        assigned = track_data.player_teams.get(det.track_id)
-                        if assigned == "home":
-                            (team_players if team == "home" else opp_players).append(det)
-                        elif assigned == "away":
-                            (team_players if team == "away" else opp_players).append(det)
-                    else:
-                        if team == "home":
-                            if det.track_id % 2 == 0:
-                                team_players.append(det)
-                            else:
-                                opp_players.append(det)
-                        else:
-                            if det.track_id % 2 != 0:
-                                team_players.append(det)
-                            else:
-                                opp_players.append(det)
+                elif (
+                    det.class_name == "person"
+                    and det.track_id is not None
+                    and track_data.player_teams
+                ):
+                    assigned = track_data.player_teams.get(det.track_id)
+                    if assigned == "home":
+                        (team_players if team == "home" else opp_players).append(det)
+                    elif assigned == "away":
+                        (team_players if team == "away" else opp_players).append(det)
+                    # No team assignment: skip this player rather than
+                    # inventing one from track-ID parity (tid % 2 has no
+                    # relation to team membership and silently corrupted
+                    # PPDA/formation stats).
 
             if ball_det is None or not team_players or not opp_players:
                 continue
@@ -268,7 +304,10 @@ class TrackingMixin:
             else:
                 bx_m, by_m = bx, by
 
-            def _opp_dist_pitch(p):
+            # Bind loop values as defaults: this closure is only used within
+            # this iteration, but default-arg binding removes the late-binding
+            # trap entirely (B023).
+            def _opp_dist_pitch(p, bx_m=bx_m, by_m=by_m, bx=bx, by=by):
                 ox = (p.bbox[0] + p.bbox[2]) / 2
                 oy = (p.bbox[1] + p.bbox[3]) / 2
                 if homography_matrix is not None:
@@ -288,38 +327,34 @@ class TrackingMixin:
             current_possessor_track_id = closest_team_player.track_id
 
             if team == "home":
-                if track_data.player_teams:
-                    if track_data.player_teams.get(current_possessor_track_id) == "home":
-                        team_possession_frames += 1
-                    else:
-                        opp_possession_frames += 1
-                elif current_possessor_track_id % 2 == 0:
+                if track_data.player_teams.get(current_possessor_track_id) == "home":
                     team_possession_frames += 1
                 else:
                     opp_possession_frames += 1
             else:
-                if current_possessor_track_id % 2 != 0:
+                if track_data.player_teams.get(current_possessor_track_id) == "away":
                     team_possession_frames += 1
                 else:
                     opp_possession_frames += 1
 
-            if (prev_possessor_track_id is not None
-                and current_possessor_track_id != prev_possessor_track_id):
-                if closest_opp_dist < press_threshold_m:
-                    n_defensive_actions += 1
-                    if prev_ball_pos is not None:
-                        pbx, pby = prev_ball_pos
-                        if homography_matrix is not None:
-                            try:
-                                bx_m, by_m = homography_matrix.pixel_to_pitch(bx, by)
-                                pbx_m, pby_m = homography_matrix.pixel_to_pitch(pbx, pby)
-                                ball_moved_m = math.sqrt((bx_m - pbx_m) ** 2 + (by_m - pby_m) ** 2)
-                            except Exception:
-                                ball_moved_m = math.sqrt((bx - pbx) ** 2 + (by - pby) ** 2)
-                        else:
+            if (
+                prev_possessor_track_id is not None
+                and current_possessor_track_id != prev_possessor_track_id
+            ) and closest_opp_dist < press_threshold_m:
+                n_defensive_actions += 1
+                if prev_ball_pos is not None:
+                    pbx, pby = prev_ball_pos
+                    if homography_matrix is not None:
+                        try:
+                            bx_m, by_m = homography_matrix.pixel_to_pitch(bx, by)
+                            pbx_m, pby_m = homography_matrix.pixel_to_pitch(pbx, pby)
+                            ball_moved_m = math.sqrt((bx_m - pbx_m) ** 2 + (by_m - pby_m) ** 2)
+                        except Exception:
                             ball_moved_m = math.sqrt((bx - pbx) ** 2 + (by - pby) ** 2)
-                        if ball_moved_m > possession_change_threshold_m:
-                            n_passes += 1
+                    else:
+                        ball_moved_m = math.sqrt((bx - pbx) ** 2 + (by - pby) ** 2)
+                    if ball_moved_m > possession_change_threshold_m:
+                        n_passes += 1
 
             prev_possessor_track_id = current_possessor_track_id
             prev_ball_pos = (bx, by)
@@ -332,7 +367,8 @@ class TrackingMixin:
                 "defensive_actions": n_defensive_actions,
                 "possession_pct": (
                     team_possession_frames / (team_possession_frames + opp_possession_frames) * 100
-                    if (team_possession_frames + opp_possession_frames) > 0 else 50.0
+                    if (team_possession_frames + opp_possession_frames) > 0
+                    else 50.0
                 ),
             }
 
@@ -352,12 +388,12 @@ class TrackingMixin:
             "defensive_actions": n_defensive_actions,
             "possession_pct": round(
                 team_possession_frames / (team_possession_frames + opp_possession_frames) * 100, 1
-            ) if (team_possession_frames + opp_possession_frames) > 0 else 50.0,
+            )
+            if (team_possession_frames + opp_possession_frames) > 0
+            else 50.0,
         }
 
     def detect_formation(self, track_data, team="home", n_players=11, homography_matrix=None):
-        import math as _math
-        from collections import defaultdict
 
         team_player_positions: dict[int, list[tuple[float, float]]] = defaultdict(list)
         track_first_seen: dict[int, float] = {}
@@ -378,12 +414,11 @@ class TrackingMixin:
                     if team == "away" and assigned != "away":
                         continue
                 else:
-                    if team == "home":
-                        if det.track_id % 2 != 0:
-                            continue
-                    else:
-                        if det.track_id % 2 == 0:
-                            continue
+                    # No team assignment: this detection carries no reliable
+                    # team evidence. The old tid%2 parity split fabricated
+                    # half a formation out of arbitrary track IDs; skipping
+                    # yields an honest "formation unknown" instead.
+                    continue
                 x1, y1, x2, y2 = det.bbox
                 cx = (x1 + x2) / 2
                 cy = (y1 + y2) / 2
@@ -404,8 +439,7 @@ class TrackingMixin:
             if (track_last_seen.get(tid, 0) - track_first_seen.get(tid, 0)) >= min_span_seconds
         }
         track_lifetimes = {
-            tid: track_last_seen[tid] - track_first_seen[tid]
-            for tid in team_player_positions
+            tid: track_last_seen[tid] - track_first_seen[tid] for tid in team_player_positions
         }
         logger.debug(
             f"Formation team={team}: {len(team_player_positions)} tracks pass "
@@ -423,8 +457,10 @@ class TrackingMixin:
             }
 
         avg_positions = {
-            tid: (sum(p[0] for p in positions) / len(positions),
-                  sum(p[1] for p in positions) / len(positions))
+            tid: (
+                sum(p[0] for p in positions) / len(positions),
+                sum(p[1] for p in positions) / len(positions),
+            )
             for tid, positions in team_player_positions.items()
         }
 
@@ -454,7 +490,7 @@ class TrackingMixin:
                 break
             prev_labels = labels
             for k in range(3):
-                members = [x_coords[i] for i, l in enumerate(labels) if l == k]
+                members = [x_coords[i] for i, lab in enumerate(labels) if lab == k]
                 if members:
                     centroids[k] = sum(members) / len(members)
             centroids.sort()
@@ -463,13 +499,12 @@ class TrackingMixin:
         n_mid = max(2, min(6, labels.count(1)))
         n_att = max(1, min(4, labels.count(2)))
 
-        defenders = [sorted_by_x[i][0] for i, l in enumerate(labels) if l == 0]
-        midfielders = [sorted_by_x[i][0] for i, l in enumerate(labels) if l == 1]
-        attackers = [sorted_by_x[i][0] for i, l in enumerate(labels) if l == 2]
+        defenders = [sorted_by_x[i][0] for i, lab in enumerate(labels) if lab == 0]
+        midfielders = [sorted_by_x[i][0] for i, lab in enumerate(labels) if lab == 1]
+        attackers = [sorted_by_x[i][0] for i, lab in enumerate(labels) if lab == 2]
 
         def_line_height = (
-            sum(avg_positions[t][0] for t in defenders) / len(defenders)
-            if defenders else 0
+            sum(avg_positions[t][0] for t in defenders) / len(defenders) if defenders else 0
         )
 
         if homography_matrix is not None:
@@ -485,15 +520,27 @@ class TrackingMixin:
         formation_str = f"{n_def}-{n_mid}-{n_att}"
 
         valid_formations = {
-            "4-3-3", "4-4-2", "4-2-3-1", "3-5-2", "3-4-3", "5-3-2",
-            "5-4-1", "4-1-4-1", "4-5-1", "3-4-1-2", "3-6-1",
-            "4-3-1-2", "4-1-3-2", "4-4-1-1", "5-2-3",
-            "3-5-1-1", "4-2-2-2", "4-3-2-1", "4-1-2-3",
+            "4-3-3",
+            "4-4-2",
+            "4-2-3-1",
+            "3-5-2",
+            "3-4-3",
+            "5-3-2",
+            "5-4-1",
+            "4-1-4-1",
+            "4-5-1",
+            "3-4-1-2",
+            "3-6-1",
+            "4-3-1-2",
+            "4-1-3-2",
+            "4-4-1-1",
+            "5-2-3",
+            "3-5-1-1",
+            "4-2-2-2",
+            "4-3-2-1",
+            "4-1-2-3",
         }
-        if formation_str in valid_formations:
-            confidence = 0.7 if n >= 8 else 0.4
-        else:
-            confidence = 0.3
+        confidence = (0.7 if n >= 8 else 0.4) if formation_str in valid_formations else 0.3
 
         return {
             "formation": formation_str,
@@ -540,13 +587,17 @@ class TrackingMixin:
             return "unknown"
         for frame in frames:
             detections = getattr(frame, "detections", []) or []
-            team_dets = [d for d in detections if getattr(d, "team", None) == team and not getattr(d, "is_ball", False)]
+            team_dets = [
+                d
+                for d in detections
+                if getattr(d, "team", None) == team and not getattr(d, "is_ball", False)
+            ]
             if len(team_dets) >= 10:
                 return self._detect_formation(team_dets)
         return "unknown"
 
     def _detect_formation(self, detections):
-        from collections import Counter
+
         thirds = Counter()
         for d in detections:
             x = getattr(d, "x", None) or 0

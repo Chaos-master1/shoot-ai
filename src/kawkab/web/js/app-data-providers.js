@@ -470,7 +470,7 @@
             clearTimeout(window[inputId + 'Timer']);
             window[inputId + 'Timer'] = setTimeout(async () => {
                 try {
-                    const data = JSON.parse(await bridge.search_api_football_team(query));
+                    const data = JSON.parse(await bridge.search_apifootball_team(query));
                     const teams = data.teams || [];
                     if (teams.length === 0) {
                         results.innerHTML = '<div class="fd-result-item" style="color: var(--text-muted)">No teams found</div>';
@@ -1849,7 +1849,7 @@
             }
             resultEl.textContent = '✅ Pitch drawn (' + data.shape[0] + 'x' + data.shape[1] + ')';
             resultEl.className = 'feedback-result success';
-            imgEl.innerHTML = '<img src="data:image/png;base64,' + data.image_b64 + '" style="max-width:100%;border:1px solid #ccc;border-radius:6px">';
+            imgEl.innerHTML = '<img src="data:image/png;base64,' + escapeHtml(data.image_b64) + '" style="max-width:100%;border:1px solid #ccc;border-radius:6px">';
         } catch (e) {
             resultEl.textContent = '❌ Failed to draw pitch';
             resultEl.className = 'feedback-result error';

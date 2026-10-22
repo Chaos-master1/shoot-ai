@@ -54,7 +54,7 @@ def _estimate_player_positions(
     events: list[dict[str, Any]],
     team: str,
     timestamp: float,
-) -> list[ dict[str, float] ]:
+) -> list[dict[str, float]]:
     positions: list[dict[str, float]] = []
     for ev in events:
         ev_ts = float(ev.get("timestamp", 0))
@@ -89,9 +89,7 @@ class PassingLaneAnalysis:
             return 0
         ts = float(event.get("timestamp", 0))
         if team_player_positions is None:
-            team_player_positions = _estimate_player_positions(
-                all_events, team, ts
-            )
+            team_player_positions = _estimate_player_positions(all_events, team, ts)
         count = 0
         for pos in team_player_positions:
             px = pos["x"]

@@ -11,9 +11,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -39,10 +38,17 @@ RNG = np.random.default_rng(42)
 def _load_metrica(data_dir: Path) -> dict[str, Any]:
     """Load Metrica CSV and return frame-by-frame player positions."""
     from evaluate_tracking import load_metrica_ground_truth
+
     gt = load_metrica_ground_truth(data_dir)
     return {
-        "home": {label: [(f.frame, f.x, f.y) for f in track.frames] for label, track in gt.home_tracks.items()},
-        "away": {label: [(f.frame, f.x, f.y) for f in track.frames] for label, track in gt.away_tracks.items()},
+        "home": {
+            label: [(f.frame, f.x, f.y) for f in track.frames]
+            for label, track in gt.home_tracks.items()
+        },
+        "away": {
+            label: [(f.frame, f.x, f.y) for f in track.frames]
+            for label, track in gt.away_tracks.items()
+        },
         "fps": gt.fps,
         "total_frames": gt.total_frames,
     }
@@ -71,13 +77,15 @@ def _build_detections(
             for frame, x, y in positions:
                 if x != x or y != y:
                     continue  # skip NaN
-                all_players.setdefault(int(frame), []).append({
-                    "gt_id": base_id,
-                    "x": x,
-                    "y": y,
-                    "team": team,
-                    "label": label,
-                })
+                all_players.setdefault(int(frame), []).append(
+                    {
+                        "gt_id": base_id,
+                        "x": x,
+                        "y": y,
+                        "team": team,
+                        "label": label,
+                    }
+                )
 
     if not all_players:
         return {}
@@ -110,14 +118,18 @@ def _build_detections(
             hw = PLAYER_WIDTH_PX / 2
             hh = PLAYER_HEIGHT_PX / 2
 
-            dets.append(np.array([
-                max(0, sx - hw),
-                max(0, sy - hh),
-                sx + hw,
-                sy + hh,
-                CONFIDENCE,
-                CLASS_ID,
-            ]))
+            dets.append(
+                np.array(
+                    [
+                        max(0, sx - hw),
+                        max(0, sy - hh),
+                        sx + hw,
+                        sy + hh,
+                        CONFIDENCE,
+                        CLASS_ID,
+                    ]
+                )
+            )
 
             # Ground truth ID stored separately for comparison
 
@@ -130,14 +142,18 @@ def _build_detections(
             fy = RNG.uniform(0, fp_scale_y)
             hw = PLAYER_WIDTH_PX / 2
             hh = PLAYER_HEIGHT_PX / 2
-            dets.append(np.array([
-                max(0, fx - hw),
-                max(0, fy - hh),
-                fx + hw,
-                fy + hh,
-                RNG.uniform(0.3, 0.7),
-                CLASS_ID,
-            ]))
+            dets.append(
+                np.array(
+                    [
+                        max(0, fx - hw),
+                        max(0, fy - hh),
+                        fx + hw,
+                        fy + hh,
+                        RNG.uniform(0.3, 0.7),
+                        CLASS_ID,
+                    ]
+                )
+            )
 
         if dets:
             detections_by_frame[fn] = np.array(dets)
@@ -149,9 +165,11 @@ def _init_tracker(tracker_type: str = "bytetrack"):
     """Initialize a boxmot tracker instance."""
     if tracker_type == "bytetrack":
         from boxmot.trackers.bbox.bytetrack.bytetrack import ByteTrack
+
         return ByteTrack()
     elif tracker_type == "botsort":
         from boxmot.trackers.bbox.botsort.botsort import BotSort
+
         return BotSort()
     else:
         raise ValueError(f"Unknown tracker: {tracker_type}")
@@ -172,11 +190,13 @@ def run_synthetic_benchmark(
         return {"status": "error", "message": "No detections generated"}
 
     frame_nums = sorted(detections.keys())
-    logger.info(f"Processing {len(frame_nums)} frames with {sum(len(d) for d in detections.values())} total detections")
+    logger.info(
+        f"Processing {len(frame_nums)} frames with {sum(len(d) for d in detections.values())} total detections"
+    )
 
     # Build ground truth tracks dict for MOT computation
     gt_tracks: dict[int, list[tuple[int, float, float]]] = {}
-    all_players = {}
+    _ = {}
     for team in ("home", "away"):
         for label, positions in gt_data[team].items():
             if not positions:
@@ -185,16 +205,20 @@ def run_synthetic_benchmark(
             for frame, x, y in positions:
                 if x != x or y != y:
                     continue
-                gt_tracks.setdefault(base_id, []).append((
-                    int(frame),
-                    x * PITCH_WIDTH_M * PX_PER_M,
-                    (1.0 - y) * PITCH_HEIGHT_M * PX_PER_M,
-                ))
+                gt_tracks.setdefault(base_id, []).append(
+                    (
+                        int(frame),
+                        x * PITCH_WIDTH_M * PX_PER_M,
+                        (1.0 - y) * PITCH_HEIGHT_M * PX_PER_M,
+                    )
+                )
 
     # Run tracker
     tracker = _init_tracker(tracker_type)
     # Create a dummy frame for tracker (needed for some trackers)
-    dummy_frame = np.zeros((int(PITCH_HEIGHT_M * PX_PER_M), int(PITCH_WIDTH_M * PX_PER_M), 3), dtype=np.uint8)
+    dummy_frame = np.zeros(
+        (int(PITCH_HEIGHT_M * PX_PER_M), int(PITCH_WIDTH_M * PX_PER_M), 3), dtype=np.uint8
+    )
 
     # Build prediction tracks from tracker output
     pred_tracks: dict[int, list[tuple[int, float, float]]] = {}  # track_id -> [(frame, x, y)]
@@ -227,7 +251,9 @@ def run_synthetic_benchmark(
         if filtered:
             filtered_gt_tracks[tid] = filtered
 
-    mot = compute_mot_metrics(pred_tracks, filtered_gt_tracks, fp_threshold=50.0, is_normalized=False)
+    mot = compute_mot_metrics(
+        pred_tracks, filtered_gt_tracks, fp_threshold=50.0, is_normalized=False
+    )
 
     # Compute fragmentation from tracking output
     total_frames = max(1, len(frame_nums))
@@ -238,13 +264,14 @@ def run_synthetic_benchmark(
         }
     }
     from evaluate_tracking import compute_fragmentation
+
     frag = compute_fragmentation(track_summary)
 
     n_gt_players = len(filtered_gt_tracks)
 
     return {
         "status": "ok",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "config": {
             "max_frames": max_frames,
             "noise_std": noise_std,
@@ -275,7 +302,7 @@ def print_report(report: dict[str, Any]):
         return
 
     cfg = report.get("config", {})
-    print(f"\n  Config:")
+    print("\n  Config:")
     print(f"    Tracker:       {cfg.get('tracker', 'N/A')}")
     print(f"    Noise std:     {cfg.get('noise_std', 'N/A')}")
     print(f"    Drop rate:     {cfg.get('drop_rate', 'N/A')}")
@@ -283,31 +310,47 @@ def print_report(report: dict[str, Any]):
     print(f"    Max frames:    {cfg.get('max_frames', 'N/A')}")
 
     gt = report.get("ground_truth", {})
-    print(f"\n  Ground Truth:")
+    print("\n  Ground Truth:")
     print(f"    Players:       {gt.get('total_players', 'N/A')}")
     print(f"    Frames:        {gt.get('total_frames', 'N/A')}")
     print(f"    Detections:    {gt.get('total_detections', 'N/A')}")
     print(f"    Tracked:       {gt.get('tracked_frames', 'N/A')}")
 
     mot = report.get("mot_metrics", {})
-    print(f"\n  -- MOT Metrics --")
-    mota = mot.get('mota', 'N/A')
-    print(f"    MOTA:          {mota:.4f}" if isinstance(mota, float) else f"    MOTA:          {mota}")
-    motp = mot.get('motp', 'N/A')
-    print(f"    MOTP:          {motp:.4f}" if isinstance(motp, float) else f"    MOTP:          {motp}")
-    idf1 = mot.get('idf1', 'N/A')
-    print(f"    IDF1:          {idf1:.4f}" if isinstance(idf1, float) else f"    IDF1:          {idf1}")
-    idp = mot.get('id_precision', 'N/A')
-    print(f"    ID Precision:  {idp:.4f}" if isinstance(idp, float) else f"    ID Precision:  {idp}")
-    idr = mot.get('id_recall', 'N/A')
-    print(f"    ID Recall:     {idr:.4f}" if isinstance(idr, float) else f"    ID Recall:     {idr}")
+    print("\n  -- MOT Metrics --")
+    mota = mot.get("mota", "N/A")
+    print(
+        f"    MOTA:          {mota:.4f}"
+        if isinstance(mota, float)
+        else f"    MOTA:          {mota}"
+    )
+    motp = mot.get("motp", "N/A")
+    print(
+        f"    MOTP:          {motp:.4f}"
+        if isinstance(motp, float)
+        else f"    MOTP:          {motp}"
+    )
+    idf1 = mot.get("idf1", "N/A")
+    print(
+        f"    IDF1:          {idf1:.4f}"
+        if isinstance(idf1, float)
+        else f"    IDF1:          {idf1}"
+    )
+    idp = mot.get("id_precision", "N/A")
+    print(
+        f"    ID Precision:  {idp:.4f}" if isinstance(idp, float) else f"    ID Precision:  {idp}"
+    )
+    idr = mot.get("id_recall", "N/A")
+    print(
+        f"    ID Recall:     {idr:.4f}" if isinstance(idr, float) else f"    ID Recall:     {idr}"
+    )
     print(f"    ID Switches:   {mot.get('id_switches', 'N/A')}")
     print(f"    False Pos:     {mot.get('false_positives', 'N/A')}")
     print(f"    False Neg:     {mot.get('false_negatives', 'N/A')}")
 
     frag = report.get("fragmentation", {})
     if "error" not in frag:
-        print(f"\n  -- Fragmentation --")
+        print("\n  -- Fragmentation --")
         print(f"    Tracks:        {frag.get('n_tracks', 'N/A')}")
         print(f"    Avg Lifetime:  {frag.get('avg_lifetime_frames', 'N/A')} frames")
 
@@ -318,9 +361,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", default="data/ground_truth")
     parser.add_argument("--output", default="benchmark_results/synthetic_benchmark.json")
-    parser.add_argument("--noise", type=float, default=0.02, help="Position noise std dev (fraction of pitch)")
+    parser.add_argument(
+        "--noise", type=float, default=0.02, help="Position noise std dev (fraction of pitch)"
+    )
     parser.add_argument("--drop", type=float, default=0.10, help="Detection drop rate")
-    parser.add_argument("--fp-rate", type=float, default=0.05, help="False positives per player per frame")
+    parser.add_argument(
+        "--fp-rate", type=float, default=0.05, help="False positives per player per frame"
+    )
     parser.add_argument("--max-frames", type=int, default=5000, help="Max frames to process")
     parser.add_argument("--tracker", default="bytetrack", choices=["bytetrack", "botsort"])
     args = parser.parse_args()

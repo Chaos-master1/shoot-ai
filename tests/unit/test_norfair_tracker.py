@@ -15,8 +15,20 @@ install_kawkab_stubs()
 
 
 def _install_norfair_stub() -> None:
-    if "norfair" in sys.modules:
-        return
+    # Deliberately unconditional: this suite unit-tests NorfairTracker's own
+    # wrapping logic (dict-in/dict-out, label routing), not norfair's real
+    # tracking/matching algorithm -- so the real package must never leak in.
+    # An earlier "if already imported, skip" guard here meant that whenever
+    # something upstream (install_kawkab_stubs() eagerly importing
+    # kawkab.services, which imports cv_service, which imports norfair)
+    # had already imported the real norfair package, this stub silently
+    # became a no-op and the test exercised real norfair's real
+    # initialization_delay/hit_counter confirmation timing instead of the
+    # wrapper logic -- passing or failing depending on import order and
+    # which norfair version happened to be installed, not on this file's
+    # own correctness. Verified via a clean `pip install -e ".[test,cloud]"`
+    # (real norfair 2.3.0 installed): every test below failed for exactly
+    # this reason before this fix.
     norfair_mod = types.ModuleType("norfair")
 
     class TrackedObject:
@@ -51,26 +63,27 @@ def _install_norfair_stub() -> None:
     norfair_mod.Tracker = Tracker
     sys.modules["norfair"] = norfair_mod
 
-    if "norfair.camera_motion" not in sys.modules:
-        cm_mod = types.ModuleType("norfair.camera_motion")
-        class MotionEstimator:
-            def __init__(self):
-                self._update_count = 0
-            def update(self, frame):
-                self._update_count += 1
-                return {"transformation_matrix": np.eye(3, dtype=np.float32)}
-        cm_mod.MotionEstimator = MotionEstimator
-        sys.modules["norfair.camera_motion"] = cm_mod
+    cm_mod = types.ModuleType("norfair.camera_motion")
 
-    if "norfair.tracker" not in sys.modules:
-        tr_mod = types.ModuleType("norfair.tracker")
-        tr_mod.TrackedObject = TrackedObject
-        sys.modules["norfair.tracker"] = tr_mod
+    class MotionEstimator:
+        def __init__(self):
+            self._update_count = 0
+
+        def update(self, frame):
+            self._update_count += 1
+            return {"transformation_matrix": np.eye(3, dtype=np.float32)}
+
+    cm_mod.MotionEstimator = MotionEstimator
+    sys.modules["norfair.camera_motion"] = cm_mod
+
+    tr_mod = types.ModuleType("norfair.tracker")
+    tr_mod.TrackedObject = TrackedObject
+    sys.modules["norfair.tracker"] = tr_mod
 
 
 def _install_cv2_stub() -> None:
-    if "cv2" in sys.modules:
-        return
+    # Same reasoning as _install_norfair_stub(): must win unconditionally,
+    # or a real cv2 already imported upstream silently defeats the stub.
     cv2_stub = types.ModuleType("cv2")
     cv2_stub.COLOR_BGR2HSV = 40
     cv2_stub.cvtColor = MagicMock(side_effect=lambda img, code: img)
@@ -79,12 +92,26 @@ def _install_cv2_stub() -> None:
     sys.modules["cv2"] = cv2_stub
 
 
-_install_norfair_stub()
-_install_cv2_stub()
+@pytest.fixture(scope="module", autouse=True)
+def _stubbed_norfair_and_cv2():
+    """Install the norfair/cv2 stubs for every test in this module, then
+    restore whatever was in sys.modules beforehand -- without this,
+    stubbing "cv2"/"norfair" here would leak into other test files that
+    run afterward in the same session and need the real packages."""
+    keys = ["norfair", "norfair.camera_motion", "norfair.tracker", "cv2"]
+    saved = {k: sys.modules.get(k) for k in keys}
+    _install_norfair_stub()
+    _install_cv2_stub()
+    yield
+    for k in keys:
+        if saved[k] is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = saved[k]
 
 
 @pytest.fixture(scope="module")
-def nf_mod():
+def nf_mod(_stubbed_norfair_and_cv2):
     return load_service_module("kawkab.services.norfair_tracker", "norfair_tracker.py")
 
 
@@ -94,7 +121,6 @@ def fake_frame():
 
 
 class TestNorfairTracker:
-
     def test_init(self, nf_mod):
         tracker = nf_mod.NorfairTracker()
         assert tracker._initialized is False

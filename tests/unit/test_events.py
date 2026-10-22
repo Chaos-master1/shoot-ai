@@ -8,14 +8,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from conftest import install_kawkab_stubs
+
 install_kawkab_stubs()
 
 from kawkab.core.events import (
-    EventType, BodyPart, PassType, ShotType, AssistType, TackleType,
-    PressureContext, ShotEvent, PassEvent, event_from_dict,
+    AssistType,
+    BodyPart,
+    EventType,
+    PassType,
+    PressureContext,
+    ShotEvent,
+    ShotType,
+    TackleType,
+    event_from_dict,
 )
-
-import pytest
 
 
 class TestEventType:

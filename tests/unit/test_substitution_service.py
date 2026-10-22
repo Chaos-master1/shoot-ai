@@ -31,10 +31,15 @@ def make_sub(
     position_changed: bool = False,
 ) -> SubstitutionEvent:
     return SubstitutionEvent(
-        minute=minute, second=0, team=team,
-        player_off_track_id=1, player_off_name="Tired Player",
-        player_on_track_id=2, player_on_name="Fresh Player",
-        formation_before=formation_before, formation_after=formation_after,
+        minute=minute,
+        second=0,
+        team=team,
+        player_off_track_id=1,
+        player_off_name="Tired Player",
+        player_on_track_id=2,
+        player_on_name="Fresh Player",
+        formation_before=formation_before,
+        formation_after=formation_after,
         position_changed=position_changed,
     )
 

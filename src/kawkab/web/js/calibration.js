@@ -4,6 +4,13 @@
 (function() {
     'use strict';
 
+    function escapeHtml(str) {
+        if (typeof str !== 'string') str = String(str || '');
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     const canvas = document.getElementById('calibration-canvas');
     const ctx = canvas ? canvas.getContext('2d') : null;
     const clicksCountEl = document.getElementById('clicks-count');
@@ -83,7 +90,7 @@
             const item = document.createElement('div');
             item.className = 'segment-item' + (idx === selectedSegment ? ' active' : '');
             item.innerHTML =
-                '<span class="segment-label">' + (seg.label || 'Segment ' + (idx + 1)) + '</span>' +
+                '<span class="segment-label">' + escapeHtml(seg.label || 'Segment ' + (idx + 1)) + '</span>' +
                 '<span class="segment-status">' + (segmentCalibrations[idx] ? 'Calibrated' : 'Not set') + '</span>' +
                 '<button class="btn btn-secondary segment-calibrate" data-idx="' + idx + '">Calibrate</button>';
             item.querySelector('.segment-calibrate').addEventListener('click', function(e) {
@@ -328,8 +335,8 @@
             const card = document.createElement('div');
             card.className = 'segment-card';
             card.innerHTML =
-                '<span class="card-label">' + (seg.label || 'Segment ' + (parseInt(k) + 1)) + '</span>' +
-                '<span class="card-detail">Method: ' + (cal.method || 'manual') + '</span>' +
+                '<span class="card-label">' + escapeHtml(seg.label || 'Segment ' + (parseInt(k) + 1)) + '</span>' +
+                '<span class="card-detail">Method: ' + escapeHtml(cal.method || 'manual') + '</span>' +
                 '<span class="card-detail">Confidence: ' + (cal.confidence ? (cal.confidence * 100).toFixed(0) + '%' : 'N/A') + '</span>';
             container.appendChild(card);
         });

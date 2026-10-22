@@ -19,6 +19,7 @@ This script expects:
   - SoccerNet tracking annotations in COCO format
   - Or custom annotations in YOLO format (.txt per image)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -101,6 +102,7 @@ def prepare_soccer_net_annotations(
 
     matches = list(raw_dir.glob("*/"))
     import random
+
     random.shuffle(matches)
     split_idx = int(len(matches) * 0.8)
     train_matches = matches[:split_idx]
@@ -157,12 +159,18 @@ def main():
     train_parser.add_argument("--workers", type=int, default=4, help="Data workers")
     train_parser.add_argument("--project", type=str, default="runs/train", help="Output dir")
     train_parser.add_argument("--name", type=str, default=None, help="Run name")
-    train_parser.add_argument("--export-onnx", action="store_true", help="Export ONNX after training")
+    train_parser.add_argument(
+        "--export-onnx", action="store_true", help="Export ONNX after training"
+    )
 
     prepare_parser = subparsers.add_parser("prepare", help="Prepare SoccerNet annotations")
     prepare_parser.add_argument("--output-dir", type=str, default="data/soccer_net")
-    prepare_parser.add_argument("--source", type=str, default=None,
-                                help="SoccerNet annotations directory (overrides default path)")
+    prepare_parser.add_argument(
+        "--source",
+        type=str,
+        default=None,
+        help="SoccerNet annotations directory (overrides default path)",
+    )
 
     args = parser.parse_args()
     if args.command == "train":

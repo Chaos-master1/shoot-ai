@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kawkab.services.rating_service import RatingService
 
 

@@ -6,10 +6,8 @@ OpenFootballData, and WeatherService (Open-Meteo API).
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
-import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -65,15 +63,16 @@ def mock_httpx():
 # ApiFootballService
 # ──────────────────────────────────────────────
 
+
 class TestApiFootballService:
     """ApiFootballService – api-sports.io v3."""
 
     @pytest.mark.asyncio
     async def test_successful_request(self, mock_httpx):
         svc = ApiFootballService(api_key="test_key")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "response": [{"team": {"id": 1, "name": "KACM", "code": "KACM"}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"response": [{"team": {"id": 1, "name": "KACM", "code": "KACM"}}]}
+        )
         result = await svc.search_team("KACM")
         assert len(result) == 1
         assert result[0]["name"] == "KACM"
@@ -90,9 +89,7 @@ class TestApiFootballService:
         svc = ApiFootballService(api_key="k")
         svc._requests_today = 0
         resp_429 = _mock_response(429)
-        resp_ok = _mock_response(200, {
-            "response": [{"team": {"id": 1, "name": "OK"}}]
-        })
+        resp_ok = _mock_response(200, {"response": [{"team": {"id": 1, "name": "OK"}}]})
         mock_httpx.get.side_effect = [resp_429, resp_ok]
         result = await svc.search_team("OK")
         assert len(result) == 1
@@ -134,15 +131,16 @@ class TestApiFootballService:
 # BzzoiroService
 # ──────────────────────────────────────────────
 
+
 class TestBzzoiroService:
     """BzzoiroService – sports.bzzoiro.com v2."""
 
     @pytest.mark.asyncio
     async def test_successful_request(self, mock_httpx):
         svc = BzzoiroService(api_key="tk")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "results": [{"id": 1, "name": "KACM", "country": "Morocco"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"results": [{"id": 1, "name": "KACM", "country": "Morocco"}]}
+        )
         result = await svc.search_team("KACM")
         assert len(result) == 1
         assert result[0]["name"] == "KACM"
@@ -196,16 +194,16 @@ class TestBzzoiroService:
 # FootballDataService
 # ──────────────────────────────────────────────
 
+
 class TestFootballDataService:
     """FootballDataService – football-data.org v4."""
 
     @pytest.mark.asyncio
     async def test_successful_request(self, mock_httpx):
         svc = FootballDataService(api_key="k")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "count": 1,
-            "competitions": [{"id": 1, "name": "PL"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"count": 1, "competitions": [{"id": 1, "name": "PL"}]}
+        )
         result = await svc.check_status()
         assert result["available"] is True
         assert result["competitions_count"] == 1
@@ -253,15 +251,16 @@ class TestFootballDataService:
 # StatsBombService
 # ──────────────────────────────────────────────
 
+
 class TestStatsBombService:
     """StatsBombService – raw GitHub open data."""
 
     @pytest.mark.asyncio
     async def test_successful_request(self, mock_httpx):
         svc = StatsBombService()
-        mock_httpx.get.return_value = _mock_response(200, [
-            {"competition_id": 1, "season_id": 2, "competition_name": "PL"}
-        ])
+        mock_httpx.get.return_value = _mock_response(
+            200, [{"competition_id": 1, "season_id": 2, "competition_name": "PL"}]
+        )
         comps = await svc.get_competitions()
         assert len(comps) == 1
         assert comps[0].competition_name == "PL"
@@ -294,21 +293,27 @@ class TestStatsBombService:
     @pytest.mark.asyncio
     async def test_get_shots_filters_by_type(self, mock_httpx):
         svc = StatsBombService()
-        mock_httpx.get.return_value = _mock_response(200, [
-            {"id": "1", "type": {"name": "Shot"}, "minute": 10},
-            {"id": "2", "type": {"name": "Pass"}, "minute": 11},
-            {"id": "3", "type": {"name": "Shot"}, "minute": 12},
-        ])
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            [
+                {"id": "1", "type": {"name": "Shot"}, "minute": 10},
+                {"id": "2", "type": {"name": "Pass"}, "minute": 11},
+                {"id": "3", "type": {"name": "Shot"}, "minute": 12},
+            ],
+        )
         shots = await svc.get_shots(123)
         assert len(shots) == 2
 
     @pytest.mark.asyncio
     async def test_get_player_events_filters(self, mock_httpx):
         svc = StatsBombService()
-        mock_httpx.get.return_value = _mock_response(200, [
-            {"id": "1", "player": {"name": "Messi"}, "team": {"name": "ARG"}},
-            {"id": "2", "player": {"name": "Ronaldo"}, "team": {"name": "POR"}},
-        ])
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            [
+                {"id": "1", "player": {"name": "Messi"}, "team": {"name": "ARG"}},
+                {"id": "2", "player": {"name": "Ronaldo"}, "team": {"name": "POR"}},
+            ],
+        )
         events = await svc.get_player_events(1, "Messi")
         assert len(events) == 1
 
@@ -324,15 +329,16 @@ class TestStatsBombService:
 # TheSportsDBService
 # ──────────────────────────────────────────────
 
+
 class TestTheSportsDBService:
     """TheSportsDBService – thesportsdb.com v1."""
 
     @pytest.mark.asyncio
     async def test_successful_team_search(self, mock_httpx):
         svc = TheSportsDBService(api_key="3")
-        mock_httpx.get.return_value = _mock_response(200, {
-            "teams": [{"idTeam": "1", "strTeam": "KACM", "strLeague": "Botola"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"teams": [{"idTeam": "1", "strTeam": "KACM", "strLeague": "Botola"}]}
+        )
         results = await svc.search_teams("KACM")
         assert len(results) == 1
         assert results[0].name == "KACM"
@@ -377,21 +383,27 @@ class TestTheSportsDBService:
 # OpenFootballDataService
 # ──────────────────────────────────────────────
 
+
 class TestOpenFootballDataService:
     """OpenFootballDataService – openfootball repos."""
 
     @pytest.mark.asyncio
     async def test_successful_matches(self, mock_httpx):
         svc = OpenFootballDataService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "matches": [{
-                "round": "1",
-                "date": "2024-08-16",
-                "team1": "Arsenal",
-                "team2": "Wolves",
-                "score": {"ft": [2, 1]},
-            }]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "matches": [
+                    {
+                        "round": "1",
+                        "date": "2024-08-16",
+                        "team1": "Arsenal",
+                        "team2": "Wolves",
+                        "score": {"ft": [2, 1]},
+                    }
+                ]
+            },
+        )
         matches = await svc.get_matches("en.1", "2024-25")
         assert len(matches) == 1
         assert matches[0].home_team == "Arsenal"
@@ -427,9 +439,9 @@ class TestOpenFootballDataService:
     @pytest.mark.asyncio
     async def test_worldcup_matches(self, mock_httpx):
         svc = OpenFootballDataService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "matches": [{"round": "Final", "date": "2026-07-19", "team1": "A", "team2": "B"}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"matches": [{"round": "Final", "date": "2026-07-19", "team1": "A", "team2": "B"}]}
+        )
         matches = await svc.get_worldcup_matches(2026)
         assert len(matches) == 1
         assert matches[0].competition == "worldcup"
@@ -444,10 +456,20 @@ class TestOpenFootballDataService:
     @pytest.mark.asyncio
     async def test_search_team_matches(self, mock_httpx):
         svc = OpenFootballDataService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "matches": [{"round": "1", "date": "2024-08-16", "team1": "Liverpool", "team2": "Chelsea",
-                         "score": {"ft": [3, 0]}}]
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "matches": [
+                    {
+                        "round": "1",
+                        "date": "2024-08-16",
+                        "team1": "Liverpool",
+                        "team2": "Chelsea",
+                        "score": {"ft": [3, 0]},
+                    }
+                ]
+            },
+        )
         results = await svc.search_team_matches("Liverpool", "en.1")
         assert len(results) >= 1
         assert results[0].home_team == "Liverpool"
@@ -463,24 +485,28 @@ class TestOpenFootballDataService:
 # WeatherService (API portion)
 # ──────────────────────────────────────────────
 
+
 class TestWeatherServiceAPI:
     """WeatherService – Open-Meteo API calls."""
 
     @pytest.mark.asyncio
     async def test_fetch_conditions_success(self, mock_httpx):
         svc = WeatherService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "hourly": {
-                "time": ["2024-01-15T15:00"],
-                "temperature_2m": [12.5],
-                "precipitation": [0.0],
-                "wind_speed_10m": [5.0],
-                "wind_direction_10m": [180.0],
-                "relative_humidity_2m": [60.0],
-                "cloud_cover": [20.0],
-                "is_day": [1],
-            }
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "hourly": {
+                    "time": ["2024-01-15T15:00"],
+                    "temperature_2m": [12.5],
+                    "precipitation": [0.0],
+                    "wind_speed_10m": [5.0],
+                    "wind_direction_10m": [180.0],
+                    "relative_humidity_2m": [60.0],
+                    "cloud_cover": [20.0],
+                    "is_day": [1],
+                }
+            },
+        )
         cond = await svc.fetch_conditions(31.6, -8.0, "2024-01-15")
         assert cond is not None
         assert cond.temperature_c == 12.5
@@ -503,9 +529,9 @@ class TestWeatherServiceAPI:
     @pytest.mark.asyncio
     async def test_fetch_conditions_empty_times(self, mock_httpx):
         svc = WeatherService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "hourly": {"time": [], "temperature_2m": []}
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200, {"hourly": {"time": [], "temperature_2m": []}}
+        )
         cond = await svc.fetch_conditions(31.6, -8.0, "2024-01-15")
         assert cond is None
 
@@ -519,18 +545,21 @@ class TestWeatherServiceAPI:
     @pytest.mark.asyncio
     async def test_fetch_forecast(self, mock_httpx):
         svc = WeatherService()
-        mock_httpx.get.return_value = _mock_response(200, {
-            "hourly": {
-                "time": ["2024-06-15T15:00"],
-                "temperature_2m": [28.0],
-                "precipitation": [0.0],
-                "wind_speed_10m": [10.0],
-                "wind_direction_10m": [90.0],
-                "relative_humidity_2m": [40.0],
-                "cloud_cover": [10.0],
-                "is_day": [1],
-            }
-        })
+        mock_httpx.get.return_value = _mock_response(
+            200,
+            {
+                "hourly": {
+                    "time": ["2024-06-15T15:00"],
+                    "temperature_2m": [28.0],
+                    "precipitation": [0.0],
+                    "wind_speed_10m": [10.0],
+                    "wind_direction_10m": [90.0],
+                    "relative_humidity_2m": [40.0],
+                    "cloud_cover": [10.0],
+                    "is_day": [1],
+                }
+            },
+        )
         cond = await svc.fetch_conditions(40.4, -3.7, "2024-06-15", is_forecast=True)
         assert cond is not None
         assert cond.temperature_c == 28.0

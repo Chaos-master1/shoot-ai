@@ -9,28 +9,39 @@ Usage:
 
 Where track_frames = [frame_number, ...] and track_positions = [(x, y), ...]
 """
+
 from __future__ import annotations
 
 import numpy as np
 
 
 class TrackSmoother:
-    def __init__(self, dt: float = 1.0 / 24.0, process_noise: float = 1e-3, measurement_noise: float = 1e-1):
+    def __init__(
+        self, dt: float = 1.0 / 24.0, process_noise: float = 1e-3, measurement_noise: float = 1e-1
+    ):
         self.dt = dt
-        self.F = np.array([
-            [1, 0, dt, 0],
-            [0, 1, 0, dt],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1],
-        ], dtype=np.float64)
-        self.H = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-        ], dtype=np.float64)
+        self.F = np.array(
+            [
+                [1, 0, dt, 0],
+                [0, 1, 0, dt],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=np.float64,
+        )
+        self.H = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+            ],
+            dtype=np.float64,
+        )
         self.Q = np.eye(4, dtype=np.float64) * process_noise
         self.R = np.eye(2, dtype=np.float64) * measurement_noise
 
-    def smooth(self, frames: list[int], positions: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    def smooth(
+        self, frames: list[int], positions: list[tuple[float, float]]
+    ) -> list[tuple[float, float]]:
         n = len(frames)
         if n < 3:
             return list(positions)

@@ -47,9 +47,7 @@ class TestMuJoCoService:
         assert not mujoco_svc.uses_mujoco
 
     def test_simulate_basic(self, mujoco_svc: MuJoCoBallService) -> None:
-        result = asyncio.run(
-            mujoco_svc.simulate(initial_speed=20, launch_angle_deg=15, spin_rps=2)
-        )
+        result = asyncio.run(mujoco_svc.simulate(initial_speed=20, launch_angle_deg=15, spin_rps=2))
         assert isinstance(result, TrajectoryResult)
         assert result.method in ("mujoco", "analytical")
         assert len(result.points) > 0
@@ -82,9 +80,7 @@ class TestFluidX3DService:
         assert "non-commercial" in notice.lower()
 
     def test_simulate_no_binary(self, fluidx3d_svc: FluidX3DService) -> None:
-        result = asyncio.run(
-            fluidx3d_svc.simulate_ball_aerodynamics(wind_speed=20)
-        )
+        result = asyncio.run(fluidx3d_svc.simulate_ball_aerodynamics(wind_speed=20))
         assert not result.success
         assert result.error is not None
 
@@ -96,8 +92,6 @@ class TestRoboflowSportsService:
         result = roboflow_svc.create_ball_annotator(radius=10)
         assert result is None
 
-    def test_create_ball_tracker_without_module(
-        self, roboflow_svc: RoboflowSportsService
-    ) -> None:
+    def test_create_ball_tracker_without_module(self, roboflow_svc: RoboflowSportsService) -> None:
         result = roboflow_svc.create_ball_tracker()
         assert result is None

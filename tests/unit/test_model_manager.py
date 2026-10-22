@@ -1,11 +1,12 @@
-"""Tests for ModelManager - model download, caching, and validation.
-"""
+"""Tests for ModelManager - model download, caching, and validation."""
 
 from __future__ import annotations
 
-import pytest
-from pathlib import Path
+import json
 import tempfile
+from pathlib import Path
+
+import pytest
 
 from kawkab.core.model_manager import ModelManager
 
@@ -88,3 +89,45 @@ class TestModelManager:
             sha = mgr._compute_sha256(test_file)
             assert len(sha) == 64  # SHA-256 hex length
             assert sha == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+
+class TestManifestTamperEvidence:
+    """The models.json manifest is HMAC-signed; a hand-edited manifest must
+    never be able to bless a swapped model binary (Phase 3.1)."""
+
+    def test_saved_manifest_is_signed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mgr = ModelManager(cache_dir=Path(tmpdir))
+            mgr._manifest["yolo11n"] = {"path": "x", "size_bytes": 1, "sha256": "a" * 64}
+            mgr._save_manifest()
+            data = json.loads(mgr.manifest_path.read_text())
+            assert "models" in data and "hmac" in data
+            assert len(data["hmac"]) == 64
+
+    def test_tampered_manifest_is_discarded(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mgr = ModelManager(cache_dir=Path(tmpdir))
+            mgr._manifest["yolo11n"] = {"path": "x", "size_bytes": 1, "sha256": "a" * 64}
+            mgr._save_manifest()
+
+            # Attacker edits the manifest after signing
+            data = json.loads(mgr.manifest_path.read_text())
+            data["models"]["yolo11n"]["sha256"] = "b" * 64
+            mgr.manifest_path.write_text(json.dumps(data))
+
+            mgr2 = ModelManager(cache_dir=Path(tmpdir))
+            assert mgr2._manifest == {}
+
+    def test_untampered_manifest_loads(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mgr = ModelManager(cache_dir=Path(tmpdir))
+            mgr._manifest["yolo11n"] = {"path": "x", "size_bytes": 1, "sha256": "a" * 64}
+            mgr._save_manifest()
+            mgr2 = ModelManager(cache_dir=Path(tmpdir))
+            assert "yolo11n" in mgr2._manifest
+
+    def test_every_default_model_has_pinned_checksum(self):
+        for name, info in ModelManager.DEFAULT_MODELS.items():
+            assert info["sha256"], f"{name} has no pinned sha256"
+            assert len(info["sha256"]) == 64
+            assert info["url"].startswith("https://")

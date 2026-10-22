@@ -7,6 +7,19 @@ metadata:
     app: kawkab
 data:
   KAWKAB_JWT_SECRET: ""
+  # containers run as runAsUser: 1000 below, but the image's Dockerfile
+  # never creates that uid (no USER/useradd) -- it has no /etc/passwd
+  # entry and therefore no home directory. Every Path.home()-based path
+  # in the codebase (cloud DB, encryption fallback key, cloud-sync token,
+  # webhooks store, secrets.json, telestration presets -- see
+  # core/paths.py, core/encryption.py, core/secrets.py,
+  # services/cloud_sync_service.py, services/webhook_service.py,
+  # services/telestration_service.py) would fail to resolve. Python's
+  # Path.home() checks $HOME before falling back to the passwd entry, so
+  # setting it here fixes all of those at once without a Dockerfile
+  # change -- paired with mounting the PVC at /data (below) instead of
+  # /root/.kawkab, which uid 1000 can't write to anyway.
+  HOME: "/data"
   DB_HOST: "postgres"
   DB_PORT: "5432"
   DB_NAME: "kawkab"
@@ -29,8 +42,19 @@ metadata:
 type: Opaque
 stringData:
   KAWKAB_JWT_SECRET: ""
-  KAWKAB_DB_URL: "postgresql+asyncpg://kawkab:changeme@postgres:5432/kawkab"
-  KAWKAB_DB_PASSWORD: "changeme"
+  # Both values below were committed with a real (if trivial) literal
+  # secret -- "changeme" in a Kubernetes Secret manifest checked into git
+  # defeats the point of it being a Secret at all; anyone who can read
+  # the repo has the production DB password. Left blank like
+  # KAWKAB_JWT_SECRET above -- operators must supply real values via
+  # `kubectl create secret`, a sealed-secrets/external-secrets
+  # controller, or their CD pipeline, never by editing this file.
+  # `postgresql+asyncpg://` was also wrong regardless of the password:
+  # cloud/database.py passes this straight to `asyncpg.connect()`, which
+  # rejects the SQLAlchemy `+asyncpg` dialect suffix -- plain
+  # `postgresql://` is what asyncpg expects.
+  KAWKAB_DB_URL: ""
+  KAWKAB_DB_PASSWORD: ""
   FOOTBALL_DATA_API_KEY: ""
   APIFOOTBALL_API_KEY: ""
   BZZOIRO_API_KEY: ""
@@ -110,7 +134,10 @@ spec:
             failureThreshold: 2
           volumeMounts:
             - name: data
-              mountPath: /root/.kawkab
+              # /root/.kawkab was unwritable by runAsUser: 1000 (see the
+              # ConfigMap's HOME comment above) -- /data pairs with
+              # HOME=/data so Path.home()-based paths resolve here.
+              mountPath: /data
             - name: tmp
               mountPath: /tmp
           securityContext:
@@ -176,7 +203,10 @@ spec:
               memory: "4Gi"
           volumeMounts:
             - name: data
-              mountPath: /root/.kawkab
+              # /root/.kawkab was unwritable by runAsUser: 1000 (see the
+              # ConfigMap's HOME comment above) -- /data pairs with
+              # HOME=/data so Path.home()-based paths resolve here.
+              mountPath: /data
             - name: tmp
               mountPath: /tmp
           securityContext:

@@ -21,7 +21,7 @@ class SkillCornerTrackingFrame:
 class SkillCornerImporter:
     def import_tracking_data(self, path: str | Path) -> list[SkillCornerTrackingFrame]:
         try:
-            with open(str(path), "r", encoding="utf-8") as f:
+            with open(str(path), encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as exc:
             logger.error(f"Failed to read SkillCorner file {path}: {exc}")
@@ -46,13 +46,15 @@ class SkillCornerImporter:
             if frame.ball and isinstance(frame.ball, dict):
                 bx = frame.ball.get("x", 0)
                 by = frame.ball.get("y", 0)
-                ball_positions.append({
-                    "frame_id": frame.frame_id,
-                    "timestamp": frame.timestamp,
-                    "x": bx,
-                    "y": by,
-                    "z": frame.ball.get("z", 0),
-                })
+                ball_positions.append(
+                    {
+                        "frame_id": frame.frame_id,
+                        "timestamp": frame.timestamp,
+                        "x": bx,
+                        "y": by,
+                        "z": frame.ball.get("z", 0),
+                    }
+                )
         for i, bp in enumerate(ball_positions):
             if i == 0:
                 continue
@@ -60,26 +62,32 @@ class SkillCornerImporter:
             dx = bp["x"] - prev["x"]
             dy = bp["y"] - prev["y"]
             dist = (dx * dx + dy * dy) ** 0.5
-            near_players = self._find_nearby_players(tracking_data, bp["frame_id"], bp["x"], bp["y"], radius=2.0)
+            near_players = self._find_nearby_players(
+                tracking_data, bp["frame_id"], bp["x"], bp["y"], radius=2.0
+            )
             if dist > 3.0 and near_players:
-                events.append({
-                    "type": "pass",
-                    "timestamp": bp["timestamp"],
-                    "start_x": prev["x"],
-                    "start_y": prev["y"],
-                    "end_x": bp["x"],
-                    "end_y": bp["y"],
-                    "player": near_players[0].get("track_id", ""),
-                })
+                events.append(
+                    {
+                        "type": "pass",
+                        "timestamp": bp["timestamp"],
+                        "start_x": prev["x"],
+                        "start_y": prev["y"],
+                        "end_x": bp["x"],
+                        "end_y": bp["y"],
+                        "player": near_players[0].get("track_id", ""),
+                    }
+                )
             elif dist > 1.0 and not near_players:
-                events.append({
-                    "type": "shot",
-                    "timestamp": bp["timestamp"],
-                    "start_x": prev["x"],
-                    "start_y": prev["y"],
-                    "end_x": bp["x"],
-                    "end_y": bp["y"],
-                })
+                events.append(
+                    {
+                        "type": "shot",
+                        "timestamp": bp["timestamp"],
+                        "start_x": prev["x"],
+                        "start_y": prev["y"],
+                        "end_x": bp["x"],
+                        "end_y": bp["y"],
+                    }
+                )
         return events
 
     def _parse_frame_list(self, frames: list[dict]) -> list[SkillCornerTrackingFrame]:
@@ -107,12 +115,14 @@ class SkillCornerImporter:
         for p in players_raw:
             if not isinstance(p, dict):
                 continue
-            players.append({
-                "track_id": str(p.get("track_id", p.get("id", ""))),
-                "x": float(p.get("x", 0)),
-                "y": float(p.get("y", 0)),
-                "speed": float(p.get("speed", 0)),
-            })
+            players.append(
+                {
+                    "track_id": str(p.get("track_id", p.get("id", ""))),
+                    "x": float(p.get("x", 0)),
+                    "y": float(p.get("y", 0)),
+                    "speed": float(p.get("speed", 0)),
+                }
+            )
         return players
 
     @staticmethod
@@ -129,7 +139,9 @@ class SkillCornerImporter:
             return None
 
     @staticmethod
-    def _find_nearby_players(frames: list[SkillCornerTrackingFrame], frame_id: int, x: float, y: float, radius: float) -> list[dict]:
+    def _find_nearby_players(
+        frames: list[SkillCornerTrackingFrame], frame_id: int, x: float, y: float, radius: float
+    ) -> list[dict]:
         for frame in frames:
             if frame.frame_id == frame_id:
                 nearby = []

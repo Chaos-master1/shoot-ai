@@ -41,9 +41,9 @@ class RoboflowSportsService:
 
     def _try_import(self) -> None:
         try:
-            from sports.configs.soccer import SoccerPitchConfiguration  # type: ignore
             from sports.annotators import soccer as soccer_annotators  # type: ignore
             from sports.common import ball as ball_module  # type: ignore
+            from sports.configs.soccer import SoccerPitchConfiguration  # type: ignore
 
             self._soccer_config = SoccerPitchConfiguration
             self._soccer_annotators = soccer_annotators
@@ -51,11 +51,13 @@ class RoboflowSportsService:
 
             try:
                 from sports.common import team as team_module  # type: ignore
+
                 self._team_module = team_module
             except Exception:
                 logger.info("roboflow/sports: team module not available")
             try:
                 from sports.common import view as view_module  # type: ignore
+
                 self._view_module = view_module
             except Exception:
                 logger.info("roboflow/sports: view module not available")
@@ -222,9 +224,7 @@ class RoboflowSportsService:
     # Team classifier (if module available)
     # ------------------------------------------------------------------
 
-    def create_team_classifier(
-        self, device: str = "cpu"
-    ) -> Any | None:
+    def create_team_classifier(self, device: str = "cpu") -> Any | None:
         if not self._available or self._team_module is None:
             return None
         try:
@@ -243,9 +243,7 @@ class RoboflowSportsService:
     # View transformer
     # ------------------------------------------------------------------
 
-    def create_view_transformer(
-        self, source: np.ndarray, target: np.ndarray
-    ) -> Any | None:
+    def create_view_transformer(self, source: np.ndarray, target: np.ndarray) -> Any | None:
         if not self._available or self._view_module is None:
             return None
         try:

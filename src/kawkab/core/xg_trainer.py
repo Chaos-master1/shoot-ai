@@ -18,14 +18,21 @@ from kawkab.core.xg_model import ENHANCED_COEFFICIENTS
 
 FEATURE_NAMES = [
     "intercept",
-    "distance_m", "distance_m_sq",
-    "angle_sin", "angle_deg_sq_sin",
+    "distance_m",
+    "distance_m_sq",
+    "angle_sin",
+    "angle_deg_sq_sin",
     "is_header",
-    "is_through_ball_assist", "is_cross_assist",
-    "is_one_on_one", "is_pressed",
-    "is_volley", "is_free_kick",
-    "gk_distance_m", "gk_distance_m_sq",
-    "is_rebound", "is_big_chance",
+    "is_through_ball_assist",
+    "is_cross_assist",
+    "is_one_on_one",
+    "is_pressed",
+    "is_volley",
+    "is_free_kick",
+    "gk_distance_m",
+    "gk_distance_m_sq",
+    "is_rebound",
+    "is_big_chance",
 ]
 
 
@@ -68,7 +75,7 @@ def _build_feature_matrix(shots: list[FitShot]) -> tuple[np.ndarray, np.ndarray]
         X[i, 11] = 1.0 if s.is_free_kick else 0.0
         if s.gk_distance_m > 0:
             X[i, 12] = s.gk_distance_m
-            X[i, 13] = s.gk_distance_m ** 2
+            X[i, 13] = s.gk_distance_m**2
         X[i, 14] = 1.0 if s.is_rebound else 0.0
         X[i, 15] = 1.0 if s.is_big_chance else 0.0
         y[i] = 1.0 if s.is_goal else 0.0
@@ -145,21 +152,23 @@ def fit_from_events(
         a = se.angle_deg or 30.0
         body_part = se.body_part.value if se.body_part else "right_foot"
         shot_type = se.shot_type.value if se.shot_type else "open_play"
-        shots.append(FitShot(
-            distance_m=d,
-            angle_deg=a,
-            is_header=(body_part == "head"),
-            is_through_ball_assist=bool(ev.get("assist_type") == "through_ball"),
-            is_cross_assist=bool(ev.get("assist_type") == "cross"),
-            is_one_on_one=se.is_one_on_one,
-            is_pressed=se.was_pressed,
-            is_volley=(shot_type in ("volley", "half_volley")),
-            is_free_kick=(shot_type == "free_kick"),
-            gk_distance_m=getattr(se, "gk_distance_m", 0.0) or ev.get("gk_distance_m", 0.0),
-            is_rebound=ev.get("is_rebound", False),
-            is_big_chance=ev.get("is_big_chance", False),
-            is_goal=bool(ev.get("is_goal", False)),
-        ))
+        shots.append(
+            FitShot(
+                distance_m=d,
+                angle_deg=a,
+                is_header=(body_part == "head"),
+                is_through_ball_assist=bool(ev.get("assist_type") == "through_ball"),
+                is_cross_assist=bool(ev.get("assist_type") == "cross"),
+                is_one_on_one=se.is_one_on_one,
+                is_pressed=se.was_pressed,
+                is_volley=(shot_type in ("volley", "half_volley")),
+                is_free_kick=(shot_type == "free_kick"),
+                gk_distance_m=getattr(se, "gk_distance_m", 0.0) or ev.get("gk_distance_m", 0.0),
+                is_rebound=ev.get("is_rebound", False),
+                is_big_chance=ev.get("is_big_chance", False),
+                is_goal=bool(ev.get("is_goal", False)),
+            )
+        )
     return fit_from_shots(shots, model_name)
 
 
@@ -171,7 +180,7 @@ def fit_from_shots(
         return dict(ENHANCED_COEFFICIENTS)
     X, y = _build_feature_matrix(shots)
     theta, _ = batch_gradient_descent(X, y)
-    coeffs = dict(zip(FEATURE_NAMES, theta.tolist()))
+    coeffs = dict(zip(FEATURE_NAMES, theta.tolist(), strict=False))
     coeffs["_model_name"] = model_name
     coeffs["_n_shots"] = len(shots)
     coeffs["_goal_rate"] = float(np.mean(y))
@@ -198,29 +207,53 @@ def generate_synthetic_training_data(
         is_through_ball = rng.random() < 0.06
         is_cross = rng.random() < 0.12
         true_proba = _synthetic_proba(
-            d, a, is_header, is_pressed, is_volley, is_free_kick,
-            is_one_on_one, gk_dist, is_rebound, is_big_chance,
-            is_through_ball, is_cross,
+            d,
+            a,
+            is_header,
+            is_pressed,
+            is_volley,
+            is_free_kick,
+            is_one_on_one,
+            gk_dist,
+            is_rebound,
+            is_big_chance,
+            is_through_ball,
+            is_cross,
         )
         is_goal = rng.random() < true_proba
-        shots.append(FitShot(
-            distance_m=d, angle_deg=a,
-            is_header=is_header, is_pressed=is_pressed,
-            is_volley=is_volley, is_free_kick=is_free_kick,
-            is_one_on_one=is_one_on_one,
-            gk_distance_m=gk_dist,
-            is_rebound=is_rebound, is_big_chance=is_big_chance,
-            is_through_ball_assist=is_through_ball,
-            is_cross_assist=is_cross,
-            is_goal=is_goal,
-        ))
+        shots.append(
+            FitShot(
+                distance_m=d,
+                angle_deg=a,
+                is_header=is_header,
+                is_pressed=is_pressed,
+                is_volley=is_volley,
+                is_free_kick=is_free_kick,
+                is_one_on_one=is_one_on_one,
+                gk_distance_m=gk_dist,
+                is_rebound=is_rebound,
+                is_big_chance=is_big_chance,
+                is_through_ball_assist=is_through_ball,
+                is_cross_assist=is_cross,
+                is_goal=is_goal,
+            )
+        )
     return shots
 
 
 def _synthetic_proba(
-    d, a, is_header, is_pressed, is_volley, is_free_kick,
-    is_one_on_one, gk_dist, is_rebound, is_big_chance,
-    is_through_ball, is_cross,
+    d,
+    a,
+    is_header,
+    is_pressed,
+    is_volley,
+    is_free_kick,
+    is_one_on_one,
+    gk_dist,
+    is_rebound,
+    is_big_chance,
+    is_through_ball,
+    is_cross,
 ) -> float:
     logit = -1.5
     logit += -0.10 * max(d, 0.5)
@@ -241,7 +274,7 @@ def _synthetic_proba(
         logit += 0.5
     if gk_dist > 0:
         logit += -0.06 * gk_dist
-        logit += -0.0003 * (gk_dist ** 2)
+        logit += -0.0003 * (gk_dist**2)
     if is_rebound:
         logit += 0.4
     if is_big_chance:
@@ -254,8 +287,7 @@ def _synthetic_proba(
 
 
 def save_coefficients(coeffs: dict[str, float], path: str) -> None:
-    serializable = {k: v for k, v in coeffs.items()
-                    if isinstance(v, (int, float, str))}
+    serializable = {k: v for k, v in coeffs.items() if isinstance(v, (int, float, str))}
     with open(path, "w") as f:
         json.dump(serializable, f, indent=2)
 

@@ -15,11 +15,9 @@ A player can be identified by:
 
 from __future__ import annotations
 
-import json
 import sqlite3
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from kawkab.core.logging import get_logger
@@ -132,18 +130,38 @@ class PlayerProfileService:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                global_id, display_name, jersey_number, preferred_position,
-                height_cm, weight_kg, dominant_foot, date_of_birth, nationality, team,
-                football_data_person_id, football_data_team_id,
-                bzzoiro_person_id, bzzoiro_team_id,
-                apifb_person_id, apifb_team_id,
+                global_id,
+                display_name,
+                jersey_number,
+                preferred_position,
+                height_cm,
+                weight_kg,
+                dominant_foot,
+                date_of_birth,
+                nationality,
+                team,
+                football_data_person_id,
+                football_data_team_id,
+                bzzoiro_person_id,
+                bzzoiro_team_id,
+                apifb_person_id,
+                apifb_team_id,
             ),
         )
         conn.commit()
         profile_id = cursor.lastrowid or 0
 
         logger.info(f"Created player profile: {display_name} (ID: {profile_id})")
-        return await self.get_profile(profile_id)
+        profile = await self.get_profile(profile_id)
+        if profile is None:
+            # get_profile() is Optional (a lookup can legitimately miss);
+            # this method's return type promises a real PlayerProfile since
+            # the row was just inserted in this same call. Fail with a
+            # clear message instead of letting None silently satisfy a
+            # non-Optional return type -- callers here index straight into
+            # profile.id without a None-check.
+            raise RuntimeError(f"Failed to retrieve newly created player profile {profile_id}")
+        return profile
 
     async def get_profile(self, profile_id: int) -> PlayerProfile | None:
         """Get a player profile by ID."""
@@ -170,7 +188,9 @@ class PlayerProfileService:
         conn = self._get_conn()
         cursor = conn.cursor()
         if team:
-            cursor.execute("SELECT * FROM player_profiles WHERE team = ? AND is_active = 1", (team,))
+            cursor.execute(
+                "SELECT * FROM player_profiles WHERE team = ? AND is_active = 1", (team,)
+            )
         else:
             cursor.execute("SELECT * FROM player_profiles WHERE is_active = 1")
         rows = cursor.fetchall()
@@ -182,18 +202,29 @@ class PlayerProfileService:
         cursor = conn.cursor()
 
         allowed_fields = {
-            "display_name", "jersey_number", "preferred_position",
-            "height_cm", "weight_kg", "dominant_foot", "date_of_birth",
-            "nationality", "photo_path", "team", "is_active",
-            "football_data_person_id", "football_data_team_id",
-            "bzzoiro_person_id", "bzzoiro_team_id",
-            "apifb_person_id", "apifb_team_id",
+            "display_name",
+            "jersey_number",
+            "preferred_position",
+            "height_cm",
+            "weight_kg",
+            "dominant_foot",
+            "date_of_birth",
+            "nationality",
+            "photo_path",
+            "team",
+            "is_active",
+            "football_data_person_id",
+            "football_data_team_id",
+            "bzzoiro_person_id",
+            "bzzoiro_team_id",
+            "apifb_person_id",
+            "apifb_team_id",
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed_fields}
         if not updates:
             return await self.get_profile(profile_id)
 
-        set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [profile_id]
 
         cursor.execute(
@@ -316,7 +347,7 @@ class PlayerProfileService:
 
         # Get match players
         team_filter = "AND team = ?" if team else ""
-        params = [match_id]
+        params: list[Any] = [match_id]
         if team:
             params.append(team)
 
@@ -343,15 +374,17 @@ class PlayerProfileService:
             profile = cursor.fetchone()
 
             if profile:
-                proposals.append({
-                    "track_id": track_id,
-                    "profile_id": profile["id"],
-                    "profile_name": profile["display_name"],
-                    "jersey_number": jersey,
-                    "team": player_team,
-                    "confidence": 0.7,  # jersey match is reasonably confident
-                    "method": "jersey_number",
-                })
+                proposals.append(
+                    {
+                        "track_id": track_id,
+                        "profile_id": profile["id"],
+                        "profile_name": profile["display_name"],
+                        "jersey_number": jersey,
+                        "team": player_team,
+                        "confidence": 0.7,  # jersey match is reasonably confident
+                        "method": "jersey_number",
+                    }
+                )
 
         return proposals
 

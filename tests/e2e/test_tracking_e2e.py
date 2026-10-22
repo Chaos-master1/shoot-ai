@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import math
 import sys
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 # ── Synthetic data generators ─────────────────────────────────────
+
 
 def make_synthetic_frame(height: int = 720, width: int = 1280) -> np.ndarray:
     """Create a synthetic BGR frame with a simple background."""
@@ -33,7 +33,9 @@ def make_synthetic_frame(height: int = 720, width: int = 1280) -> np.ndarray:
     return frame
 
 
-def make_synthetic_frame_with_ball(height: int = 720, width: int = 1280, ball_x: int = 640, ball_y: int = 360) -> np.ndarray:
+def make_synthetic_frame_with_ball(
+    height: int = 720, width: int = 1280, ball_x: int = 640, ball_y: int = 360
+) -> np.ndarray:
     """Create a synthetic frame with a white ball-like circle."""
     frame = make_synthetic_frame(height, width)
     cv2 = pytest.importorskip("cv2")
@@ -42,7 +44,10 @@ def make_synthetic_frame_with_ball(height: int = 720, width: int = 1280, ball_x:
 
 
 def make_synthetic_frames_with_ball_trajectory(
-    n_frames: int = 60, fps: float = 30.0, width: int = 1280, height: int = 720,
+    n_frames: int = 60,
+    fps: float = 30.0,
+    width: int = 1280,
+    height: int = 720,
 ) -> list[np.ndarray]:
     """Create synthetic frames with a ball moving in a sine wave pattern."""
     frames = []
@@ -63,13 +68,14 @@ class TestTrackingE2eSynthetic:
 
     def test_ball_tracker_initializes(self):
         from kawkab.services.ball_tracker import BallTracker
+
         bt = BallTracker(fps=30.0)
         assert bt.fps == 30.0
         assert not bt.initialized
         assert bt.missed_frames == 0
 
     def test_ball_tracker_update_on_synthetic_frame(self):
-        cv2 = pytest.importorskip("cv2")
+        _ = pytest.importorskip("cv2")
         from kawkab.services.ball_tracker import BallTracker
 
         bt = BallTracker(fps=30.0)
@@ -84,7 +90,7 @@ class TestTrackingE2eSynthetic:
             assert det.conf >= 0.0
 
     def test_ball_tracker_update_multiple_frames(self):
-        cv2 = pytest.importorskip("cv2")
+        _ = pytest.importorskip("cv2")
         from kawkab.services.ball_tracker import BallTracker
 
         bt = BallTracker(fps=30.0)
@@ -101,7 +107,7 @@ class TestTrackingE2eSynthetic:
         assert len(bt.trail) >= 1
 
     def test_ball_tracker_reset(self):
-        cv2 = pytest.importorskip("cv2")
+        _ = pytest.importorskip("cv2")
         from kawkab.services.ball_tracker import BallTracker
 
         bt = BallTracker(fps=30.0)
@@ -114,7 +120,7 @@ class TestTrackingE2eSynthetic:
         assert len(bt.trail) == 0
 
     def test_ball_tracker_get_trail(self):
-        cv2 = pytest.importorskip("cv2")
+        _ = pytest.importorskip("cv2")
         from kawkab.services.ball_tracker import BallTracker
 
         bt = BallTracker(fps=30.0)
@@ -126,7 +132,7 @@ class TestTrackingE2eSynthetic:
         assert len(trail) >= 1
 
     def test_ball_tracker_missed_frames_prediction(self):
-        cv2 = pytest.importorskip("cv2")
+        _ = pytest.importorskip("cv2")
         from kawkab.services.ball_tracker import BallTracker
 
         bt = BallTracker(fps=30.0)
@@ -148,10 +154,11 @@ class TestTrackingE2eSynthetic:
                 # shape (6,1) on some versions, causing float() conversion to fail.
                 # This is a pre-existing issue in ball_tracker.py, not a test problem.
                 pass
-        assert pred_count >= 1 or True  # allow pass-through for known compat issue
+        assert True  # allow pass-through for known compat issue
 
     def test_camera_cut_detector_initializes(self):
         from kawkab.services.camera_cut_detector import CameraCutDetector
+
         ccd = CameraCutDetector(threshold=0.35)
         assert ccd.threshold == 0.35
         assert ccd.min_cut_interval == 0.5
@@ -199,6 +206,7 @@ class TestTrackingE2eSynthetic:
 
 # ── Physical metrics from mock tracking data ────────────────────────
 
+
 class TestTrackingPhysicalMetrics:
     """Physical metrics computation from mock tracking trajectories."""
 
@@ -225,6 +233,7 @@ class TestTrackingPhysicalMetrics:
 
     def test_physical_metrics_analyze_player(self, sample_trajectory):
         from kawkab.core.physical_metrics import PhysicalMetricsAnalyzer
+
         pma = PhysicalMetricsAnalyzer()
         metrics = pma.analyze_player(sample_trajectory)
         assert metrics.total_distance_m > 0
@@ -235,12 +244,14 @@ class TestTrackingPhysicalMetrics:
 
     def test_physical_metrics_short_trajectory(self):
         from kawkab.core.physical_metrics import PhysicalMetricsAnalyzer
+
         pma = PhysicalMetricsAnalyzer()
         metrics = pma.analyze_player([(0.0, 0.0, 0.0)])
         assert metrics.total_distance_m == 0
 
     def test_physical_metrics_constant_speed(self):
         from kawkab.core.physical_metrics import PhysicalMetricsAnalyzer
+
         pma = PhysicalMetricsAnalyzer()
         traj = [(i / 30.0, 2.0 * i / 30.0, 0.0) for i in range(100)]
         metrics = pma.analyze_player(traj)
@@ -250,6 +261,7 @@ class TestTrackingPhysicalMetrics:
 
     def test_tracking_team_report_structure(self):
         from kawkab.core.physical_metrics import TeamPhysicalReport
+
         report = TeamPhysicalReport(team="home")
         assert report.team == "home"
         assert report.total_distance_m == 0
@@ -257,6 +269,7 @@ class TestTrackingPhysicalMetrics:
 
 
 # ── Tracking metrics basic computation ─────────────────────────────
+
 
 class TestTrackingMetricsComputation:
     """Basic tracking metrics computation from mock data."""
@@ -298,11 +311,12 @@ class TestTrackingMetricsComputation:
 
 # ── Edge cases ─────────────────────────────────────────────────────
 
+
 class TestTrackingE2eEdgeCases:
     """Edge cases for the tracking pipeline."""
 
     def test_ball_tracker_no_ball_on_frame(self):
-        cv2 = pytest.importorskip("cv2")
+        _ = pytest.importorskip("cv2")
         from kawkab.services.ball_tracker import BallTracker
 
         bt = BallTracker(fps=30.0)
@@ -312,12 +326,14 @@ class TestTrackingE2eEdgeCases:
 
     def test_empty_trajectory_physical_metrics(self):
         from kawkab.core.physical_metrics import PhysicalMetricsAnalyzer
+
         pma = PhysicalMetricsAnalyzer()
         metrics = pma.analyze_player([])
         assert metrics.total_distance_m == 0
 
     def test_camera_cut_detector_nonexistent_video(self, tmp_path):
         from kawkab.services.camera_cut_detector import CameraCutDetector
+
         ccd = CameraCutDetector()
         cuts = ccd.detect_cuts(tmp_path / "nonexistent.mp4")
         assert cuts == []

@@ -114,7 +114,9 @@ class TestKabschAlign2D:
         tgt = np.array([[0, 1], [0, 0], [-1, 0]], dtype=float)
         angle, trans, rmsd = kabsch_align_2d(src, tgt)
         assert rmsd < 1e-10
-        assert np.isclose(angle, np.pi / 2, atol=1e-5) or np.isclose(angle, -3 * np.pi / 2, atol=1e-5)
+        assert np.isclose(angle, np.pi / 2, atol=1e-5) or np.isclose(
+            angle, -3 * np.pi / 2, atol=1e-5
+        )
 
     def test_fewer_than_two_points_raises(self):
         src = np.array([[0, 0]], dtype=float)

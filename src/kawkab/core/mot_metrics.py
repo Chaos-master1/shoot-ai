@@ -14,6 +14,7 @@ Usage:
         fp_threshold=20.0,  # pixel distance
     )
 """
+
 from __future__ import annotations
 
 import logging
@@ -56,7 +57,7 @@ def compute_mot_metrics(
             pred_frame_map[frame].append((pred_id, x, y))
 
     all_frames = sorted(set(gt_frame_map.keys()) | set(pred_frame_map.keys()))
-    gt_id_to_pred: dict[int, int | None] = {}
+    _: dict[int, int | None] = {}
     prev_assignment: dict[int, int | None] = {}
     prev_gt_matched: set[int] = set()
     gt_ever_matched_before: set[int] = set()

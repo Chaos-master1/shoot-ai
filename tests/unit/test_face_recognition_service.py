@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import json
 import sys
-import types
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from conftest import install_kawkab_stubs, load_service_module
@@ -42,8 +40,10 @@ def _install_insightface_stub():
     class MockFaceAnalysis:
         def __init__(self, *a, **k):
             pass
+
         def prepare(self, *a, **k):
             pass
+
         def get(self, img):
             return [MockFace()]
 
@@ -108,7 +108,7 @@ class TestDetectFaces:
 
     def test_detect_faces_returns_empty_when_app_none(self):
         svc = FaceRecognitionService()
-        with patch.object(svc, '_ensure_models'):
+        with patch.object(svc, "_ensure_models"):
             svc._app = None
             img = np.zeros((100, 100, 3), dtype=np.uint8)
             assert svc.detect_faces(img) == []
@@ -125,7 +125,7 @@ class TestGetEmbedding:
 
     def test_get_embedding_returns_none_when_no_faces(self):
         svc = FaceRecognitionService()
-        with patch.object(svc, '_ensure_models'):
+        with patch.object(svc, "_ensure_models"):
             svc._app = MagicMock()
             svc._app.get.return_value = []
             img = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -155,9 +155,7 @@ class TestBuildGallery:
 
     def test_build_gallery_skips_bad_json(self):
         svc = FaceRecognitionService()
-        profiles = [
-            {"id": 1, "display_name": "Bad", "face_embedding": "not-json"}
-        ]
+        profiles = [{"id": 1, "display_name": "Bad", "face_embedding": "not-json"}]
         svc.build_gallery(profiles)
         assert len(svc._gallery) == 0
 
@@ -184,10 +182,22 @@ class TestMatchFace:
         emb1 = _normalized_emb(0.5)
         emb2 = _normalized_emb(0.9)
         svc._gallery = [
-            {"profile_id": 1, "display_name": "A", "jersey_number": 10,
-             "team": "home", "embedding": emb1, "confidence": 0.9},
-            {"profile_id": 2, "display_name": "B", "jersey_number": 7,
-             "team": "away", "embedding": emb2, "confidence": 0.8},
+            {
+                "profile_id": 1,
+                "display_name": "A",
+                "jersey_number": 10,
+                "team": "home",
+                "embedding": emb1,
+                "confidence": 0.9,
+            },
+            {
+                "profile_id": 2,
+                "display_name": "B",
+                "jersey_number": 7,
+                "team": "away",
+                "embedding": emb2,
+                "confidence": 0.8,
+            },
         ]
         svc._gallery_loaded = True
         query = _normalized_emb(0.5)
@@ -211,9 +221,14 @@ class TestMatchFace:
     def test_match_face_returns_none_when_exceeds_threshold(self):
         svc = FaceRecognitionService()
         svc._gallery = [
-            {"profile_id": 1, "display_name": "A", "jersey_number": 10,
-             "team": "home", "embedding": _normalized_emb(0.9),
-             "confidence": 0.9},
+            {
+                "profile_id": 1,
+                "display_name": "A",
+                "jersey_number": 10,
+                "team": "home",
+                "embedding": _normalized_emb(0.9),
+                "confidence": 0.9,
+            },
         ]
         svc._gallery_loaded = True
         query = _normalized_emb(0.0)
@@ -223,9 +238,14 @@ class TestMatchFace:
     def test_match_face_mismatched_shape_skips(self):
         svc = FaceRecognitionService()
         svc._gallery = [
-            {"profile_id": 1, "display_name": "A", "jersey_number": 10,
-             "team": "home", "embedding": np.ones(256, dtype=np.float32),
-             "confidence": 0.9},
+            {
+                "profile_id": 1,
+                "display_name": "A",
+                "jersey_number": 10,
+                "team": "home",
+                "embedding": np.ones(256, dtype=np.float32),
+                "confidence": 0.9,
+            },
         ]
         svc._gallery_loaded = True
         query = _normalized_emb(0.5)
@@ -239,8 +259,14 @@ class TestIdentifyPlayerFromCrop:
         svc._ensure_models()
         emb = _normalized_emb(0.5)
         svc._gallery = [
-            {"profile_id": 1, "display_name": "Cristiano", "jersey_number": 7,
-             "team": "home", "embedding": emb, "confidence": 0.9},
+            {
+                "profile_id": 1,
+                "display_name": "Cristiano",
+                "jersey_number": 7,
+                "team": "home",
+                "embedding": emb,
+                "confidence": 0.9,
+            },
         ]
         svc._gallery_loaded = True
         img = np.zeros((200, 200, 3), dtype=np.uint8)
@@ -249,7 +275,7 @@ class TestIdentifyPlayerFromCrop:
 
     def test_identify_player_from_crop_no_face(self):
         svc = FaceRecognitionService()
-        with patch.object(svc, '_ensure_models'):
+        with patch.object(svc, "_ensure_models"):
             svc._app = MagicMock()
             svc._app.get.return_value = []
             img = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -261,9 +287,8 @@ class TestCropFaceRegion:
     def test_crop_face_region_returns_none_on_bad_bbox(self):
         svc = FaceRecognitionService()
         from types import SimpleNamespace
-        frame_det = SimpleNamespace(
-            image_width=100, image_height=100, frame_number=0
-        )
+
+        frame_det = SimpleNamespace(image_width=100, image_height=100, frame_number=0)
         result = svc._crop_face_region(frame_det, [0, 0, 0, 0], None)
         assert result is None
 

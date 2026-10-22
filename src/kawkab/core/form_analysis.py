@@ -5,7 +5,6 @@ All numpy-only, no pandas/scipy/sklearn.
 
 from __future__ import annotations
 
-import math
 from collections import defaultdict
 from typing import Any
 
@@ -169,7 +168,15 @@ class FormAnalyzer:
         by_position: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for ps in player_stats:
             pos = ps.get("position", "MID")
-            base_pos = "GK" if pos == "GK" else "DEF" if pos in ("DEF", "CB", "LB", "RB") else "MID" if pos in ("MID", "CM", "DM", "AM", "LM", "RM") else "FWD"
+            base_pos = (
+                "GK"
+                if pos == "GK"
+                else "DEF"
+                if pos in ("DEF", "CB", "LB", "RB")
+                else "MID"
+                if pos in ("MID", "CM", "DM", "AM", "LM", "RM")
+                else "FWD"
+            )
             by_position[base_pos].append(ps)
 
         totw: dict[str, Any] = {}
@@ -216,7 +223,15 @@ class FormAnalyzer:
 
             for team in (home, away):
                 if team not in teams:
-                    teams[team] = {"played": 0, "wins": 0, "draws": 0, "losses": 0, "gf": 0, "ga": 0, "results": []}
+                    teams[team] = {
+                        "played": 0,
+                        "wins": 0,
+                        "draws": 0,
+                        "losses": 0,
+                        "gf": 0,
+                        "ga": 0,
+                        "results": [],
+                    }
 
             teams[home]["played"] += 1
             teams[away]["played"] += 1
@@ -247,18 +262,20 @@ class FormAnalyzer:
             gd = data["gf"] - data["ga"]
             last_5 = data["results"][-5:]
             form_arrow = "".join(last_5) if last_5 else ""
-            standings.append({
-                "team": team,
-                "played": data["played"],
-                "wins": data["wins"],
-                "draws": data["draws"],
-                "losses": data["losses"],
-                "goals_for": data["gf"],
-                "goals_against": data["ga"],
-                "goal_difference": gd,
-                "points": pts,
-                "form": form_arrow,
-            })
+            standings.append(
+                {
+                    "team": team,
+                    "played": data["played"],
+                    "wins": data["wins"],
+                    "draws": data["draws"],
+                    "losses": data["losses"],
+                    "goals_for": data["gf"],
+                    "goals_against": data["ga"],
+                    "goal_difference": gd,
+                    "points": pts,
+                    "form": form_arrow,
+                }
+            )
 
         standings.sort(key=lambda x: (-x["points"], -x["goal_difference"], -x["goals_for"]))
         for i, s in enumerate(standings):
@@ -272,7 +289,12 @@ class FormAnalyzer:
         team: str,
     ) -> dict[str, Any]:
         if not matches:
-            return {"is_crisis": False, "streak_type": "none", "streak_length": 0, "recommended_action": "No matches to analyze"}
+            return {
+                "is_crisis": False,
+                "streak_type": "none",
+                "streak_length": 0,
+                "recommended_action": "No matches to analyze",
+            }
 
         results = [_result_from_match(m, team) for m in matches]
 
@@ -346,9 +368,14 @@ def form_by_competition(
         comp_matches = _competition_map.get(ct, [])
         if not comp_matches:
             result[ct] = {
-                "played": 0, "won": 0, "drawn": 0, "lost": 0,
-                "goals_for": 0, "goals_against": 0,
-                "points_per_game": 0.0, "win_pct": 0.0,
+                "played": 0,
+                "won": 0,
+                "drawn": 0,
+                "lost": 0,
+                "goals_for": 0,
+                "goals_against": 0,
+                "points_per_game": 0.0,
+                "win_pct": 0.0,
             }
             recent[ct] = []
             continue
@@ -401,7 +428,9 @@ def form_by_opponent_strength(
 
     opponent_strengths: dict[str, float] = {}
     for m in matches:
-        opp = m.get("away_team", "") if m.get("home_team", "") == team_id else m.get("home_team", "")
+        opp = (
+            m.get("away_team", "") if m.get("home_team", "") == team_id else m.get("home_team", "")
+        )
         opp_ppg = float(m.get("opponent_strength", m.get("opponent_ppg", 0)))
         if opp not in opponent_strengths:
             opponent_strengths[opp] = opp_ppg
@@ -424,8 +453,12 @@ def form_by_opponent_strength(
     for tier_name, tier_matches in tiered.items():
         if not tier_matches:
             result[tier_name] = {
-                "played": 0, "won": 0, "drawn": 0, "lost": 0,
-                "goals_for": 0, "goals_against": 0,
+                "played": 0,
+                "won": 0,
+                "drawn": 0,
+                "lost": 0,
+                "goals_for": 0,
+                "goals_against": 0,
                 "points_per_game": 0.0,
             }
             continue

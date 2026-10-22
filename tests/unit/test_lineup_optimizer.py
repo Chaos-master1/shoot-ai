@@ -1,12 +1,10 @@
 """Tests for formation-based lineup optimizer."""
-import pytest
 
 from kawkab.core.lineup_optimizer import (
-    LineupOptimizer,
-    LineupSuggestion,
-    OptimizerResult,
     FORMATION_TEMPLATES,
     POSITION_ROLES,
+    LineupOptimizer,
+    LineupSuggestion,
     _canonical_role,
 )
 

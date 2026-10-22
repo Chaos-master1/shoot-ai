@@ -7,17 +7,13 @@ import json
 from kawkab.core.logging import get_logger
 from kawkab.core.observability import metrics
 from kawkab.core.security import ErrorSanitizer
+from kawkab.ui.bridge_handlers.base import BridgeHandlerBase
 
 logger = get_logger(__name__)
 
 
-class LifecycleHandler:
+class LifecycleHandler(BridgeHandlerBase):
     """Handles app lifecycle operations for Bridge."""
-
-    def __init__(self, bridge, services, rate_limiter=None):
-        self._bridge = bridge
-        self._services = services
-        self._rate_limiter = rate_limiter
 
     # ── helpers ──────────────────────────────────────────────────
 
@@ -33,10 +29,6 @@ class LifecycleHandler:
     def profiler(self):
         return self._services.get("profiler")
 
-    def _check_rate_limit(self, category: str = "analysis") -> None:
-        if self._rate_limiter is not None and not self._rate_limiter.acquire(category):
-            raise RuntimeError(f"Rate limit exceeded for {category}")
-
     # ── slots ────────────────────────────────────────────────────
 
     def get_gpu_info(self):
@@ -44,30 +36,34 @@ class LifecycleHandler:
         from kawkab.services.benchmark_service import BenchmarkService
 
         try:
-            model_size = getattr(self.cv_service, 'model_size', 'l') if self.cv_service else 'l'
+            model_size = getattr(self.cv_service, "model_size", "l") if self.cv_service else "l"
             if self.benchmark_service is None:
-                return json.dumps({
-                    "gpu_name": "unknown",
-                    "tier": "unknown",
-                    "recommendations": BenchmarkService.recommend_settings("unknown"),
-                    "current_settings": {
-                        "model_size": model_size,
-                        "frame_skip": self._services.get("frame_skip", 3),
-                    },
-                })
+                return json.dumps(
+                    {
+                        "gpu_name": "unknown",
+                        "tier": "unknown",
+                        "recommendations": BenchmarkService.recommend_settings("unknown"),
+                        "current_settings": {
+                            "model_size": model_size,
+                            "frame_skip": self._services.get("frame_skip", 3),
+                        },
+                    }
+                )
             info = self.benchmark_service._system_info
             gpu_name = info.get("gpu_name", "unknown")
             tier = BenchmarkService.classify_gpu_tier(gpu_name)
             recommendations = BenchmarkService.recommend_settings(tier)
-            return json.dumps({
-                "gpu_name": gpu_name,
-                "tier": tier,
-                "recommendations": recommendations,
-                "current_settings": {
-                    "model_size": model_size,
-                    "frame_skip": self._services.get("frame_skip", 3),
-                },
-            })
+            return json.dumps(
+                {
+                    "gpu_name": gpu_name,
+                    "tier": tier,
+                    "recommendations": recommendations,
+                    "current_settings": {
+                        "model_size": model_size,
+                        "frame_skip": self._services.get("frame_skip", 3),
+                    },
+                }
+            )
         except Exception as e:
             logger.error(f"get_gpu_info failed: {e}")
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})

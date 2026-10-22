@@ -15,7 +15,6 @@ is often the most decisive player.
 from __future__ import annotations
 
 import math
-from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -42,6 +41,7 @@ class GoalkeeperAction:
 @dataclass
 class GoalkeeperStats:
     """Aggregated goalkeeper stats."""
+
     team: str
     saves: int = 0
     goals_conceded: int = 0
@@ -93,8 +93,8 @@ class GoalkeeperService:
         reasonable approximation for amateur analysis.
         """
         goal_x = self.PITCH_LENGTH
-        goal_y_top = 34 - 3.66
-        goal_y_bottom = 34 + 3.66
+        _ = 34 - 3.66
+        _ = 34 + 3.66
         if shot_x > goal_x:
             shot_x = self.PITCH_LENGTH - shot_x
             goal_x = self.PITCH_LENGTH
@@ -179,11 +179,11 @@ class GoalkeeperService:
         if stats.clean_sheet:
             notes.append("Clean sheet — no goals conceded")
         if stats.save_rate >= 0.7:
-            notes.append(f"Excellent save rate: {stats.save_rate*100:.0f}%")
+            notes.append(f"Excellent save rate: {stats.save_rate * 100:.0f}%")
         elif stats.save_rate >= 0.5:
-            notes.append(f"Good save rate: {stats.save_rate*100:.0f}%")
+            notes.append(f"Good save rate: {stats.save_rate * 100:.0f}%")
         elif stats.shots_faced > 0:
-            notes.append(f"Low save rate: {stats.save_rate*100:.0f}% — coaching review needed")
+            notes.append(f"Low save rate: {stats.save_rate * 100:.0f}% — coaching review needed")
         if stats.clean_sheet:
             notes.append("Clean sheet — no goals conceded")
         if stats.shots_faced > 0 and stats.xgot_per_shot < 0.15:
@@ -193,11 +193,11 @@ class GoalkeeperService:
         if stats.short_distribution_attempts > 0:
             short_pct = stats.short_distribution_successful / stats.short_distribution_attempts
             if short_pct < 0.5:
-                notes.append(f"Short distribution accuracy low: {short_pct*100:.0f}%")
+                notes.append(f"Short distribution accuracy low: {short_pct * 100:.0f}%")
         if stats.long_distribution_attempts > 0:
             long_pct = stats.long_distribution_successful / stats.long_distribution_attempts
             if long_pct < 0.3:
-                notes.append(f"Long distribution accuracy very low: {long_pct*100:.0f}%")
+                notes.append(f"Long distribution accuracy very low: {long_pct * 100:.0f}%")
         if stats.sweep_actions > 0:
             notes.append(f"Active sweeper: {stats.sweep_actions} actions outside box")
         if stats.crosses_missed > stats.crosses_claimed:

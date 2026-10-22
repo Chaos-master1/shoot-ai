@@ -1,14 +1,11 @@
 """Tests for Build-Up Analysis module."""
 
-import pytest
-
 from kawkab.core.build_up import (
-    BuildUpAction,
     BuildUpReport,
     _classify_zone,
+    _is_under_pressure,
     _lines_bypassed,
     _passes_through_line,
-    _is_under_pressure,
     analyze_build_up,
 )
 
@@ -96,14 +93,18 @@ class TestIsUnderPressure:
 
     def test_opponent_positions_nearby(self):
         ev = _ev(
-            0, start_x=50.0, start_y=34.0,
+            0,
+            start_x=50.0,
+            start_y=34.0,
             opponent_positions=[{"x": 51.0, "y": 34.0}],
         )
         assert _is_under_pressure(ev, [ev], 0) is True
 
     def test_opponent_too_far(self):
         ev = _ev(
-            0, start_x=50.0, start_y=34.0,
+            0,
+            start_x=50.0,
+            start_y=34.0,
             opponent_positions=[{"x": 60.0, "y": 34.0}],
         )
         assert _is_under_pressure(ev, [ev], 0) is False
@@ -116,8 +117,7 @@ class TestIsUnderPressure:
 class TestGoalKickPatterns:
     def test_short_goal_kick(self):
         events = [
-            _ev(0, etype="goal_kick", team="home", timestamp=0.0,
-                start_x=0.0, end_x=20.0),
+            _ev(0, etype="goal_kick", team="home", timestamp=0.0, start_x=0.0, end_x=20.0),
         ]
         report = analyze_build_up(events, events, "home")
         assert report.goal_kick_patterns["short"]["attempts"] == 1
@@ -125,8 +125,7 @@ class TestGoalKickPatterns:
 
     def test_long_goal_kick(self):
         events = [
-            _ev(0, etype="goal_kick", team="home", timestamp=0.0,
-                start_x=0.0, end_x=40.0),
+            _ev(0, etype="goal_kick", team="home", timestamp=0.0, start_x=0.0, end_x=40.0),
         ]
         report = analyze_build_up(events, events, "home")
         assert report.goal_kick_patterns["long"]["attempts"] == 1
@@ -134,8 +133,7 @@ class TestGoalKickPatterns:
 
     def test_goal_kick_middle_distance_not_counted(self):
         events = [
-            _ev(0, etype="goal_kick", team="home", timestamp=0.0,
-                start_x=0.0, end_x=30.0),
+            _ev(0, etype="goal_kick", team="home", timestamp=0.0, start_x=0.0, end_x=30.0),
         ]
         report = analyze_build_up(events, events, "home")
         assert report.goal_kick_patterns["short"]["attempts"] == 0
@@ -155,7 +153,9 @@ class TestLineBreakingPasses:
             _ev(0, team="home", timestamp=0.0, start_x=20.0, end_x=80.0),
         ]
         report = analyze_build_up(events, events, "home")
-        breaking = [p for p in report.line_breaking_passes if p.get("defensive_line_bypassed", 0) == 2]
+        breaking = [
+            p for p in report.line_breaking_passes if p.get("defensive_line_bypassed", 0) == 2
+        ]
         assert len(breaking) >= 1
 
     def test_short_pass_no_lines_broken(self):
@@ -169,8 +169,7 @@ class TestLineBreakingPasses:
 class TestBuildOutUnderPressure:
     def test_pressure_detected(self):
         events = [
-            _ev(0, team="home", timestamp=0.0, start_x=10.0, end_x=20.0,
-                under_pressure=True),
+            _ev(0, team="home", timestamp=0.0, start_x=10.0, end_x=20.0, under_pressure=True),
         ]
         report = analyze_build_up(events, events, "home")
         assert report.build_out_under_pressure["attempts"] >= 1
@@ -239,10 +238,24 @@ class TestBuildUpReport:
 
     def test_goal_kick_success_rate(self):
         events = [
-            _ev(0, etype="goal_kick", team="home", timestamp=0.0,
-                start_x=0.0, end_x=20.0, completed=True),
-            _ev(1, etype="goal_kick", team="home", timestamp=1.0,
-                start_x=0.0, end_x=15.0, completed=False),
+            _ev(
+                0,
+                etype="goal_kick",
+                team="home",
+                timestamp=0.0,
+                start_x=0.0,
+                end_x=20.0,
+                completed=True,
+            ),
+            _ev(
+                1,
+                etype="goal_kick",
+                team="home",
+                timestamp=1.0,
+                start_x=0.0,
+                end_x=15.0,
+                completed=False,
+            ),
         ]
         report = analyze_build_up(events, events, "home")
         assert report.goal_kick_patterns["short"]["attempts"] == 2

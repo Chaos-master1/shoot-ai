@@ -14,7 +14,13 @@ class TestPassNetwork:
     def test_build_simple_pass(self):
         pn = PassNetwork()
         events = [
-            {"type": "pass", "from_track_id": 1, "to_track_id": 2, "completed": True, "team": "home"},
+            {
+                "type": "pass",
+                "from_track_id": 1,
+                "to_track_id": 2,
+                "completed": True,
+                "team": "home",
+            },
         ]
         pn.build(events, {1: "home", 2: "home"})
         matrix = pn.get_connection_matrix()

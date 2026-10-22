@@ -6,9 +6,7 @@ Supports train/test split, temporal split, and k-fold cross-validation."""
 
 from __future__ import annotations
 
-import math
 import random
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -89,12 +87,16 @@ class ModelComparisonReport:
             lines.append("")
             lines.append("Cross-Validation Summary (mean ± std across folds):")
             for model_name, stats in self.cv_summary.items():
-                lines.append(f"  {model_name}: log_loss={stats['log_loss_mean']:.4f}±{stats['log_loss_std']:.4f}")
+                lines.append(
+                    f"  {model_name}: log_loss={stats['log_loss_mean']:.4f}±{stats['log_loss_std']:.4f}"
+                )
         if self.significant_differences:
             lines.append("")
             lines.append("Significant differences:")
             for d in self.significant_differences:
-                lines.append(f"  {d['metric']}: {d['model_a']} vs {d['model_b']} (p={d['p_value']:.3f})")
+                lines.append(
+                    f"  {d['metric']}: {d['model_a']} vs {d['model_b']} (p={d['p_value']:.3f})"
+                )
         return "\n".join(lines)
 
 
@@ -115,6 +117,7 @@ def _compute_metrics(
     auc_roc = 0.0
     try:
         from sklearn.metrics import roc_auc_score
+
         if len(np.unique(labels)) >= 2:
             auc_roc = roc_auc_score(labels, p)
     except ImportError:
@@ -212,12 +215,14 @@ def _compute_calibration_chart(
             else:
                 mean_pred = round((i + 0.5) / n_bins, 3)
                 obs_rate = None
-            bins_data.append({
-                "bin": f"{i / n_bins:.1f}-{(i + 1) / n_bins:.1f}",
-                "predicted": mean_pred,
-                "observed": obs_rate,
-                "count": int(np.sum(mask)),
-            })
+            bins_data.append(
+                {
+                    "bin": f"{i / n_bins:.1f}-{(i + 1) / n_bins:.1f}",
+                    "predicted": mean_pred,
+                    "observed": obs_rate,
+                    "count": int(np.sum(mask)),
+                }
+            )
         chart[model_name] = {"bins": bins_data}
     return chart
 
@@ -244,10 +249,12 @@ def _predict_all_models(
             heur_predictions[i] = float(s["xG"])
         else:
             from kawkab.core.xg_model import compute_xg
+
             d = float(s.get("distance_m", 18.0))
             a = float(s.get("angle_deg", 30.0))
             heur_predictions[i] = compute_xg(
-                distance_m=d, angle_deg=a,
+                distance_m=d,
+                angle_deg=a,
                 body_part=s.get("body_part", "right_foot"),
                 assist_type=s.get("assist_type", "standard"),
                 is_one_on_one=bool(s.get("is_one_on_one", False)),
@@ -276,7 +283,9 @@ def _evaluate_on_split(
     if not train_shots or not test_shots:
         return [], {}, {}, {}
 
-    test_labels = np.array([float(shots[i].get("is_goal", 0.0)) for i in test_indices], dtype=np.float64)
+    test_labels = np.array(
+        [float(shots[i].get("is_goal", 0.0)) for i in test_indices], dtype=np.float64
+    )
     heuristic_test_preds = np.array([heur_predictions[i] for i in test_indices])
     enhanced_test_preds = np.array([enhanced_predictions[i] for i in test_indices])
 
@@ -287,48 +296,76 @@ def _evaluate_on_split(
     if compute_feature_importance:
         try:
             from sklearn.linear_model import LogisticRegression
+
             features_list = []
             for s in train_shots:
                 feat = enhanced_model.extract_features(s)
-                features_list.append([
-                    feat.distance_m, feat.angle_deg, 1.0 if feat.is_header else 0.0,
-                    1.0 if feat.is_one_on_one else 0.0, 1.0 if feat.is_pressed else 0.0,
-                    1.0 if feat.is_volley else 0.0, 1.0 if feat.is_free_kick else 0.0,
-                    1.0 if feat.is_penalty else 0.0, feat.gk_distance_m,
-                    1.0 if feat.is_rebound else 0.0, 1.0 if feat.is_big_chance else 0.0,
-                ])
+                features_list.append(
+                    [
+                        feat.distance_m,
+                        feat.angle_deg,
+                        1.0 if feat.is_header else 0.0,
+                        1.0 if feat.is_one_on_one else 0.0,
+                        1.0 if feat.is_pressed else 0.0,
+                        1.0 if feat.is_volley else 0.0,
+                        1.0 if feat.is_free_kick else 0.0,
+                        1.0 if feat.is_penalty else 0.0,
+                        feat.gk_distance_m,
+                        1.0 if feat.is_rebound else 0.0,
+                        1.0 if feat.is_big_chance else 0.0,
+                    ]
+                )
             X_train = np.array(features_list, dtype=np.float64)
-            y_train = np.array([float(s.get("is_goal", 0.0)) for s in train_shots], dtype=np.float64)
+            y_train = np.array(
+                [float(s.get("is_goal", 0.0)) for s in train_shots], dtype=np.float64
+            )
             if len(np.unique(y_train)) >= 2:
-                log_model = LogisticRegression(C=1.0, max_iter=1000, random_state=random_seed, solver="lbfgs")
+                log_model = LogisticRegression(
+                    C=1.0, max_iter=1000, random_state=random_seed, solver="lbfgs"
+                )
                 log_model.fit(X_train, y_train)
 
                 logistic_test_preds = log_model.predict_proba(
-                    np.array([
+                    np.array(
                         [
-                            float(s.get("distance_m", 18.0)), float(s.get("angle_deg", 30.0)),
-                            1.0 if s.get("is_header", False) or s.get("body_part", "") == "head" else 0.0,
-                            1.0 if s.get("is_one_on_one", False) else 0.0,
-                            1.0 if s.get("was_pressed", False) else 0.0,
-                            1.0 if s.get("shot_type", "open_play") in ("volley", "half_volley") else 0.0,
-                            1.0 if s.get("shot_type", "open_play") == "free_kick" else 0.0,
-                            1.0 if s.get("shot_type", "open_play") == "penalty" else 0.0,
-                            float(s.get("gk_distance_m", 0.0)),
-                            1.0 if s.get("is_rebound", False) else 0.0,
-                            1.0 if s.get("is_big_chance", False) else 0.0,
+                            [
+                                float(s.get("distance_m", 18.0)),
+                                float(s.get("angle_deg", 30.0)),
+                                1.0
+                                if s.get("is_header", False) or s.get("body_part", "") == "head"
+                                else 0.0,
+                                1.0 if s.get("is_one_on_one", False) else 0.0,
+                                1.0 if s.get("was_pressed", False) else 0.0,
+                                1.0
+                                if s.get("shot_type", "open_play") in ("volley", "half_volley")
+                                else 0.0,
+                                1.0 if s.get("shot_type", "open_play") == "free_kick" else 0.0,
+                                1.0 if s.get("shot_type", "open_play") == "penalty" else 0.0,
+                                float(s.get("gk_distance_m", 0.0)),
+                                1.0 if s.get("is_rebound", False) else 0.0,
+                                1.0 if s.get("is_big_chance", False) else 0.0,
+                            ]
+                            for s in test_shots
                         ]
-                        for s in test_shots
-                    ])
+                    )
                 )[:, 1]
 
                 feature_names = [
-                    "distance_m", "angle_deg", "is_header", "is_one_on_one",
-                    "is_pressed", "is_volley", "is_free_kick", "is_penalty",
-                    "gk_distance_m", "is_rebound", "is_big_chance",
+                    "distance_m",
+                    "angle_deg",
+                    "is_header",
+                    "is_one_on_one",
+                    "is_pressed",
+                    "is_volley",
+                    "is_free_kick",
+                    "is_penalty",
+                    "gk_distance_m",
+                    "is_rebound",
+                    "is_big_chance",
                 ]
                 importances = {
                     fn: abs(float(c))
-                    for fn, c in zip(feature_names, log_model.coef_[0])
+                    for fn, c in zip(feature_names, log_model.coef_[0], strict=False)
                 }
         except ImportError:
             pass
@@ -336,11 +373,13 @@ def _evaluate_on_split(
     try:
         dl_model = DLXgModel(seed=random_seed)
         dl_model.train(
-            enhanced_model.extract_features(train_shots),
+            dl_model.extract_features(train_shots),
             np.array([float(s.get("is_goal", 0.0)) for s in train_shots], dtype=np.float64),
-            epochs=50, batch_size=min(32, len(train_shots)), verbose=False,
+            epochs=50,
+            batch_size=min(32, len(train_shots)),
+            verbose=False,
         )
-        dl_test_preds = dl_model.predict(enhanced_model.extract_features(test_shots))
+        dl_test_preds = dl_model.predict(dl_model.extract_features(test_shots))
     except Exception:
         pass
 
@@ -356,16 +395,18 @@ def _evaluate_on_split(
         "dl_xg": dl_test_preds,
     }
 
-    test_distances = np.array([float(s.get("distance", s.get("distance_m", 18.0))) for s in test_shots])
+    test_distances = np.array(
+        [float(s.get("distance", s.get("distance_m", 18.0))) for s in test_shots]
+    )
     test_angles = np.array([float(s.get("angle", s.get("angle_deg", 30.0))) for s in test_shots])
 
     dist_edges = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0]
     dist_labels = ["0-5m", "5-10m", "10-15m", "15-20m", "20-25m", "25+m"]
-    distance_buckets = _compute_buckets(all_predictions, test_labels, test_distances, dist_edges, dist_labels)
+    _ = _compute_buckets(all_predictions, test_labels, test_distances, dist_edges, dist_labels)
 
     angle_edges = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0]
     angle_labels = ["0-10°", "10-20°", "20-30°", "30-40°", "40-50°"]
-    angle_buckets = _compute_buckets(all_predictions, test_labels, test_angles, angle_edges, angle_labels)
+    _ = _compute_buckets(all_predictions, test_labels, test_angles, angle_edges, angle_labels)
 
     calibration_chart_data = _compute_calibration_chart(all_predictions, test_labels)
 
@@ -385,20 +426,28 @@ def compare_xg_models(
 
     enhanced_model = EnhancedXgModel()
     heur_predictions, enhanced_predictions, _, labels, indices = _predict_all_models(
-        shots, enhanced_model, random_seed,
+        shots,
+        enhanced_model,
+        random_seed,
     )
 
     if temporal_split:
         shots_with_idx = sorted(
             [(i, s) for i, s in enumerate(shots)],
-            key=lambda x: float(x[1].get("timestamp", x[1].get("index", 0)))
+            key=lambda x: float(x[1].get("timestamp", x[1].get("index", 0))),
         )
         split_point = int(len(shots_with_idx) * (1.0 - test_fraction))
         train_indices = [si for si, _ in shots_with_idx[:split_point]]
         test_indices = [si for si, _ in shots_with_idx[split_point:]]
         models_list, all_predictions, importances, calibration_chart_data = _evaluate_on_split(
-            train_indices, test_indices, shots, heur_predictions, enhanced_predictions,
-            enhanced_model, random_seed, compute_feature_importance,
+            train_indices,
+            test_indices,
+            shots,
+            heur_predictions,
+            enhanced_predictions,
+            enhanced_model,
+            random_seed,
+            compute_feature_importance,
         )
     elif n_folds > 1:
         rng = random.Random(random_seed)
@@ -407,24 +456,33 @@ def compare_xg_models(
         fold_size = len(shuffled) // n_folds
         cv_folds = []
         all_model_names = ["heuristic", "logistic", "dl_xg"]
-        cv_metrics: dict[str, list[float]] = {m: {"log_loss": [], "brier_score": [], "auc_roc": []} for m in all_model_names}
+        cv_metrics: dict[str, dict[str, list[float]]] = {
+            m: {"log_loss": [], "brier_score": [], "auc_roc": []} for m in all_model_names
+        }
 
         for fold in range(n_folds):
-            test_idx_set = set(shuffled[fold * fold_size:(fold + 1) * fold_size])
+            test_idx_set = set(shuffled[fold * fold_size : (fold + 1) * fold_size])
             if fold == n_folds - 1:
-                test_idx_set = set(shuffled[fold * fold_size:])
+                test_idx_set = set(shuffled[fold * fold_size :])
             train_idx = [i for i in shuffled if i not in test_idx_set]
             test_idx = [i for i in shuffled if i in test_idx_set]
             if not train_idx or not test_idx:
                 continue
             fold_models, _, _, _ = _evaluate_on_split(
-                train_idx, test_idx, shots, heur_predictions, enhanced_predictions,
-                enhanced_model, random_seed, compute_feature_importance=False,
+                train_idx,
+                test_idx,
+                shots,
+                heur_predictions,
+                enhanced_predictions,
+                enhanced_model,
+                random_seed,
+                compute_feature_importance=False,
             )
             fold_record = CrossValidationFold(
                 fold=fold,
                 metrics={m.model_name: m for m in fold_models},
-                train_size=len(train_idx), test_size=len(test_idx),
+                train_size=len(train_idx),
+                test_size=len(test_idx),
             )
             cv_folds.append(fold_record)
             for m in fold_models:
@@ -454,12 +512,24 @@ def compare_xg_models(
             else:
                 train_indices.append(i)
         models_list, all_predictions, importances, calibration_chart_data = _evaluate_on_split(
-            train_indices, test_indices, shots, heur_predictions, enhanced_predictions,
-            enhanced_model, random_seed, compute_feature_importance,
+            train_indices,
+            test_indices,
+            shots,
+            heur_predictions,
+            enhanced_predictions,
+            enhanced_model,
+            random_seed,
+            compute_feature_importance,
         )
 
-        report = _build_report(models_list, all_predictions, importances,
-                               calibration_chart_data, shots, test_indices if test_indices else list(indices))
+        report = _build_report(
+            models_list,
+            all_predictions,
+            importances,
+            calibration_chart_data,
+            shots,
+            test_indices if test_indices else list(indices),
+        )
         report.cv_folds = cv_folds
         report.cv_summary = cv_summary
         return report
@@ -474,17 +544,35 @@ def compare_xg_models(
             else:
                 train_indices.append(i)
         models_list, all_predictions, importances, calibration_chart_data = _evaluate_on_split(
-            train_indices, test_indices, shots, heur_predictions, enhanced_predictions,
-            enhanced_model, random_seed, compute_feature_importance,
+            train_indices,
+            test_indices,
+            shots,
+            heur_predictions,
+            enhanced_predictions,
+            enhanced_model,
+            random_seed,
+            compute_feature_importance,
         )
 
-    return _build_report(models_list, all_predictions, importances,
-                         calibration_chart_data, shots, test_indices if not temporal_split and not n_folds > 1 else (test_indices if not temporal_split else test_indices))
+    return _build_report(
+        models_list,
+        all_predictions,
+        importances,
+        calibration_chart_data,
+        shots,
+        test_indices
+        if not temporal_split and not n_folds > 1
+        else (test_indices if not temporal_split else test_indices),
+    )
 
 
 def _build_report(
-    models_list, all_predictions, feature_importances, calibration_chart_data,
-    shots, test_indices,
+    models_list,
+    all_predictions,
+    feature_importances,
+    calibration_chart_data,
+    shots,
+    test_indices,
 ) -> ModelComparisonReport:
     if not models_list:
         return ModelComparisonReport()
@@ -492,8 +580,12 @@ def _build_report(
     best_model = min(models_list, key=lambda m: m.log_loss)
 
     test_labels = np.array([float(shots[i].get("is_goal", 0.0)) for i in test_indices])
-    test_distances = np.array([float(shots[i].get("distance", shots[i].get("distance_m", 18.0))) for i in test_indices])
-    test_angles = np.array([float(shots[i].get("angle", shots[i].get("angle_deg", 30.0))) for i in test_indices])
+    test_distances = np.array(
+        [float(shots[i].get("distance", shots[i].get("distance_m", 18.0))) for i in test_indices]
+    )
+    test_angles = np.array(
+        [float(shots[i].get("angle", shots[i].get("angle_deg", 30.0))) for i in test_indices]
+    )
 
     if not all_predictions:
         all_predictions = {}
@@ -502,11 +594,15 @@ def _build_report(
 
     dist_edges = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0]
     dist_labels = ["0-5m", "5-10m", "10-15m", "15-20m", "20-25m", "25+m"]
-    distance_buckets = _compute_buckets(all_predictions, test_labels, test_distances, dist_edges, dist_labels)
+    distance_buckets = _compute_buckets(
+        all_predictions, test_labels, test_distances, dist_edges, dist_labels
+    )
 
     angle_edges = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0]
     angle_labels = ["0-10°", "10-20°", "20-30°", "30-40°", "40-50°"]
-    angle_buckets = _compute_buckets(all_predictions, test_labels, test_angles, angle_edges, angle_labels)
+    angle_buckets = _compute_buckets(
+        all_predictions, test_labels, test_angles, angle_edges, angle_labels
+    )
 
     if not calibration_chart_data:
         calibration_chart_data = _compute_calibration_chart(all_predictions, test_labels)
@@ -517,17 +613,21 @@ def _build_report(
             if i >= j:
                 continue
             if abs(m1.log_loss - m2.log_loss) > 0.05:
-                significant_differences.append({
-                    "metric": "log_loss",
-                    "model_a": m1.model_name,
-                    "model_b": m2.model_name,
-                    "diff": round(m1.log_loss - m2.log_loss, 4),
-                    "p_value": 0.01,
-                })
+                significant_differences.append(
+                    {
+                        "metric": "log_loss",
+                        "model_a": m1.model_name,
+                        "model_b": m2.model_name,
+                        "diff": round(m1.log_loss - m2.log_loss, 4),
+                        "p_value": 0.01,
+                    }
+                )
 
     feature_importances_dict: dict[str, dict] = {}
     if feature_importances:
-        feature_importances_dict["logistic"] = dict(sorted(feature_importances.items(), key=lambda x: -x[1]))
+        feature_importances_dict["logistic"] = dict(
+            sorted(feature_importances.items(), key=lambda x: -x[1])
+        )
 
     return ModelComparisonReport(
         models=models_list,

@@ -185,7 +185,5 @@ class TestEdgeCases:
 
     def test_single_pass_not_classified_as_sequence(self):
         ppa = PassPatternAnalyzer()
-        seqs = ppa.extract_pass_sequences(
-            [_make_pass_event("home", 30, 30, 40, 30, 1, 2, 0)]
-        )
+        seqs = ppa.extract_pass_sequences([_make_pass_event("home", 30, 30, 40, 30, 1, 2, 0)])
         assert seqs == []

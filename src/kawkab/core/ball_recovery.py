@@ -9,8 +9,6 @@ import math
 from collections import defaultdict
 from typing import Any
 
-import numpy as np
-
 from kawkab.core.game_constants import GAME
 
 PITCH_LENGTH = GAME.PITCH_LENGTH_M
@@ -22,6 +20,12 @@ RECOVERY_EVENT_TYPES = {"interception", "tackle", "loose_ball", "goal_kick", "cl
 
 
 def _to_zone(x: float, y: float) -> tuple[int, int]:
+    # x/y=None (events without coordinates — dict.get(key, default) returns
+    # None when the key exists with a NULL value) → pitch-center fallback,
+    # same fix as epv._to_zone / pressing_efficiency / tactical_shape.
+    if x is None or y is None:
+        x = PITCH_LENGTH / 2.0
+        y = PITCH_WIDTH / 2.0
     zx = min(int(x / ZONE_WIDTH), NUM_ZONES - 1)
     zy = min(int(y / ZONE_HEIGHT), NUM_ZONES - 1)
     return (zx, zy)
@@ -40,13 +44,19 @@ class BallRecoveryAnalyzer:
         previous_events: list[dict[str, Any]],
     ) -> tuple[str, float, float]:
         ev_type = recovery_event.get("type", "")
-        x = recovery_event.get("x", PITCH_LENGTH / 2)
-        y = recovery_event.get("y", PITCH_WIDTH / 2)
-        if not math.isfinite(x):
-            x = PITCH_LENGTH / 2
-        if not math.isfinite(y):
-            y = PITCH_WIDTH / 2
-        team = recovery_event.get("team", "home")
+        # x/y may be absent or present-but-NULL (no coordinates). Guard with
+        # an isinstance check (isfinite(None) raises TypeError, which is what
+        # killed real-match reports) and bind to float so every return site
+        # satisfies the (str, float, float) contract.
+        x = recovery_event.get("x")
+        y = recovery_event.get("y")
+        x = (
+            PITCH_LENGTH / 2
+            if not isinstance(x, (int, float)) or not math.isfinite(x)
+            else float(x)
+        )
+        y = PITCH_WIDTH / 2 if not isinstance(y, (int, float)) or not math.isfinite(y) else float(y)
+        _ = recovery_event.get("team", "home")
 
         if ev_type == "interception":
             return ("interception", x, y)
@@ -60,7 +70,7 @@ class BallRecoveryAnalyzer:
         if ev_type == "clearance":
             return ("clearance", x, y)
 
-        prev_ev_types = {e.get("type", "") for e in previous_events[-5:]}
+        _ = {e.get("type", "") for e in previous_events[-5:]}
         if ev_type == "pass" and not recovery_event.get("completed", True):
             return ("loose_ball", x, y)
 
@@ -93,13 +103,15 @@ class BallRecoveryAnalyzer:
         events: list[dict[str, Any]],
         team: str,
     ) -> dict[str, Any]:
-        recoveries = [e for e in events if e.get("team") == team and e.get("type") in RECOVERY_EVENT_TYPES]
+        recoveries = [
+            e for e in events if e.get("team") == team and e.get("type") in RECOVERY_EVENT_TYPES
+        ]
         total = len(recoveries)
 
         by_type: dict[str, int] = defaultdict(int)
         for ev in recoveries:
             prev_idx = events.index(ev)
-            prev = events[max(0, prev_idx - 5):prev_idx]
+            prev = events[max(0, prev_idx - 5) : prev_idx]
             rtype, _, _ = self.classify_recovery(ev, prev)
             by_type[rtype] += 1
 
@@ -160,7 +172,8 @@ class BallRecoveryAnalyzer:
         counter_team = "away" if team == "home" else "home"
         pressure_end = event_time + 2.0
         pressure_events = [
-            e for e in events
+            e
+            for e in events
             if e.get("timestamp", 0) > event_time
             and e.get("timestamp", 0) <= pressure_end
             and e.get("team") == counter_team
@@ -180,7 +193,7 @@ class BallRecoveryAnalyzer:
         self,
         events: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        teams = set(e.get("team", "") for e in events if e.get("team"))
+        teams = {e.get("team", "") for e in events if e.get("team")}
         result: dict[str, Any] = {}
 
         for team in teams:
@@ -195,8 +208,7 @@ class BallRecoveryAnalyzer:
             recoveries_per_min = total_rec / match_minutes
 
             attacking_third_recoveries = sum(
-                1 for e in recoveries
-                if e.get("x", 0) > PITCH_LENGTH * (2.0 / 3.0)
+                1 for e in recoveries if e.get("x", 0) > PITCH_LENGTH * (2.0 / 3.0)
             )
             attacking_third_pct = (attacking_third_recoveries / max(total_rec, 1)) * 100
 

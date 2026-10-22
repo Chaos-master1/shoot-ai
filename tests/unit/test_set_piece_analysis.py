@@ -1,15 +1,16 @@
 """Tests for set piece analysis module — delivery quality scoring."""
 
 import pytest
+
 from kawkab.core.set_piece_analysis import (
+    DeliveryZone,
+    SetPieceReport,
+    SetPieceSummary,
     _classify_set_piece_type,
     _compute_delivery_quality,
     _delivery_zone_label,
     _estimate_set_piece_xg,
     analyze_set_pieces,
-    DeliveryZone,
-    SetPieceReport,
-    SetPieceSummary,
 )
 from kawkab.core.xg_model import EnhancedXgModel
 
@@ -37,7 +38,9 @@ class TestSetPieceAnalysis:
         assert sp is None
 
     def test_classify_set_piece_shot(self):
-        sp = _classify_set_piece_type({"event_type": "shot", "type": "shot", "metadata": {"set_piece": "corner_kick"}})
+        sp = _classify_set_piece_type(
+            {"event_type": "shot", "type": "shot", "metadata": {"set_piece": "corner_kick"}}
+        )
         assert sp == "corner_kick"
 
     def test_delivery_zone_near_post(self):
@@ -61,7 +64,18 @@ class TestSetPieceAnalysis:
         assert z == "Midfield"
 
     def test_single_corner_no_shot(self):
-        events = [{"event_type": "corner_kick", "type": "corner_kick", "team": "home", "x": 1, "y": 1, "xg": 0.0, "is_goal": False, "timestamp": 10}]
+        events = [
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 10,
+            }
+        ]
         report = analyze_set_pieces(events)
         assert report.total_set_pieces == 1
         assert report.home_set_pieces == 1
@@ -71,8 +85,27 @@ class TestSetPieceAnalysis:
 
     def test_corner_with_goal(self):
         events = [
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home", "x": 1, "y": 1, "xg": 0.0, "is_goal": False, "timestamp": 10},
-            {"event_type": "shot", "type": "shot", "team": "home", "x": 92, "y": 34, "xg": 0.35, "is_goal": True, "timestamp": 12, "metadata": {"set_piece": "corner_kick"}},
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 10,
+            },
+            {
+                "event_type": "shot",
+                "type": "shot",
+                "team": "home",
+                "x": 92,
+                "y": 34,
+                "xg": 0.35,
+                "is_goal": True,
+                "timestamp": 12,
+                "metadata": {"set_piece": "corner_kick"},
+            },
         ]
         report = analyze_set_pieces(events)
         assert report.total_set_pieces == 2
@@ -90,9 +123,36 @@ class TestSetPieceAnalysis:
 
     def test_both_teams_set_pieces(self):
         events = [
-            {"event_type": "free_kick", "type": "free_kick", "team": "home", "x": 80, "y": 34, "xg": 0.0, "is_goal": False, "timestamp": 5},
-            {"event_type": "free_kick", "type": "free_kick", "team": "away", "x": 20, "y": 34, "xg": 0.0, "is_goal": False, "timestamp": 15},
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home", "x": 1, "y": 1, "xg": 0.0, "is_goal": False, "timestamp": 25},
+            {
+                "event_type": "free_kick",
+                "type": "free_kick",
+                "team": "home",
+                "x": 80,
+                "y": 34,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 5,
+            },
+            {
+                "event_type": "free_kick",
+                "type": "free_kick",
+                "team": "away",
+                "x": 20,
+                "y": 34,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 15,
+            },
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 25,
+            },
         ]
         report = analyze_set_pieces(events)
         assert report.total_set_pieces == 3
@@ -101,9 +161,14 @@ class TestSetPieceAnalysis:
 
     def test_set_piece_summary_to_dict(self):
         s = SetPieceSummary(
-            type="corner_kick", count=5, shots=3, goals=1,
-            total_xg=0.75, avg_xg_per_set_piece=0.15,
-            conversion_rate=0.2, threat_rating=0.45,
+            type="corner_kick",
+            count=5,
+            shots=3,
+            goals=1,
+            total_xg=0.75,
+            avg_xg_per_set_piece=0.15,
+            conversion_rate=0.2,
+            threat_rating=0.45,
         )
         d = s.to_dict()
         assert d["type"] == "corner_kick"
@@ -124,9 +189,42 @@ class TestSetPieceAnalysis:
 
     def test_multiple_delivery_zones(self):
         events = [
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home", "x": 1, "y": 1, "pass_end_x": 95, "pass_end_y": 10, "xg": 0.0, "is_goal": False, "timestamp": 10},
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home", "x": 1, "y": 1, "pass_end_x": 95, "pass_end_y": 55, "xg": 0.0, "is_goal": False, "timestamp": 20},
-            {"event_type": "free_kick", "type": "free_kick", "team": "away", "x": 80, "y": 34, "pass_end_x": 70, "pass_end_y": 34, "xg": 0.0, "is_goal": False, "timestamp": 30},
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "pass_end_x": 95,
+                "pass_end_y": 10,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 10,
+            },
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "pass_end_x": 95,
+                "pass_end_y": 55,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 20,
+            },
+            {
+                "event_type": "free_kick",
+                "type": "free_kick",
+                "team": "away",
+                "x": 80,
+                "y": 34,
+                "pass_end_x": 70,
+                "pass_end_y": 34,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 30,
+            },
         ]
         report = analyze_set_pieces(events)
         zone_labels = [z["label"] for z in report.delivery_zones]
@@ -190,21 +288,48 @@ class TestEstimateSetPieceXg:
 class TestReportDeliveryQuality:
     def test_overall_quality_in_report(self):
         events = [
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home",
-             "x": 1, "y": 1, "pass_end_x": 95, "pass_end_y": 10,
-             "xg": 0.0, "is_goal": False, "timestamp": 10},
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home",
-             "x": 1, "y": 1, "pass_end_x": 90, "pass_end_y": 34,
-             "xg": 0.0, "is_goal": False, "timestamp": 20},
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "pass_end_x": 95,
+                "pass_end_y": 10,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 10,
+            },
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "pass_end_x": 90,
+                "pass_end_y": 34,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 20,
+            },
         ]
         report = analyze_set_pieces(events)
         assert report.overall_delivery_quality > 0
 
     def test_summary_has_delivery_quality(self):
         events = [
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home",
-             "x": 1, "y": 1, "pass_end_x": 95, "pass_end_y": 34,
-             "xg": 0.0, "is_goal": False, "timestamp": 10},
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "pass_end_x": 95,
+                "pass_end_y": 34,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 10,
+            },
         ]
         report = analyze_set_pieces(events)
         for s in report.summaries:
@@ -213,9 +338,18 @@ class TestReportDeliveryQuality:
 
     def test_zone_weights_in_delivery_zones(self):
         events = [
-            {"event_type": "corner_kick", "type": "corner_kick", "team": "home",
-             "x": 1, "y": 1, "pass_end_x": 95, "pass_end_y": 34,
-             "xg": 0.0, "is_goal": False, "timestamp": 10},
+            {
+                "event_type": "corner_kick",
+                "type": "corner_kick",
+                "team": "home",
+                "x": 1,
+                "y": 1,
+                "pass_end_x": 95,
+                "pass_end_y": 34,
+                "xg": 0.0,
+                "is_goal": False,
+                "timestamp": 10,
+            },
         ]
         report = analyze_set_pieces(events)
         for z in report.delivery_zones:

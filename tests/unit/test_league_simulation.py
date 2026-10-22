@@ -1,10 +1,10 @@
 """Tests for League Simulation — Monte Carlo simulation from xG."""
 
 from kawkab.core.league_simulation import (
+    _poisson_goals,
+    _poisson_knuth,
     simulate_league,
     simulate_match,
-    _poisson_knuth,
-    _poisson_goals,
 )
 
 
@@ -90,7 +90,10 @@ class TestSimulateLeague:
 
     def test_standings_have_all_fields(self):
         fixtures = [{"home_team": "team_a", "away_team": "team_b", "home_xg": 1.0, "away_xg": 1.0}]
-        table = [{"team_id": "team_a", "points": 0, "played": 0}, {"team_id": "team_b", "points": 0, "played": 0}]
+        table = [
+            {"team_id": "team_a", "points": 0, "played": 0},
+            {"team_id": "team_b", "points": 0, "played": 0},
+        ]
         r = simulate_league(fixtures, table, n_simulations=50)
         s = r.standings[0]
         assert "team_id" in s
@@ -101,7 +104,10 @@ class TestSimulateLeague:
 
     def test_title_and_relegation_percentages(self):
         fixtures = [{"home_team": "team_a", "away_team": "team_b", "home_xg": 3.0, "away_xg": 0.3}]
-        table = [{"team_id": "team_a", "points": 0, "played": 0}, {"team_id": "team_b", "points": 0, "played": 0}]
+        table = [
+            {"team_id": "team_a", "points": 0, "played": 0},
+            {"team_id": "team_b", "points": 0, "played": 0},
+        ]
         r = simulate_league(fixtures, table, n_simulations=100)
         a_row = next(s for s in r.standings if s["team_id"] == "team_a")
         b_row = next(s for s in r.standings if s["team_id"] == "team_b")
@@ -109,13 +115,18 @@ class TestSimulateLeague:
 
     def test_point_distributions(self):
         fixtures = [{"home_team": "team_a", "away_team": "team_b", "home_xg": 1.0, "away_xg": 1.0}]
-        table = [{"team_id": "team_a", "points": 0, "played": 0}, {"team_id": "team_b", "points": 0, "played": 0}]
+        table = [
+            {"team_id": "team_a", "points": 0, "played": 0},
+            {"team_id": "team_b", "points": 0, "played": 0},
+        ]
         r = simulate_league(fixtures, table, n_simulations=50)
         assert len(r.point_distributions) == 2
         assert len(r.point_distributions["team_a"]) == 50
 
     def test_teams_from_fixtures_added_automatically(self):
-        fixtures = [{"home_team": "new_team", "away_team": "other_team", "home_xg": 1.0, "away_xg": 1.0}]
+        fixtures = [
+            {"home_team": "new_team", "away_team": "other_team", "home_xg": 1.0, "away_xg": 1.0}
+        ]
         table = []
         r = simulate_league(fixtures, table, n_simulations=50)
         team_ids = {s["team_id"] for s in r.standings}
@@ -164,6 +175,8 @@ class TestSimulateLeague:
         assert len(r.standings) == 1
 
     def test_no_fixtures(self):
-        r = simulate_league([], [{"team_id": "team_a", "points": 10, "played": 10}], n_simulations=10)
+        r = simulate_league(
+            [], [{"team_id": "team_a", "points": 10, "played": 10}], n_simulations=10
+        )
         assert len(r.standings) == 1
         assert r.standings[0]["avg_points"] == 10.0

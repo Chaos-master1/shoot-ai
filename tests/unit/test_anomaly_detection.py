@@ -1,7 +1,6 @@
 """Tests for anomaly detection service."""
 
 import pytest
-
 from conftest import install_kawkab_stubs, load_service_module
 
 install_kawkab_stubs()
@@ -14,6 +13,7 @@ Anomaly = _mod.Anomaly
 # ---------------------------------------------------------------------------
 # Fake data helpers
 # ---------------------------------------------------------------------------
+
 
 class FakePlayer:
     def __init__(self, max_speed_kmh=0, distance_covered_m=0):
@@ -42,6 +42,7 @@ class FakeAnalysis:
 # ===================================================================
 # Physical anomaly detection
 # ===================================================================
+
 
 class TestPhysicalAnomalies:
     def test_speed_above_max_detected(self):
@@ -79,7 +80,9 @@ class TestPhysicalAnomalies:
 
     def test_multiple_physical_anomalies_on_same_player(self):
         svc = AnomalyDetectionService()
-        analysis = FakeAnalysis(players={"p1": FakePlayer(max_speed_kmh=50.0, distance_covered_m=18000.0)})
+        analysis = FakeAnalysis(
+            players={"p1": FakePlayer(max_speed_kmh=50.0, distance_covered_m=18000.0)}
+        )
         anomalies = svc._check_physical_stats(analysis)
         assert len(anomalies) == 2
         metrics = {a.metric for a in anomalies}
@@ -89,6 +92,7 @@ class TestPhysicalAnomalies:
 # ===================================================================
 # Tracking quality checks
 # ===================================================================
+
 
 class TestTrackingQuality:
     def test_too_few_tracks_detected(self):
@@ -136,11 +140,13 @@ class TestTrackingQuality:
 
     def test_no_tracking_quality_issues(self):
         svc = AnomalyDetectionService()
-        track_data = FakeTrackData({
-            "validated_player_tracks": 25,
-            "fragmentation_rate": 2.0,
-            "tracking_quality": "good",
-        })
+        track_data = FakeTrackData(
+            {
+                "validated_player_tracks": 25,
+                "fragmentation_rate": 2.0,
+                "tracking_quality": "good",
+            }
+        )
         anomalies = svc._check_tracking_quality(track_data)
         assert len(anomalies) == 0
 
@@ -162,6 +168,7 @@ class TestTrackingQuality:
 # ===================================================================
 # Team / statistical outlier checks
 # ===================================================================
+
 
 class TestTeamStats:
     def test_extreme_possession_split_detected(self):
@@ -221,6 +228,7 @@ class TestTeamStats:
 # Formation checks
 # ===================================================================
 
+
 class TestFormationChecks:
     def test_unusual_formation_detected(self):
         svc = AnomalyDetectionService()
@@ -246,10 +254,12 @@ class TestFormationChecks:
 
     def test_both_teams_unusual_formations(self):
         svc = AnomalyDetectionService()
-        analysis = FakeAnalysis(formations={
-            "home": {"formation": "1-4-5"},
-            "away": {"formation": "2-7-1"},
-        })
+        analysis = FakeAnalysis(
+            formations={
+                "home": {"formation": "1-4-5"},
+                "away": {"formation": "2-7-1"},
+            }
+        )
         anomalies = svc._check_formations(analysis)
         assert len(anomalies) == 2
 
@@ -263,6 +273,7 @@ class TestFormationChecks:
 # ===================================================================
 # Event anomaly detection
 # ===================================================================
+
 
 class TestEventAnomalies:
     def test_too_many_shots_detected(self):
@@ -324,6 +335,7 @@ class TestEventAnomalies:
 # Full pipeline (detect_anomalies)
 # ===================================================================
 
+
 class TestDetectAnomalies:
     @pytest.mark.asyncio
     async def test_full_pipeline_all_sections(self):
@@ -367,21 +379,22 @@ class TestDetectAnomalies:
     @pytest.mark.asyncio
     async def test_all_normal_data_no_anomalies(self):
         svc = AnomalyDetectionService()
-        track_data = FakeTrackData({
-            "validated_player_tracks": 25,
-            "fragmentation_rate": 2.0,
-            "tracking_quality": "good",
-        })
+        track_data = FakeTrackData(
+            {
+                "validated_player_tracks": 25,
+                "fragmentation_rate": 2.0,
+                "tracking_quality": "good",
+            }
+        )
         analysis = FakeAnalysis(
             players={"p1": FakePlayer(max_speed_kmh=32.0, distance_covered_m=10000.0)},
             home_team=FakeTeam(possession_pct=52),
             away_team=FakeTeam(possession_pct=48),
             formations={"home": {"formation": "4-3-3"}},
         )
-        events = (
-            [{"type": "pass", "metadata": {"distance_m": 30.0}} for _ in range(10)]
-            + [{"type": "shot", "metadata": {}} for _ in range(5)]
-        )
+        events = [{"type": "pass", "metadata": {"distance_m": 30.0}} for _ in range(10)] + [
+            {"type": "shot", "metadata": {}} for _ in range(5)
+        ]
         anomalies = await svc.detect_anomalies(
             track_data=track_data, analysis=analysis, events=events
         )
@@ -391,6 +404,7 @@ class TestDetectAnomalies:
 # ===================================================================
 # Quality report generation
 # ===================================================================
+
 
 class TestGenerateQualityReport:
     @pytest.mark.asyncio
@@ -453,10 +467,18 @@ class TestGenerateQualityReport:
 # Anomaly dataclass
 # ===================================================================
 
+
 class TestAnomalyDataclass:
     def test_anomaly_creation(self):
-        a = Anomaly("tracking", "high", "validated_tracks", ">= 18", "10",
-                     "Only 10 tracks", "Check video quality")
+        a = Anomaly(
+            "tracking",
+            "high",
+            "validated_tracks",
+            ">= 18",
+            "10",
+            "Only 10 tracks",
+            "Check video quality",
+        )
         assert a.category == "tracking"
         assert a.severity == "high"
         assert a.metric == "validated_tracks"

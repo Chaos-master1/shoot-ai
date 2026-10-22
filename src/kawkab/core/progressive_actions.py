@@ -11,8 +11,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-import numpy as np
-
 from kawkab.core.game_constants import GAME
 
 PITCH_LENGTH = GAME.PITCH_LENGTH_M
@@ -168,7 +166,12 @@ def analyze_progressive_passes(
             continue
 
         opp_bypassed = _count_opponents_behind_pass(
-            sx, sy, ex, ey, opp_positions or [], attacking_direction,
+            sx,
+            sy,
+            ex,
+            ey,
+            opp_positions or [],
+            attacking_direction,
         )
         danger = _compute_danger_rating(ex, ey, PITCH_LENGTH, PITCH_WIDTH, attacking_direction)
 

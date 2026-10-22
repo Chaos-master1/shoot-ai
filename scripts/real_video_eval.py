@@ -16,10 +16,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,8 +37,8 @@ IOU_THRESH = 0.5
 
 
 def _load_model():
-    from ultralytics import YOLO
     import torch
+    from ultralytics import YOLO
 
     model = YOLO("yolo11m.pt")
     if torch.cuda.is_available():
@@ -87,11 +86,19 @@ def _run_detections(
                 boxes = results[0].boxes
                 if boxes is not None and len(boxes) > 0:
                     import torch
-                    dets_np = torch.cat([
-                        boxes.xyxy,
-                        boxes.conf.unsqueeze(1),
-                        boxes.cls.unsqueeze(1),
-                    ], dim=1).cpu().numpy()
+
+                    dets_np = (
+                        torch.cat(
+                            [
+                                boxes.xyxy,
+                                boxes.conf.unsqueeze(1),
+                                boxes.cls.unsqueeze(1),
+                            ],
+                            dim=1,
+                        )
+                        .cpu()
+                        .numpy()
+                    )
                     for d in dets_np:
                         # Only keep person class (0) for GT
                         if int(d[5]) == 0:  # cls == person
@@ -111,7 +118,9 @@ def _run_detections(
 
     cap.release()
     elapsed = time.time() - t0
-    logger.info(f"Done: {det_frame} detection frames in {elapsed:.1f}s ({det_frame/elapsed:.1f} fps)")
+    logger.info(
+        f"Done: {det_frame} detection frames in {elapsed:.1f}s ({det_frame / elapsed:.1f} fps)"
+    )
 
     return detections
 
@@ -287,7 +296,9 @@ def main():
 
     # ── 2. Run detections at pipeline threshold ──
     logger.info(f"Running YOLO at conf={args.pipeline_conf} (pipeline threshold)...")
-    raw_dets = _run_detections(model, args.video, args.pipeline_conf, args.frame_skip, args.max_frames)
+    raw_dets = _run_detections(
+        model, args.video, args.pipeline_conf, args.frame_skip, args.max_frames
+    )
     logger.info(f"  Total raw detections: {sum(len(d) for d in raw_dets.values())}")
 
     # ── 3. Run detections at high threshold (pseudo-GT) ──
@@ -305,14 +316,14 @@ def main():
     logger.info(f"  Total predicted tracks: {len(pred_tracks)}")
 
     # ── 5. Build pseudo-GT tracks (unique ID per detection) ──
-    gt_tracks = _build_gt_tracks(gt_dets)
+    _ = _build_gt_tracks(gt_dets)
 
     # ── 6. Compute metrics ──
     det_metrics = _match_by_iou_and_id(raw_dets, gt_dets)
     mota = _compute_iou_mota(raw_dets, gt_dets)
 
     tracked_dets: dict[int, np.ndarray] = {}
-    for tid, positions in pred_tracks.items():
+    for _tid, positions in pred_tracks.items():
         for fn, bbox in positions:
             if fn not in tracked_dets:
                 tracked_dets[fn] = []
@@ -326,7 +337,7 @@ def main():
 
     report = {
         "status": "ok",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "config": {
             "video": args.video,
             "frame_skip": args.frame_skip,
@@ -386,7 +397,7 @@ def main():
     print(f"    F1:               {dm['f1']:.4f}")
     print(f"    TP/FP/FN:        {dm['tp']}/{dm['fp']}/{dm['fn']}")
     print()
-    print(f"  -- Tracked Metrics (ByteTrack on pipeline detections vs GT) --")
+    print("  -- Tracked Metrics (ByteTrack on pipeline detections vs GT) --")
     tm = report["tracked_detection_metrics"]
     print(f"    MOTA (tracked):   {tm['mota_tracked']:.4f}")
     print(f"    Precision:        {tm['precision']:.4f}")

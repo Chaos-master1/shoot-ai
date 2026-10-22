@@ -1,28 +1,28 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from datetime import datetime, date
-from enum import Enum
-from typing import Any, Optional
+from dataclasses import dataclass
+from datetime import date, datetime
+from enum import StrEnum
+from typing import Any
 
 from kawkab.core.encryption import decrypt_dict, encrypt_dict
 
 
-class InjurySeverity(str, Enum):
+class InjurySeverity(StrEnum):
     MINOR = "minor"
     MODERATE = "moderate"
     SEVERE = "severe"
     CRITICAL = "critical"
 
 
-class InjuryStatus(str, Enum):
+class InjuryStatus(StrEnum):
     ACTIVE = "active"
     RECOVERED = "recovered"
     CHRONIC = "chronic"
 
 
-class BodyPart(str, Enum):
+class BodyPart(StrEnum):
     HEAD = "head"
     NECK = "neck"
     SHOULDER = "shoulder"
@@ -44,6 +44,7 @@ class BodyPart(str, Enum):
     CALF = "calf"
     ANKLE = "ankle"
     FOOT = "foot"
+
 
 # Evidence-based recovery estimates (min_days, expected_days, max_days)
 # Sources: Ekstrand et al. (2011) UEFA Elite Club Injury Study,
@@ -86,7 +87,7 @@ class InjuryRecord:
     severity: str = "minor"
     mechanism: str = ""
     date_injured: str = ""
-    match_id: Optional[int] = None
+    match_id: int | None = None
     status: str = "active"
     notes: str = ""
     id: int = 0
@@ -144,10 +145,17 @@ class InjuryRecord:
     def to_dict(self) -> dict:
         rec_min, rec_max = self.recovery_range_days()
         return {
-            "id": self.id, "player_id": self.player_id, "injury_type": self.injury_type,
-            "body_part": self.body_part, "severity": self.severity, "mechanism": self.mechanism,
-            "date_injured": self.date_injured, "date_recovered": self.date_recovered,
-            "match_id": self.match_id, "status": self.status, "notes": self.notes,
+            "id": self.id,
+            "player_id": self.player_id,
+            "injury_type": self.injury_type,
+            "body_part": self.body_part,
+            "severity": self.severity,
+            "mechanism": self.mechanism,
+            "date_injured": self.date_injured,
+            "date_recovered": self.date_recovered,
+            "match_id": self.match_id,
+            "status": self.status,
+            "notes": self.notes,
             "days_since_injury": self.days_since_injury(),
             "estimated_recovery_days": self.estimated_recovery_days(),
             "recovery_range_min": rec_min,
@@ -167,30 +175,45 @@ class InjuryTrackerService:
         cur = self._db.execute(
             """INSERT INTO injuries (player_id, match_id, injury_type, body_part, severity, mechanism, date_injured, status, notes)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (record.player_id, record.match_id, record.injury_type, record.body_part,
-             record.severity, record.mechanism, record.date_injured or datetime.now().isoformat(),
-             record.status, encrypted_notes),
+            (
+                record.player_id,
+                record.match_id,
+                record.injury_type,
+                record.body_part,
+                record.severity,
+                record.mechanism,
+                record.date_injured or datetime.now().isoformat(),
+                record.status,
+                encrypted_notes,
+            ),
         )
         self._db.commit()
         return cur.lastrowid
 
+    _INJURY_COLUMNS = (
+        "id, player_id, match_id, injury_type, body_part, severity, mechanism, "
+        "date_injured, date_recovered, status, notes, created_at, updated_at"
+    )
+
     def get_player_injuries(self, player_id: int) -> list[dict]:
         rows = self._db.execute(
-            "SELECT * FROM injuries WHERE player_id = ? ORDER BY date_injured DESC",
+            f"SELECT {self._INJURY_COLUMNS} FROM injuries WHERE player_id = ? ORDER BY date_injured DESC",
             (player_id,),
         ).fetchall()
         return [decrypt_dict(dict(r), ["notes"]) for r in rows]
 
-    def get_active_injuries(self, team_player_ids: Optional[list[int]] = None) -> list[dict]:
+    def get_active_injuries(self, team_player_ids: list[int] | None = None) -> list[dict]:
         if team_player_ids:
             placeholders = ",".join("?" * len(team_player_ids))
             rows = self._db.execute(
-                f"SELECT * FROM injuries WHERE status IN ('active','chronic') AND player_id IN ({placeholders}) ORDER BY date_injured DESC",
+                f"SELECT {self._INJURY_COLUMNS} FROM injuries WHERE status IN ('active','chronic') "
+                f"AND player_id IN ({placeholders}) ORDER BY date_injured DESC",
                 team_player_ids,
             ).fetchall()
         else:
             rows = self._db.execute(
-                "SELECT * FROM injuries WHERE status IN ('active','chronic') ORDER BY date_injured DESC",
+                f"SELECT {self._INJURY_COLUMNS} FROM injuries WHERE status IN ('active','chronic') "
+                f"ORDER BY date_injured DESC",
             ).fetchall()
         return [decrypt_dict(dict(r), ["notes"]) for r in rows]
 

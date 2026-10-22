@@ -9,13 +9,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from kawkab.core.build_up import BuildUpReport
 from kawkab.core.passing_triangles import PassingTriangleAnalyzer
 from kawkab.core.pressing_classifier import PressingSystemReport, classify_pressing_system
 from kawkab.core.tactical_periods import TacticalPeriodReport, detect_tactical_periods
 from kawkab.core.tactical_shape_analyzer import ShapeReport, TacticalShapeAnalyzer
 from kawkab.core.transitions import TransitionReport
-from kawkab.core.formation_analysis import FormationAnalyzer
 
 
 @dataclass
@@ -52,8 +50,12 @@ class TacticalReport:
     tactical_phases: TacticalPeriodReport = field(default_factory=TacticalPeriodReport)
     home_shape_report: ShapeReport = field(default_factory=lambda: ShapeReport(team="home"))
     away_shape_report: ShapeReport = field(default_factory=lambda: ShapeReport(team="away"))
-    home_pressing: PressingSystemReport = field(default_factory=lambda: PressingSystemReport(team="home"))
-    away_pressing: PressingSystemReport = field(default_factory=lambda: PressingSystemReport(team="away"))
+    home_pressing: PressingSystemReport = field(
+        default_factory=lambda: PressingSystemReport(team="home")
+    )
+    away_pressing: PressingSystemReport = field(
+        default_factory=lambda: PressingSystemReport(team="away")
+    )
     home_transitions: TransitionReport = field(default_factory=TransitionReport)
     away_transitions: TransitionReport = field(default_factory=TransitionReport)
     key_tactical_observations: list[str] = field(default_factory=list)
@@ -91,13 +93,20 @@ def _generate_observations(report: TacticalReport) -> list[str]:
             f"{report.away.team} uses {report.away_pressing.primary_block_type}"
         )
 
-    if report.home_pressing.pressing_style == "man_oriented" and report.away_pressing.pressing_style == "zonal":
-        obs.append(f"{report.home.team} uses man-oriented pressing while {report.away.team} stays zonal")
+    if (
+        report.home_pressing.pressing_style == "man_oriented"
+        and report.away_pressing.pressing_style == "zonal"
+    ):
+        obs.append(
+            f"{report.home.team} uses man-oriented pressing while {report.away.team} stays zonal"
+        )
 
     # Triangle dominance
     if report.home.triangle_count > report.away.triangle_count * 1.5:
-        obs.append(f"{report.home.team} dominates passing triangles ("
-                   f"{report.home.triangle_count} vs {report.away.triangle_count})")
+        obs.append(
+            f"{report.home.team} dominates passing triangles ("
+            f"{report.home.triangle_count} vs {report.away.triangle_count})"
+        )
 
     # Phase distribution
     if report.tactical_phases:
@@ -110,19 +119,23 @@ def _generate_observations(report: TacticalReport) -> list[str]:
 
     # Diamond midfield
     if report.home_shape_report and report.home_shape_report.diamond_midfield_pct > 30:
-        obs.append(f"{report.home.team} used diamond midfield "
-                   f"({report.home_shape_report.diamond_midfield_pct:.0f}% of match)")
+        obs.append(
+            f"{report.home.team} used diamond midfield "
+            f"({report.home_shape_report.diamond_midfield_pct:.0f}% of match)"
+        )
 
     # Transitions
     if report.home_transitions:
         hc = getattr(report.home_transitions, "counter_attacks", 0)
-        hct = getattr(report.home_transitions, "counter_attacks", 0)
+        _ = getattr(report.home_transitions, "counter_attacks", 0)
         if hc > 5:
             obs.append(f"{report.home.team} relied on counter-attacks ({hc} total)")
 
     # Shape changes
     if report.home_shape_report and report.home_shape_report.shape_changes > 3:
-        obs.append(f"{report.home.team} changed shape {report.home_shape_report.shape_changes} times")
+        obs.append(
+            f"{report.home.team} changed shape {report.home_shape_report.shape_changes} times"
+        )
 
     if not obs:
         obs.append("Balanced tactical profile — no extreme disparities detected")
@@ -163,13 +176,15 @@ def generate_tactical_report(
         window = [e for e in events if t <= e.get("timestamp", 0) < t + step]
         home_events = [e for e in window if e.get("team") == "home"]
         team_possession = len(home_events) > len(window) / 2 if window else True
-        frame_data.append({
-            "timestamp": t,
-            "possession": team_possession,
-            "home_positions": [],
-            "away_positions": [],
-            "ball_pos": None,
-        })
+        frame_data.append(
+            {
+                "timestamp": t,
+                "possession": team_possession,
+                "home_positions": [],
+                "away_positions": [],
+                "ball_pos": None,
+            }
+        )
         t += step
 
     phases = detect_tactical_periods(frame_data) if frame_data else TacticalPeriodReport()
@@ -203,7 +218,9 @@ def generate_tactical_report(
         pressing_style=home_pressing.pressing_style if home_pressing else "unknown",
         triangle_count=len(home_triangles),
         triangles_per_90=home_tri_per_90,
-        transition_count=len([e for e in events if e.get("type") == "counter" and e.get("team") == "home"]),
+        transition_count=len(
+            [e for e in events if e.get("type") == "counter" and e.get("team") == "home"]
+        ),
     )
 
     away_profile = TeamTacticalProfile(
@@ -214,7 +231,9 @@ def generate_tactical_report(
         pressing_style=away_pressing.pressing_style if away_pressing else "unknown",
         triangle_count=len(away_triangles),
         triangles_per_90=away_tri_per_90,
-        transition_count=len([e for e in events if e.get("type") == "counter" and e.get("team") == "away"]),
+        transition_count=len(
+            [e for e in events if e.get("type") == "counter" and e.get("team") == "away"]
+        ),
     )
 
     report = TacticalReport(

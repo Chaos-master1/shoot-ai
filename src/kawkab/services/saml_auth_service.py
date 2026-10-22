@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC
 from typing import Any
 
 from kawkab.core.logging import get_logger
@@ -35,6 +36,7 @@ class SAMLAuthService:
     def _try_load(self) -> None:
         try:
             from onelogin.saml2.auth import OneLogin_Saml2_Auth
+
             self._onelogin = OneLogin_Saml2_Auth
             self._available = True
             logger.info("OneLogin SAML SDK loaded")
@@ -82,8 +84,10 @@ class SAMLAuthService:
         self._sps[config.entity_id] = config
         logger.info(f"Registered SAML SP: {config.entity_id}")
 
-    def _build_authn_request(self, sp: SAMLServiceProvider, idp: SAMLIdentityProvider, relay_state: str) -> str:
-        base_url = sp.acs_url.rstrip("/")
+    def _build_authn_request(
+        self, sp: SAMLServiceProvider, idp: SAMLIdentityProvider, relay_state: str
+    ) -> str:
+        _ = sp.acs_url.rstrip("/")
         saml_request = (
             f'<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"'
             f' xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"'
@@ -92,13 +96,14 @@ class SAMLAuthService:
             f' Destination="{idp.sso_url}"'
             f' AssertionConsumerServiceURL="{sp.acs_url}"'
             f' ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST">'
-            f'<saml:Issuer>{sp.entity_id}</saml:Issuer>'
+            f"<saml:Issuer>{sp.entity_id}</saml:Issuer>"
             f'<samlp:NameIDPolicy Format="{idp.name_id_format}" AllowCreate="true"/>'
-            f'</samlp:AuthnRequest>'
+            f"</samlp:AuthnRequest>"
         )
+        import base64
         import urllib.parse
         import zlib
-        import base64
+
         deflated = zlib.compress(saml_request.encode("utf-8"))
         encoded = base64.b64encode(deflated).decode("utf-8")
         url = f"{idp.sso_url}?SAMLRequest={urllib.parse.quote(encoded)}"
@@ -108,6 +113,7 @@ class SAMLAuthService:
 
     def _parse_saml_response(self, response_xml: str) -> dict[str, Any]:
         import xml.etree.ElementTree as ET
+
         root = ET.fromstring(response_xml)
         ns = {
             "samlp": "urn:oasis:names:tc:SAML:2.0:protocol",
@@ -134,5 +140,6 @@ class SAMLAuthService:
 
     @staticmethod
     def _now_iso() -> str:
-        from datetime import datetime, timezone
-        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        from datetime import datetime
+
+        return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

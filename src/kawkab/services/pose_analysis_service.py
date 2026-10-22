@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -25,16 +25,42 @@ from kawkab.core.logging import get_logger
 logger = get_logger(__name__)
 
 COCO_KEYPOINTS: list[str] = [
-    "nose", "left_eye", "right_eye", "left_ear", "right_ear",
-    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
-    "left_wrist", "right_wrist", "left_hip", "right_hip",
-    "left_knee", "right_knee", "left_ankle", "right_ankle",
+    "nose",
+    "left_eye",
+    "right_eye",
+    "left_ear",
+    "right_ear",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip",
+    "left_knee",
+    "right_knee",
+    "left_ankle",
+    "right_ankle",
 ]
 
 POSE_CONNECTIONS: list[tuple[int, int]] = [
-    (0, 1), (0, 2), (1, 3), (2, 4), (5, 6), (5, 7), (7, 9),
-    (6, 8), (8, 10), (5, 11), (6, 12), (11, 12), (11, 13),
-    (13, 15), (12, 14), (14, 16),
+    (0, 1),
+    (0, 2),
+    (1, 3),
+    (2, 4),
+    (5, 6),
+    (5, 7),
+    (7, 9),
+    (6, 8),
+    (8, 10),
+    (5, 11),
+    (6, 12),
+    (11, 12),
+    (11, 13),
+    (13, 15),
+    (12, 14),
+    (14, 16),
 ]
 
 
@@ -78,14 +104,12 @@ class PoseAnalysisService:
     def __init__(self, model_size: str = "n", device: str = "") -> None:
         self.model_size = model_size
         self.device = device
-        self._model = None
+        self._model: Any = None
         self._available = False
         self._activity_history: dict[int, deque[tuple[float, str]]] = defaultdict(
             lambda: deque(maxlen=300)
         )
-        self._keypoint_history: dict[int, deque[np.ndarray]] = defaultdict(
-            lambda: deque(maxlen=30)
-        )
+        self._keypoint_history: dict[int, deque[np.ndarray]] = defaultdict(lambda: deque(maxlen=30))
 
     def _ensure_model(self) -> bool:
         if self._model is not None:
@@ -106,14 +130,14 @@ class PoseAnalysisService:
     def available(self) -> bool:
         return self._ensure_model()
 
-    def detect_poses(
-        self, frame: np.ndarray, conf_threshold: float = 0.3
-    ) -> list[PoseResult]:
+    def detect_poses(self, frame: np.ndarray, conf_threshold: float = 0.3) -> list[PoseResult]:
         """Run pose detection on a single frame."""
         if not self._ensure_model():
             return []
         try:
-            results = self._model.predict(
+            model = self._model
+            assert model is not None  # _ensure_model() returned True
+            results = model.predict(
                 frame, conf=conf_threshold, verbose=False, device=self.device or None
             )
             if not results:
@@ -125,7 +149,11 @@ class PoseAnalysisService:
             kpts_data = result.keypoints.data
             n = len(kpts_data) if kpts_data is not None else 0
             for i in range(n):
-                kpts = kpts_data[i].cpu().numpy() if hasattr(kpts_data[i], "cpu") else np.array(kpts_data[i])
+                kpts = (
+                    kpts_data[i].cpu().numpy()
+                    if hasattr(kpts_data[i], "cpu")
+                    else np.array(kpts_data[i])
+                )
                 if kpts.shape[0] < 17:
                     continue
                 confidence = float(np.mean(kpts[:, 2]))
@@ -134,21 +162,21 @@ class PoseAnalysisService:
                 xs = kpts[:, 0]
                 ys = kpts[:, 1]
                 bbox = (float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max()))
-                poses.append(PoseResult(
-                    track_id=i,
-                    keypoints=kpts,
-                    confidence=confidence,
-                    bbox=bbox,
-                    timestamp=time.time(),
-                ))
+                poses.append(
+                    PoseResult(
+                        track_id=i,
+                        keypoints=kpts,
+                        confidence=confidence,
+                        bbox=bbox,
+                        timestamp=time.time(),
+                    )
+                )
             return poses
         except Exception as e:
             logger.warning(f"detect_poses failed: {e}")
             return []
 
-    def classify_activity(
-        self, track_id: int, keypoints: np.ndarray, timestamp: float
-    ) -> str:
+    def classify_activity(self, track_id: int, keypoints: np.ndarray, timestamp: float) -> str:
         """Classify player activity from a single pose sample.
 
         Uses ankle+hip velocity estimate over the keypoint history.
@@ -163,7 +191,9 @@ class PoseAnalysisService:
             valid = (curr_ankles[:, 0] > 0) & (prev_ankles[:, 0] > 0)
             if not valid.any():
                 return "unknown"
-            displacement = float(np.linalg.norm(curr_ankles[valid] - prev_ankles[valid], axis=1).max())
+            displacement = float(
+                np.linalg.norm(curr_ankles[valid] - prev_ankles[valid], axis=1).max()
+            )
             speed_px_per_frame = displacement
             speed_m_per_s = speed_px_per_frame * 0.05
             speed_kmh = speed_m_per_s * 3.6
@@ -183,7 +213,11 @@ class PoseAnalysisService:
         return activity
 
     def detect_fall(
-        self, track_id: int, prev_keypoints: np.ndarray, curr_keypoints: np.ndarray, timestamp: float
+        self,
+        track_id: int,
+        prev_keypoints: np.ndarray,
+        curr_keypoints: np.ndarray,
+        timestamp: float,
     ) -> FallEvent | None:
         """Detect a fall event: rapid hip-height drop in a short window."""
         try:
@@ -222,9 +256,7 @@ class PoseAnalysisService:
         except Exception:
             return 0.0
 
-    def get_activity_segments(
-        self, track_id: int
-    ) -> list[ActivitySegment]:
+    def get_activity_segments(self, track_id: int) -> list[ActivitySegment]:
         """Convert activity history into consolidated time segments."""
         history = list(self._activity_history.get(track_id, []))
         if not history:
@@ -235,24 +267,28 @@ class PoseAnalysisService:
         for i in range(1, len(history)):
             if history[i][1] != current_activity:
                 duration = history[i][0] - start_time
-                segments.append(ActivitySegment(
-                    track_id=track_id,
-                    activity=current_activity,
-                    start_time=start_time,
-                    end_time=history[i][0],
-                    duration_s=duration,
-                ))
+                segments.append(
+                    ActivitySegment(
+                        track_id=track_id,
+                        activity=current_activity,
+                        start_time=start_time,
+                        end_time=history[i][0],
+                        duration_s=duration,
+                    )
+                )
                 current_activity = history[i][1]
                 start_time = history[i][0]
         if history:
             duration = history[-1][0] - start_time
-            segments.append(ActivitySegment(
-                track_id=track_id,
-                activity=current_activity,
-                start_time=start_time,
-                end_time=history[-1][0],
-                duration_s=duration,
-            ))
+            segments.append(
+                ActivitySegment(
+                    track_id=track_id,
+                    activity=current_activity,
+                    start_time=start_time,
+                    end_time=history[-1][0],
+                    duration_s=duration,
+                )
+            )
         return segments
 
     def summarize_activity(self, track_id: int) -> dict[str, float]:

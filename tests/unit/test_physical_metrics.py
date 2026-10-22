@@ -1,13 +1,17 @@
 """Tests for PhysicalMetricsAnalyzer."""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import math
-import numpy as np
+
 from kawkab.core.physical_metrics import (
-    PhysicalMetricsAnalyzer, PlayerPhysicalMetrics, TeamPhysicalReport, SPEED_ZONES
+    SPEED_ZONES,
+    PhysicalMetricsAnalyzer,
+    PlayerPhysicalMetrics,
+    TeamPhysicalReport,
 )
 
 
@@ -109,10 +113,10 @@ def test_analyze_player_acceleration_deceleration():
     # Start slow, accelerate fast, then decelerate
     trajectory = [
         (0.0, 0.0, 0.0),
-        (0.5, 0.5, 0.0),   # 1 m/s
-        (1.0, 4.0, 0.0),   # 7 m/s (accel)
-        (1.5, 7.5, 0.0),   # 7 m/s
-        (2.0, 9.0, 0.0),   # 3 m/s (decel)
+        (0.5, 0.5, 0.0),  # 1 m/s
+        (1.0, 4.0, 0.0),  # 7 m/s (accel)
+        (1.5, 7.5, 0.0),  # 7 m/s
+        (2.0, 9.0, 0.0),  # 3 m/s (decel)
     ]
     metrics = pma.analyze_player(trajectory)
     # Should detect acceleration and deceleration
@@ -124,9 +128,9 @@ def test_analyze_player_distance_by_zone():
     # Mixed speeds
     trajectory = [
         (0.0, 0.0, 0.0),
-        (1.0, 1.0, 0.0),    # 1 m/s - walking
-        (2.0, 4.0, 0.0),    # 3 m/s - jogging
-        (3.0, 8.0, 0.0),    # 4 m/s - running
+        (1.0, 1.0, 0.0),  # 1 m/s - walking
+        (2.0, 4.0, 0.0),  # 3 m/s - jogging
+        (3.0, 8.0, 0.0),  # 4 m/s - running
     ]
     metrics = pma.analyze_player(trajectory)
     zones = metrics.distance_by_zone
@@ -191,6 +195,7 @@ def test_analyze_player_distance_per_minute():
 def test_standalone_import():
     """Test that the module can be imported standalone."""
     from kawkab.core.physical_metrics import PhysicalMetricsAnalyzer
+
     pma = PhysicalMetricsAnalyzer()
     assert pma.SPRINT_THRESHOLD_MS == 7.0
     assert pma.HIGH_INTENSITY_THRESHOLD_MS == 5.5

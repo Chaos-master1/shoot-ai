@@ -47,7 +47,11 @@ PITCH_WIDTH = 68.0
 
 def _check_bounds(value: Any, bounds: tuple) -> list[str]:
     errs: list[str] = []
-    if isinstance(bounds, tuple) and len(bounds) == 2 and all(isinstance(b, (int, float)) for b in bounds):
+    if (
+        isinstance(bounds, tuple)
+        and len(bounds) == 2
+        and all(isinstance(b, (int, float)) for b in bounds)
+    ):
         lo, hi = bounds
         if value is not None:
             try:
@@ -78,7 +82,11 @@ def validate_event(event: dict) -> ValidationResult:
 
         type_ok = False
         for st in spec:
-            if isinstance(st, tuple) and len(st) == 2 and all(isinstance(b, (int, float)) for b in st):
+            if (
+                isinstance(st, tuple)
+                and len(st) == 2
+                and all(isinstance(b, (int, float)) for b in st)
+            ):
                 continue
             if isinstance(st, type) and isinstance(value, st):
                 type_ok = True
@@ -86,7 +94,9 @@ def validate_event(event: dict) -> ValidationResult:
 
         if not type_ok:
             expected = [str(s) for s in spec if isinstance(s, type)]
-            errors.append(f"Field '{field_name}': expected one of {expected}, got {type(value).__name__}")
+            errors.append(
+                f"Field '{field_name}': expected one of {expected}, got {type(value).__name__}"
+            )
 
         for st in spec:
             if isinstance(st, tuple):

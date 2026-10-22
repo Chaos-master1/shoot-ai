@@ -10,7 +10,6 @@ from __future__ import annotations
 import base64
 import os
 from pathlib import Path
-from typing import Callable
 
 import keyring
 import keyring.errors
@@ -29,7 +28,9 @@ _KEYRING_USER = "encryption-key"
 
 
 def _derive_key(raw: bytes) -> bytes:
-    kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=b"kawkab-medical-v1", iterations=600_000)
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(), length=32, salt=b"kawkab-medical-v1", iterations=600_000
+    )
     return base64.urlsafe_b64encode(kdf.derive(raw))
 
 
@@ -76,6 +77,7 @@ def get_fernet() -> Fernet:
     global _fernet
     if _fernet is None:
         init_fernet()
+    assert _fernet is not None
     return _fernet
 
 
@@ -87,9 +89,7 @@ def decrypt(ciphertext: str) -> str:
     return get_fernet().decrypt(ciphertext.encode()).decode()
 
 
-def encrypt_dict(
-    data: dict, fields: list[str], in_place: bool = True
-) -> dict:
+def encrypt_dict(data: dict, fields: list[str], in_place: bool = True) -> dict:
     result = data if in_place else dict(data)
     for field in fields:
         val = result.get(field)
@@ -98,15 +98,19 @@ def encrypt_dict(
     return result
 
 
-def decrypt_dict(
-    data: dict, fields: list[str], in_place: bool = True
-) -> dict:
+def decrypt_dict(data: dict, fields: list[str], in_place: bool = True) -> dict:
     result = data if in_place else dict(data)
     for field in fields:
         val = result.get(field)
         if val and isinstance(val, str):
             try:
                 result[field] = decrypt(val)
-            except Exception:
-                pass
+            except Exception as exc:
+                # A failed decrypt on a medical/PII field must never be
+                # silent: with a wrong or rotated key, "ciphertext" would
+                # otherwise be indistinguishable from "no data" downstream.
+                logger.warning(
+                    f"decrypt failed for field '{field}' "
+                    f"(len={len(val)}): {type(exc).__name__}: {exc}"
+                )
     return result

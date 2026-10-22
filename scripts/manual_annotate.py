@@ -8,20 +8,32 @@ Controls:
     Left-click: mark player position
     Right-click: undo last mark
     n: next frame
-    b: previous frame  
+    b: previous frame
     q: quit and save
     c: clear current frame marks
 """
-import argparse, json, os, sys, cv2, numpy as np
+
+import argparse
+import json
 from pathlib import Path
+
+import cv2
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", default="France_Sweden_clip_2min.mp4")
     parser.add_argument("--output", default="data/ground_truth/manual_frames.json")
     parser.add_argument("--frame-skip", type=int, default=6, help="Detection frame skip")
-    parser.add_argument("--sample-every", type=int, default=12, help="Sample every Nth detection frame (so every N*skip video frames)")
-    parser.add_argument("--max-frames", type=int, default=20, help="Max frames to show for annotation")
+    parser.add_argument(
+        "--sample-every",
+        type=int,
+        default=12,
+        help="Sample every Nth detection frame (so every N*skip video frames)",
+    )
+    parser.add_argument(
+        "--max-frames", type=int, default=20, help="Max frames to show for annotation"
+    )
     args = parser.parse_args()
 
     cap = cv2.VideoCapture(args.video)
@@ -30,12 +42,12 @@ def main():
 
     # Compute sampled detection frames
     all_det_frames = list(range(0, total_frames, args.frame_skip))
-    sampled = all_det_frames[::args.sample_every][:args.max_frames]
+    sampled = all_det_frames[:: args.sample_every][: args.max_frames]
 
     print(f"Video: {total_frames} frames @ {fps:.1f} FPS")
     print(f"Detection frames: {len(all_det_frames)}")
     print(f"Sampling every {args.sample_every}th = {len(sampled)} frames to annotate")
-    print(f"Controls: Left-click=mark, Right-click=undo, n=next, b=prev, c=clear, q=quit")
+    print("Controls: Left-click=mark, Right-click=undo, n=next, b=prev, c=clear, q=quit")
 
     annotations = {}  # {frame_num: [{'x': x, 'y': y}, ...]}
     current_idx = 0
@@ -49,7 +61,7 @@ def main():
             fn = sampled[current_idx]
             if fn not in annotations:
                 annotations[fn] = []
-            annotations[fn].append({'x': float(x), 'y': float(y)})
+            annotations[fn].append({"x": float(x), "y": float(y)})
 
     cv2.setMouseCallback(window_name, mouse_callback)
 
@@ -66,27 +78,40 @@ def main():
         # Draw existing marks
         if frame_num in annotations:
             for pt in annotations[frame_num]:
-                cv2.circle(display, (int(pt['x']), int(pt['y'])), 6, (0, 255, 0), -1)
-                cv2.putText(display, f"({int(pt['x'])},{int(pt['y'])})",
-                            (int(pt['x']) + 10, int(pt['y']) - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                cv2.circle(display, (int(pt["x"]), int(pt["y"])), 6, (0, 255, 0), -1)
+                cv2.putText(
+                    display,
+                    f"({int(pt['x'])},{int(pt['y'])})",
+                    (int(pt["x"]) + 10, int(pt["y"]) - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    1,
+                )
 
         # Info overlay
-        info = f"Frame {frame_num}/{total_frames} ({current_idx+1}/{len(sampled)}) - {len(annotations.get(frame_num, []))} marks"
+        info = f"Frame {frame_num}/{total_frames} ({current_idx + 1}/{len(sampled)}) - {len(annotations.get(frame_num, []))} marks"
         cv2.putText(display, info, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        cv2.putText(display, "n=next b=prev c=clear q=quit", (10, h - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+        cv2.putText(
+            display,
+            "n=next b=prev c=clear q=quit",
+            (10, h - 20),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (200, 200, 200),
+            1,
+        )
 
         cv2.imshow(window_name, display)
         key = cv2.waitKey(0) & 0xFF
 
-        if key == ord('n') or key == ord(' '):
+        if key == ord("n") or key == ord(" "):
             current_idx += 1
-        elif key == ord('b'):
+        elif key == ord("b"):
             current_idx = max(0, current_idx - 1)
-        elif key == ord('c'):
+        elif key == ord("c"):
             annotations[frame_num] = []
-        elif key == ord('q'):
+        elif key == ord("q"):
             break
 
     cap.release()
@@ -95,16 +120,22 @@ def main():
     # Save
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w') as f:
-        json.dump({
-            "video": args.video,
-            "frame_skip": args.frame_skip,
-            "total_annotated": len(annotations),
-            "total_points": sum(len(v) for v in annotations.values()),
-            "annotations": {str(k): v for k, v in annotations.items()},
-        }, f, indent=2)
+    with open(output_path, "w") as f:
+        json.dump(
+            {
+                "video": args.video,
+                "frame_skip": args.frame_skip,
+                "total_annotated": len(annotations),
+                "total_points": sum(len(v) for v in annotations.values()),
+                "annotations": {str(k): v for k, v in annotations.items()},
+            },
+            f,
+            indent=2,
+        )
 
-    print(f"\nSaved {len(annotations)} frames with {sum(len(v) for v in annotations.values())} total points to {output_path}")
+    print(
+        f"\nSaved {len(annotations)} frames with {sum(len(v) for v in annotations.values())} total points to {output_path}"
+    )
 
     # Compare with tracking output if available
     tracking_path = Path("tracking_output_clip/track_summary.json")
@@ -119,6 +150,7 @@ def main():
         for fn_str, pts in sorted(annotations.items(), key=lambda x: int(x[0])):
             fn = int(fn_str)
             print(f"    Frame {fn}: {len(pts)} markers")
+
 
 if __name__ == "__main__":
     main()

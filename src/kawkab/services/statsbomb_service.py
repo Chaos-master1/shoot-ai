@@ -124,6 +124,7 @@ class StatsBombService:
         if cached is not None:
             return cached
         await self._ensure_client()
+        assert self._client is not None
         try:
             r = await self._client.get(url)
             if r.status_code == 200:
@@ -175,9 +176,7 @@ class StatsBombService:
     # Matches
     # ------------------------------------------------------------------
 
-    async def get_matches(
-        self, competition_id: int, season_id: int
-    ) -> list[SbMatch]:
+    async def get_matches(self, competition_id: int, season_id: int) -> list[SbMatch]:
         path = f"matches/{competition_id}/{season_id}.json"
         data = await self._get(path)
         if not data or not isinstance(data, list):
@@ -201,8 +200,16 @@ class StatsBombService:
             away_score=int(away_score) if away_score is not None else None,
             match_date=str(raw.get("match_date", "")),
             competition_stage=str(raw.get("competition_stage", "")),
-            stadium=str(raw.get("stadium", {}).get("name", "") if isinstance(raw.get("stadium"), dict) else raw.get("stadium", "")),
-            referee=str(raw.get("referee", {}).get("name", "") if isinstance(raw.get("referee"), dict) else raw.get("referee", "")),
+            stadium=str(
+                raw.get("stadium", {}).get("name", "")
+                if isinstance(raw.get("stadium"), dict)
+                else raw.get("stadium", "")
+            ),
+            referee=str(
+                raw.get("referee", {}).get("name", "")
+                if isinstance(raw.get("referee"), dict)
+                else raw.get("referee", "")
+            ),
             has_360=raw.get("match_available_360") is not None,
             raw=raw,
         )
@@ -246,7 +253,9 @@ class StatsBombService:
             xg=float(shot.get("statsbomb_xg", 0)) if shot.get("statsbomb_xg") is not None else None,
             shot_type=str(shot.get("type", {}).get("name", "")),
             shot_body_part=str(shot.get("body_part", {}).get("name", "")),
-            pass_target=str(pass_.get("recipient", {}).get("name", "")) if pass_.get("recipient") else "",
+            pass_target=str(pass_.get("recipient", {}).get("name", ""))
+            if pass_.get("recipient")
+            else "",
             raw=raw,
         )
 
@@ -254,16 +263,12 @@ class StatsBombService:
         events = await self.get_events(match_id)
         return [e for e in events if e.event_type == "Shot"]
 
-    async def get_team_events(
-        self, match_id: int, team_name: str
-    ) -> list[SbEvent]:
+    async def get_team_events(self, match_id: int, team_name: str) -> list[SbEvent]:
         events = await self.get_events(match_id)
         needle = team_name.lower()
         return [e for e in events if e.team.lower() == needle]
 
-    async def get_player_events(
-        self, match_id: int, player_name: str
-    ) -> list[SbEvent]:
+    async def get_player_events(self, match_id: int, player_name: str) -> list[SbEvent]:
         events = await self.get_events(match_id)
         needle = player_name.lower()
         return [e for e in events if e.player.lower() == needle]
@@ -284,18 +289,22 @@ class StatsBombService:
             for p in entry.get("players", []) or []:
                 player = p.get("player", {}) or {}
                 positions = [pp.get("position", "") for pp in p.get("positions", [])]
-                players.append({
-                    "name": player.get("name", ""),
-                    "player_id": player.get("id"),
-                    "jersey_number": player.get("jersey_number"),
-                    "country": player.get("country", {}).get("name", ""),
-                    "positions": positions,
-                })
-            result.append(SbLineup(
-                team_name=team.get("name", ""),
-                team_id=team.get("id", 0),
-                players=players,
-            ))
+                players.append(
+                    {
+                        "name": player.get("name", ""),
+                        "player_id": player.get("id"),
+                        "jersey_number": player.get("jersey_number"),
+                        "country": player.get("country", {}).get("name", ""),
+                        "positions": positions,
+                    }
+                )
+            result.append(
+                SbLineup(
+                    team_name=team.get("name", ""),
+                    team_id=team.get("id", 0),
+                    players=players,
+                )
+            )
         return result
 
     # ------------------------------------------------------------------
@@ -330,6 +339,7 @@ class StatsBombService:
         if not raw_events:
             return 0
         from kawkab.services.data_import_service import DataImportService
+
         converter = DataImportService(storage_service)
         events = []
         for item in raw_events:

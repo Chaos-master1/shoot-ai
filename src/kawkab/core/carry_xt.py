@@ -7,11 +7,8 @@ into a higher-value zone creates value even without a pass.
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
-
-import numpy as np
 
 from kawkab.core.xt_model import ExpectedThreatModel
 

@@ -9,7 +9,6 @@ install_kawkab_stubs()
 from kawkab.services.workload_service import (  # noqa: E402
     RiskLevel,
     WorkloadRecord,
-    WorkloadReport,
     WorkloadService,
     WorkloadSource,
 )
@@ -192,8 +191,17 @@ class TestFlags:
         # Varying loads where std is small relative to mean => high monotony
         records = [
             make_record(date=d, duration_min=60, rpe=5 + (i % 2))
-            for i, d in enumerate(["2026-01-04", "2026-01-05", "2026-01-06", "2026-01-07",
-                                   "2026-01-08", "2026-01-09", "2026-01-10"])
+            for i, d in enumerate(
+                [
+                    "2026-01-04",
+                    "2026-01-05",
+                    "2026-01-06",
+                    "2026-01-07",
+                    "2026-01-08",
+                    "2026-01-09",
+                    "2026-01-10",
+                ]
+            )
         ]
         report = svc.analyze(1, "Player A", records, reference_date="2026-01-10")
         assert len(report.flags) >= 0  # monotony may or may not exceed 2.0

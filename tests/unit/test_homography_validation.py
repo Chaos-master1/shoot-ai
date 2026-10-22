@@ -21,19 +21,24 @@ def _install_stubs() -> None:
     core_mod = types.ModuleType("kawkab.core")
     sys.modules["kawkab.core"] = core_mod
     paths_mod = types.ModuleType("kawkab.core.paths")
+
     class _Paths:
         def __init__(self):
             self.calibration_dir = Path("/tmp/cal")
             self.data_dir = Path("/tmp/data")
+
     paths_mod.get_paths = lambda: _Paths()
     sys.modules["kawkab.core.paths"] = paths_mod
     services_mod = types.ModuleType("kawkab.services")
     sys.modules["kawkab.services"] = services_mod
     cv_mod = types.ModuleType("kawkab.services.cv_service")
+
     class FrameDetections:
         pass
+
     class MatchTrackData:
         pass
+
     cv_mod.FrameDetections = FrameDetections
     cv_mod.MatchTrackData = MatchTrackData
     sys.modules["kawkab.services.cv_service"] = cv_mod
@@ -99,3 +104,58 @@ class TestValidate4Corner:
 
     def test_convex_check_triangle(self) -> None:
         assert HomographyService._is_convex([(0, 0), (1, 0), (0, 1)]) is True
+
+
+class TestHonestConfidence:
+    """Confidence must reflect geometry, not just reprojection error.
+
+    With exactly 4 correspondences the homography fits them exactly, so a
+    reprojection-only confidence was ~1.0 even for mirrored / degenerate
+    corner sets (the 2026-09-16 audit gap). Confidence is now the minimum
+    of the reprojection term and the geometric quality score.
+    """
+
+    def test_good_corners_get_full_confidence(self) -> None:
+        hs = HomographyService()
+        corners = [(100, 50), (1800, 50), (1800, 1000), (100, 1000)]
+        m = hs.compute_homography_from_corners(corners)
+        assert m.confidence >= 0.99
+        assert m.quality_issues == []
+
+    def test_self_intersecting_corners_capped(self) -> None:
+        hs = HomographyService()
+        # Mirrored set: fits exactly (error ~0) but is geometrically wrong.
+        corners = [(100, 50), (100, 1000), (1800, 50), (1800, 1000)]
+        m = hs.compute_homography_from_corners(corners)
+        assert m.confidence <= 0.71
+        assert any("convex" in i for i in m.quality_issues)
+
+    def test_skewed_corners_penalised(self) -> None:
+        hs = HomographyService()
+        corners = [(100, 50), (1800, 50), (1800, 500), (100, 1000)]
+        m = hs.compute_homography_from_corners(corners)
+        assert m.confidence < 0.99
+        assert m.quality_issues
+
+    def test_quality_issues_survive_save_load(self) -> None:
+        hs = HomographyService()
+        corners = [(100, 50), (100, 1000), (1800, 50), (1800, 1000)]
+        m = hs.compute_homography_from_corners(corners)
+        hs.save_calibration(4242, m)
+        loaded = hs.load_calibration(4242)
+        assert loaded is not None
+        assert loaded.quality_issues == m.quality_issues
+        assert loaded.confidence == pytest.approx(m.confidence)
+
+    def test_validate_still_reports_reprojection(self) -> None:
+        hs = HomographyService()
+        corners = [(100, 50), (1800, 50), (1800, 1000), (100, 1000)]
+        result = hs.validate_4corner_calibration(corners)
+        assert "reprojection_error_px" in result["metrics"]
+        assert result["is_valid"] is True
+
+    def test_estimated_calibration_still_capped_at_half(self) -> None:
+        hs = HomographyService()
+        m = hs.compute_homography_from_visible_markings(1920, 1080)
+        assert m.source == "estimated"
+        assert m.confidence <= 0.5

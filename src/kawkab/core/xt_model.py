@@ -13,10 +13,10 @@ References:
 
 from __future__ import annotations
 
-import functools
-import math
+import json
 import random
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -26,6 +26,41 @@ from kawkab.core.game_constants import GAME
 from kawkab.core.perf_timing import timed
 
 PITCH_LENGTH = GAME.PITCH_LENGTH_M
+
+# ── League-wide reference grid (pre-trained from StatsBomb open data) ────────
+# Auto-loaded as the cold-start default when a match's own events are too
+# sparse to learn from. Rebuild with:
+#   PYTHONPATH=src python -m kawkab.core.validation.train_xt --force
+_REFERENCE_GRID_PATH = Path(__file__).parent / "trained_xt_grid.json"
+_REFERENCE_GRID: np.ndarray | None = None
+_REFERENCE_GRID_SHAPE: tuple[int, ...] | None = None
+
+
+def reference_grid_available() -> bool:
+    """True when the pre-trained league-wide xT grid is loadable."""
+    if _REFERENCE_GRID is not None:
+        return True
+    return _REFERENCE_GRID_PATH.exists()
+
+
+def _load_reference_grid() -> np.ndarray | None:
+    global _REFERENCE_GRID, _REFERENCE_GRID_SHAPE
+    if _REFERENCE_GRID is not None:
+        return _REFERENCE_GRID
+    if not _REFERENCE_GRID_PATH.exists():
+        return None
+    try:
+        with open(_REFERENCE_GRID_PATH) as f:
+            payload = json.load(f)
+        grid = np.asarray(payload.get("grid", []), dtype=np.float64)
+        if grid.ndim != 2 or grid.size == 0:
+            return None
+        _REFERENCE_GRID = grid
+        assert grid.shape is not None  # ndarray.shape is never None at runtime
+        _REFERENCE_GRID_SHAPE = grid.shape
+        return _REFERENCE_GRID
+    except Exception:
+        return None
 
 
 class ExpectedThreatModel:
@@ -59,25 +94,36 @@ class ExpectedThreatModel:
         self.attacking_direction = attacking_direction
         self._transition = None
         self._ze_values: np.ndarray | None = None
+        self._zone_cache: dict[tuple[float, float], tuple[int, int]] = {}
 
-    @functools.lru_cache(maxsize=256)
-    def _zone_from_position(
-        self, x: float, y: float
-    ) -> tuple[int, int]:
+    def _zone_from_position(self, x: float, y: float) -> tuple[int, int]:
+        cache_key = (x, y)
+        cached = self._zone_cache.get(cache_key)
+        if cached is not None:
+            return cached
         if self.attacking_direction == "left":
             x = PITCH_LENGTH - x
         col = min(self.cols - 1, max(0, int(x / self.pitch_length * self.cols)))
         row = min(self.rows - 1, max(0, int(y / self.pitch_width * self.rows)))
+        self._zone_cache[cache_key] = (row, col)
         return (row, col)
 
     def build_transition_matrix(
         self,
         events: list[dict[str, Any]],
     ) -> None:
-        transitions = defaultdict(lambda: defaultdict(int))
-        possession_from_zone = defaultdict(int)
-        shots_from_zone = defaultdict(int)
-        goals_from_zone = defaultdict(int)
+        transitions: defaultdict[tuple[int, int], defaultdict[tuple[int, int], int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
+        possession_from_zone: defaultdict[tuple[int, int], int] = defaultdict(int)
+        shots_from_zone: defaultdict[tuple[int, int], int] = defaultdict(int)
+        goals_from_zone: defaultdict[tuple[int, int], int] = defaultdict(int)
+
+        n_actions = 0
+        for ev in events:
+            if ev.get("type") not in ("pass", "carry"):
+                continue
+            n_actions += 1
 
         for ev in events:
             if ev.get("type") not in ("pass", "carry"):
@@ -114,7 +160,25 @@ class ExpectedThreatModel:
             if ev.get("is_goal", False):
                 goals_from_zone[zone] += 1
 
-        self._transition = dict(transitions)
+        self._transition = dict(transitions)  # type: ignore[assignment]
+
+        # Cold-start rule: a match with too few actions produces a
+        # near-degenerate learned grid (a handful of zones with data,
+        # zeros elsewhere — misleading as a threat surface). Fall back
+        # to the league-wide reference grid trained from the StatsBomb
+        # corpus when the match itself can't support learning. The
+        # match's own goals-per-zone still overlay onto the reference
+        # when available (they're the model's ze term), so a data-rich
+        # match keeps its own learned behavior; only sparse ones borrow.
+        min_actions_for_learning = 200
+        if n_actions < min_actions_for_learning:
+            ref = _load_reference_grid()
+            if ref is not None and ref.shape == (self.rows, self.cols):
+                ze = self._solve_xT(possession_from_zone, goals_from_zone)
+                # Blend: reference grid carries the transition structure,
+                # the match's own ze (zone scoring rates) overlays it.
+                self._ze_values = 0.8 * ref + 0.2 * ze
+                return
         self._ze_values = self._solve_xT(possession_from_zone, goals_from_zone)
 
     def _solve_xT(
@@ -135,7 +199,7 @@ class ExpectedThreatModel:
         if self._transition is None or not self._transition:
             return ze
 
-        n_zones = self.rows * self.cols
+        _ = self.rows * self.cols
         xT = ze.flatten().copy()
 
         # Power iteration: xT_new[src] = ze[src] + gamma * sum(prob * xT[dst])
@@ -226,7 +290,8 @@ class ExpectedThreatModel:
             "n_bootstrap": n_bootstrap,
         }
 
-    @functools.lru_cache(maxsize=128)
+    # Deliberately not lru_cache'd: _ze_values is mutated by fit(), and a
+    # method-level cache would keep serving pre-fit (stale) zone values.
     def _get_zone_value(self, row: int, col: int) -> float:
         if self._ze_values is None:
             return 0.0

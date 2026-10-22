@@ -4,16 +4,27 @@ from kawkab.core.passing_triangles import PassingTriangleAnalyzer
 
 
 def _make_pass_event(
-    team: str, start_x: float, start_y: float, end_x: float, end_y: float,
-    from_track_id: int = 1, to_track_id: int = 2, timestamp: float = 0,
+    team: str,
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+    from_track_id: int = 1,
+    to_track_id: int = 2,
+    timestamp: float = 0,
     completed: bool = True,
 ) -> dict:
     return {
-        "type": "pass", "team": team,
-        "start_x": start_x, "start_y": start_y,
-        "end_x": end_x, "end_y": end_y,
-        "from_track_id": from_track_id, "to_track_id": to_track_id,
-        "timestamp": timestamp, "completed": completed,
+        "type": "pass",
+        "team": team,
+        "start_x": start_x,
+        "start_y": start_y,
+        "end_x": end_x,
+        "end_y": end_y,
+        "from_track_id": from_track_id,
+        "to_track_id": to_track_id,
+        "timestamp": timestamp,
+        "completed": completed,
     }
 
 

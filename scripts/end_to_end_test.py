@@ -9,6 +9,7 @@ This script:
 Usage:
     python scripts/end_to_end_test.py [--duration 30]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -52,22 +53,28 @@ def generate_synthetic_video(
     cmd = [
         "ffmpeg",
         "-y",
-        "-f", "lavfi",
-        "-i", f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
         "-vf",
         f"""
-        drawbox=x=0:y={height//2-2}:w={width}:h=4:color=white@0.8:t=fill,
-        drawbox=x={width//2-2}:y=0:w=4:h={height}:color=white@0.8:t=fill,
+        drawbox=x=0:y={height // 2 - 2}:w={width}:h=4:color=white@0.8:t=fill,
+        drawbox=x={width // 2 - 2}:y=0:w=4:h={height}:color=white@0.8:t=fill,
         drawbox=x=80:y=80:w=120:h=100:color=red@0.7:t=fill,
-        drawbox=x={width-200}:y=80:w=120:h=100:color=blue@0.7:t=fill,
-        drawbox=x=80:y={height-180}:w=120:h=100:color=red@0.7:t=fill,
-        drawbox=x={width-200}:y={height-180}:w=120:h=100:color=blue@0.7:t=fill,
+        drawbox=x={width - 200}:y=80:w=120:h=100:color=blue@0.7:t=fill,
+        drawbox=x=80:y={height - 180}:w=120:h=100:color=red@0.7:t=fill,
+        drawbox=x={width - 200}:y={height - 180}:w=120:h=100:color=blue@0.7:t=fill,
         drawtext=text='%{{eif\\:t\\:d}}':fontsize=60:fontcolor=white:x=20:y=20,
         """.replace("\n", "").strip(),
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-crf", "23",
-        "-pix_fmt", "yuv420p",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
         str(output_path),
     ]
 
@@ -81,12 +88,18 @@ def generate_synthetic_video(
         cmd = [
             "ffmpeg",
             "-y",
-            "-f", "lavfi",
-            "-i", f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-crf", "23",
-            "-pix_fmt", "yuv420p",
+            "-f",
+            "lavfi",
+            "-i",
+            f"color=c=green:s={width}x{height}:r={fps}:d={duration_sec}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
             str(output_path),
         ]
         subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -108,17 +121,17 @@ async def run_full_pipeline(
         Summary dict with all results
     """
     from kawkab.services import (
-        CVService,
-        LLMService,
-        LLMConfig,
         AnalysisService,
+        CVService,
         KnowledgeService,
+        LLMConfig,
+        LLMService,
         StorageService,
     )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"FULL PIPELINE TEST: {match_name}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     print("Step 1/6: Initialize services...")
     storage = StorageService()
@@ -128,12 +141,14 @@ async def run_full_pipeline(
     analysis = AnalysisService()
     knowledge = KnowledgeService()
     await knowledge.initialize()
-    llm = LLMService(LLMConfig(
-        provider="ollama",
-        ollama_model="gemma4:12b",
-        max_tokens=4000,
-        num_gpu=99,
-    ))
+    llm = LLMService(
+        LLMConfig(
+            provider="ollama",
+            ollama_model="gemma4:12b",
+            max_tokens=4000,
+            num_gpu=99,
+        )
+    )
     print(f"  [OK] Services ready. KB: {knowledge.stats}")
 
     print("\nStep 2/6: Save match to database...")
@@ -145,17 +160,19 @@ async def run_full_pipeline(
     )
     print(f"  [OK] Match saved: id={match_id}")
 
-    print(f"\nStep 3/6: Run CV pipeline on video...")
+    print("\nStep 3/6: Run CV pipeline on video...")
     t0 = time.time()
 
     async def progress_cb(p: float, msg: str) -> None:
         if int(p * 100) % 10 == 0:
-            print(f"  {p*100:.0f}% - {msg}")
+            print(f"  {p * 100:.0f}% - {msg}")
 
     track_data = await cv.process_video(video_path, progress_callback=progress_cb)
     cv_time = time.time() - t0
-    print(f"  [OK] CV done in {cv_time:.1f}s: {len(track_data.frames)} frames, "
-          f"{len(track_data.track_registry)} unique tracks")
+    print(
+        f"  [OK] CV done in {cv_time:.1f}s: {len(track_data.frames)} frames, "
+        f"{len(track_data.track_registry)} unique tracks"
+    )
 
     await storage.update_match_analysis(
         match_id=match_id,
@@ -168,14 +185,18 @@ async def run_full_pipeline(
     t0 = time.time()
     match_analysis = await analysis.analyze_match(track_data, match_id=match_id)
     analysis_time = time.time() - t0
-    print(f"  [OK] Analysis done in {analysis_time:.1f}s: "
-          f"{len(match_analysis.players)} players, {len(match_analysis.events)} events")
-    print(f"  Possession: Home {match_analysis.home_team.possession_pct:.1f}% "
-          f"vs Away {match_analysis.away_team.possession_pct:.1f}%")
+    print(
+        f"  [OK] Analysis done in {analysis_time:.1f}s: "
+        f"{len(match_analysis.players)} players, {len(match_analysis.events)} events"
+    )
+    print(
+        f"  Possession: Home {match_analysis.home_team.possession_pct:.1f}% "
+        f"vs Away {match_analysis.away_team.possession_pct:.1f}%"
+    )
     print(f"  Confidence: {match_analysis.confidence_overall:.1%}")
 
     print("\nStep 5/6: Save to database...")
-    for tid, player in match_analysis.players.items():
+    for _tid, player in match_analysis.players.items():
         await storage.save_player(
             match_id=match_id,
             player_data={
@@ -191,8 +212,10 @@ async def run_full_pipeline(
         )
     for event in match_analysis.events[:100]:
         await storage.save_event(match_id=match_id, event=event)
-    print(f"  [OK] Saved {len(match_analysis.players)} players, "
-          f"{len(match_analysis.events[:100])} events")
+    print(
+        f"  [OK] Saved {len(match_analysis.players)} players, "
+        f"{len(match_analysis.events[:100])} events"
+    )
 
     print("\nStep 6/6: Generate coach report (LLM)...")
     t0 = time.time()
@@ -211,7 +234,7 @@ Duration: {track_data.duration_seconds:.0f} seconds
 Possession: Home {match_analysis.home_team.possession_pct:.1f}%, Away {match_analysis.away_team.possession_pct:.1f}%
 Players tracked: {len(match_analysis.players)}
 Events detected: {len(match_analysis.events)}
-Passes: {len([e for e in match_analysis.events if e.get('type') == 'pass'])}
+Passes: {len([e for e in match_analysis.events if e.get("type") == "pass"])}
 Average confidence: {match_analysis.confidence_overall:.1%}
 Top 5 players by distance (track_id, distance_m, max_speed_kmh): {top_summary}
 """
@@ -220,8 +243,10 @@ Top 5 players by distance (track_id, distance_m, max_speed_kmh): {top_summary}
     await cv.shutdown()
     import asyncio as _asyncio
     import gc
+
     try:
         import torch
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
@@ -237,13 +262,13 @@ Top 5 players by distance (track_id, distance_m, max_speed_kmh): {top_summary}
         report = await llm.generate_coach_report(summary, language="en")
         llm_time = time.time() - t0
         print(f"  [OK] Report generated in {llm_time:.1f}s ({len(report)} chars)")
-        print("\n" + "-"*60)
+        print("\n" + "-" * 60)
         print("COACH REPORT:")
-        print("-"*60)
+        print("-" * 60)
         print(report[:1000])
         if len(report) > 1000:
-            print(f"... ({len(report)-1000} more chars)")
-        print("-"*60)
+            print(f"... ({len(report) - 1000} more chars)")
+        print("-" * 60)
 
         await storage.save_report(
             match_id=match_id,
@@ -277,57 +302,67 @@ Top 5 players by distance (track_id, distance_m, max_speed_kmh): {top_summary}
 
 def print_summary(results: dict, video_path: Path) -> None:
     """Print a nice summary table of the test results."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TEST RESULTS SUMMARY")
-    print("="*60)
+    print("=" * 60)
     print(f"  Video:              {video_path.name}")
     print(f"  Match ID:           {results['match_id']}")
     print(f"  Frames processed:   {results['frames_processed']}")
     print(f"  Unique tracks:      {results['unique_tracks']}")
     print(f"  Players analyzed:   {results['players_analyzed']}")
     print(f"  Events detected:    {results['events_detected']}")
-    print(f"  Possession (H/A):   {results['possession_home']:.1f}% / {results['possession_away']:.1f}%")
+    print(
+        f"  Possession (H/A):   {results['possession_home']:.1f}% / {results['possession_away']:.1f}%"
+    )
     print(f"  Confidence:         {results['confidence']:.1%}")
     print(f"  CV pipeline:        {results['cv_time_sec']:.1f}s")
     print(f"  Analysis:           {results['analysis_time_sec']:.1f}s")
     print(f"  Report generated:   {'YES' if results['report_generated'] else 'NO'}")
     print()
-    if results['cv_time_sec'] > 0:
-        fps = results['frames_processed'] / results['cv_time_sec']
+    if results["cv_time_sec"] > 0:
+        fps = results["frames_processed"] / results["cv_time_sec"]
         print(f"  Processing speed:   {fps:.1f} FPS")
-    print("="*60)
-    if results['confidence'] > 0.5 and results['report_generated']:
+    print("=" * 60)
+    if results["confidence"] > 0.5 and results["report_generated"]:
         print("ALL TESTS PASSED!")
     else:
         print("TESTS COMPLETED (with caveats)")
-    print("="*60)
+    print("=" * 60)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="End-to-end pipeline test")
     parser.add_argument(
-        "--duration", type=int, default=30,
+        "--duration",
+        type=int,
+        default=30,
         help="Synthetic video duration in seconds (default: 30)",
     )
     parser.add_argument(
-        "--no-synthetic", action="store_true",
+        "--no-synthetic",
+        action="store_true",
         help="Skip synthetic video generation, use a real video path instead",
     )
     parser.add_argument(
-        "--video", type=str, default=None,
+        "--video",
+        type=str,
+        default=None,
         help="Path to a real video file (skips synthetic generation)",
     )
     parser.add_argument(
-        "--name", type=str, default="Test Match (Synthetic)",
+        "--name",
+        type=str,
+        default="Test Match (Synthetic)",
         help="Match name",
     )
     args = parser.parse_args()
 
-    print("="*60)
+    print("=" * 60)
     print("KAWKAB AI - END-TO-END PIPELINE TEST")
-    print("="*60)
+    print("=" * 60)
 
     from kawkab.core.paths import get_paths
+
     paths = get_paths()
     test_dir = paths.cache / "tests"
     test_dir.mkdir(parents=True, exist_ok=True)
@@ -342,9 +377,7 @@ def main() -> int:
         if not video_path.exists():
             print("\nGenerating synthetic test video...")
             try:
-                video_path = generate_synthetic_video(
-                    video_path, duration_sec=args.duration
-                )
+                video_path = generate_synthetic_video(video_path, duration_sec=args.duration)
             except FileNotFoundError:
                 print("[ERROR] FFmpeg not found. Install FFmpeg or use --video flag.")
                 return 1
@@ -359,6 +392,7 @@ def main() -> int:
     except Exception as e:
         print(f"\n[FATAL] Pipeline failed: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

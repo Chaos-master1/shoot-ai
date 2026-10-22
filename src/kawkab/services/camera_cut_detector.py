@@ -83,18 +83,22 @@ class CameraCutDetector:
                 diff = cv2.compareHist(prev_hist, curr_hist, cv2.HISTCMP_BHATTACHARYYA)
                 gap_frames = frame_idx - last_cut_frame
                 if diff > self.threshold and gap_frames >= self.min_cut_interval * fps:
-                    cuts.append({
-                        "frame": frame_idx,
-                        "timestamp": frame_idx / fps,
-                        "diff_score": float(diff),
-                    })
+                    cuts.append(
+                        {
+                            "frame": frame_idx,
+                            "timestamp": frame_idx / fps,
+                            "diff_score": float(diff),
+                        }
+                    )
                     last_cut_frame = frame_idx
 
             prev_hist = curr_hist
             frame_idx += 1
 
         cap.release()
-        logger.info(f"CameraCutDetector: {len(cuts)} cuts in {frame_idx} frames ({video_path.name})")
+        logger.info(
+            f"CameraCutDetector: {len(cuts)} cuts in {frame_idx} frames ({video_path.name})"
+        )
         return cuts
 
     def detect_cuts_fast(self, video_path: Path) -> list[dict[str, Any]]:
@@ -117,9 +121,7 @@ class CameraCutDetector:
         cuts = self.detect_cuts(video_path, sample_every_n=sample_every_n)
         return self._cuts_to_segments(cuts, video_path)
 
-    def _cuts_to_segments(
-        self, cuts: list[dict], video_path: Path
-    ) -> list[dict[str, Any]]:
+    def _cuts_to_segments(self, cuts: list[dict], video_path: Path) -> list[dict[str, Any]]:
         """Convert raw cuts to (start, end) segments."""
         cap = cv2.VideoCapture(str(video_path))
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -133,25 +135,29 @@ class CameraCutDetector:
             if cf - prev_frame < 6:  # ignore tiny segments (< ~1 sec)
                 prev_frame = cf
                 continue
-            segments.append({
-                "start_frame": prev_frame,
-                "end_frame": cf,
-                "start_time": prev_frame / fps,
-                "end_time": cf / fps,
-                "duration": (cf - prev_frame) / fps,
-                "index": len(segments),
-            })
+            segments.append(
+                {
+                    "start_frame": prev_frame,
+                    "end_frame": cf,
+                    "start_time": prev_frame / fps,
+                    "end_time": cf / fps,
+                    "duration": (cf - prev_frame) / fps,
+                    "index": len(segments),
+                }
+            )
             prev_frame = cf
         # Last segment
         if total - prev_frame > 6:
-            segments.append({
-                "start_frame": prev_frame,
-                "end_frame": total,
-                "start_time": prev_frame / fps,
-                "end_time": total / fps,
-                "duration": (total - prev_frame) / fps,
-                "index": len(segments),
-            })
+            segments.append(
+                {
+                    "start_frame": prev_frame,
+                    "end_frame": total,
+                    "start_time": prev_frame / fps,
+                    "end_time": total / fps,
+                    "duration": (total - prev_frame) / fps,
+                    "index": len(segments),
+                }
+            )
         return segments
 
     @staticmethod
@@ -167,7 +173,9 @@ class CameraCutDetector:
             return None
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         hist = cv2.calcHist(
-            [hsv], [0, 1], None,
+            [hsv],
+            [0, 1],
+            None,
             [32, 8],  # hue 32 bins, saturation 8 bins
             [0, 180, 0, 256],
         )

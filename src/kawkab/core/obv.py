@@ -11,8 +11,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-import numpy as np
-
 from kawkab.core.game_constants import GAME
 
 PITCH_LENGTH = GAME.PITCH_LENGTH_M
@@ -132,7 +130,7 @@ class OffBallValuator:
         if not player_trajectories:
             return OBVMatchReport(team=team)
 
-        team_player_ids = set(player_trajectories.keys())
+        _ = set(player_trajectories.keys())
 
         results: dict[int, OBVPlayerResult] = {}
 
@@ -162,7 +160,9 @@ class OffBallValuator:
                 if ball is None:
                     continue
 
-                possession = possession_flags[frame_idx] if frame_idx < len(possession_flags) else False
+                possession = (
+                    possession_flags[frame_idx] if frame_idx < len(possession_flags) else False
+                )
 
                 ball_dx = x - ball[0]
                 ball_dy = y - ball[1]
@@ -170,23 +170,37 @@ class OffBallValuator:
                 prev_dist_to_ball = math.sqrt((prev_x - ball[0]) ** 2 + (prev_y - ball[1]) ** 2)
 
                 # --- Space creation: teammate has ball, player moves away creating room ---
-                if possession and speed >= self.SPACE_CREATION_SPEED_MS and dist_to_ball > prev_dist_to_ball * 1.05:
+                if (
+                    possession
+                    and speed >= self.SPACE_CREATION_SPEED_MS
+                    and dist_to_ball > prev_dist_to_ball * 1.05
+                ):
                     space_magnitude = min((dist_to_ball - prev_dist_to_ball) / 5.0, 1.0)
                     space += self.SPACE_WEIGHT * space_magnitude
 
                 # --- Defensive positioning: opponent has ball, player near dangerous lane ---
                 if not possession:
-                    def_value = self._compute_defensive_value((x, y), ball, opponent_trajectories, frame_idx)
+                    def_value = self._compute_defensive_value(
+                        (x, y), ball, opponent_trajectories, frame_idx
+                    )
                     defense += self.DEF_WEIGHT * def_value
 
                 # --- Support positioning: teammate has ball, good passing angle ---
                 if possession:
-                    support_value = self._compute_passing_lane_value((x, y), ball, player_trajectories, tid, frame_idx)
+                    support_value = self._compute_passing_lane_value(
+                        (x, y), ball, player_trajectories, tid, frame_idx
+                    )
                     support += self.SUPPORT_WEIGHT * support_value
 
                 # --- Decoy run: player moves away from ball fast, drawing nearby defender ---
-                if speed >= self.DECOY_RUN_SPEED_MS and dist_to_ball > 5.0 and prev_dist_to_ball < dist_to_ball:
-                    decoy_value = self._compute_decoy_value((x, y), ball, opponent_trajectories, frame_idx)
+                if (
+                    speed >= self.DECOY_RUN_SPEED_MS
+                    and dist_to_ball > 5.0
+                    and prev_dist_to_ball < dist_to_ball
+                ):
+                    decoy_value = self._compute_decoy_value(
+                        (x, y), ball, opponent_trajectories, frame_idx
+                    )
                     decoy += self.DECOY_WEIGHT * decoy_value
 
             total = space + defense + support + decoy
@@ -231,17 +245,19 @@ class OffBallValuator:
         goal_center_y = PITCH_WIDTH / 2.0
         ball_to_goal_dx = goal_center_x - bx
         ball_to_goal_dy = goal_center_y - by
-        ball_to_goal_norm = math.sqrt(ball_to_goal_dx ** 2 + ball_to_goal_dy ** 2)
+        ball_to_goal_norm = math.sqrt(ball_to_goal_dx**2 + ball_to_goal_dy**2)
         if ball_to_goal_norm < 1e-6:
             return 0.0
 
         player_dx = px - bx
         player_dy = py - by
-        player_norm = math.sqrt(player_dx ** 2 + player_dy ** 2)
+        player_norm = math.sqrt(player_dx**2 + player_dy**2)
         if player_norm < 1e-6:
             return 0.0
 
-        cos_angle = (ball_to_goal_dx * player_dx + ball_to_goal_dy * player_dy) / (ball_to_goal_norm * player_norm)
+        cos_angle = (ball_to_goal_dx * player_dx + ball_to_goal_dy * player_dy) / (
+            ball_to_goal_norm * player_norm
+        )
         cos_angle = max(-1.0, min(1.0, cos_angle))
         angle_deg = math.degrees(math.acos(cos_angle))
 
@@ -274,13 +290,13 @@ class OffBallValuator:
 
         ball_to_own_goal_dx = -bx
         ball_to_own_goal_dy = (PITCH_WIDTH / 2.0) - by
-        ball_to_own_goal_norm = math.sqrt(ball_to_own_goal_dx ** 2 + ball_to_own_goal_dy ** 2)
+        ball_to_own_goal_norm = math.sqrt(ball_to_own_goal_dx**2 + ball_to_own_goal_dy**2)
         if ball_to_own_goal_norm < 1e-6:
             return 0.0
 
         player_from_ball_dx = px - bx
         player_from_ball_dy = py - by
-        player_from_ball_norm = math.sqrt(player_from_ball_dx ** 2 + player_from_ball_dy ** 2)
+        player_from_ball_norm = math.sqrt(player_from_ball_dx**2 + player_from_ball_dy**2)
         if player_from_ball_norm < 1e-6:
             return 0.0
 
@@ -320,7 +336,7 @@ class OffBallValuator:
         px, py = player_pos
         drawn = 0
 
-        for opp_tid, traj in opponent_trajs.items():
+        for _opp_tid, traj in opponent_trajs.items():
             if len(traj) <= frame_idx:
                 continue
 

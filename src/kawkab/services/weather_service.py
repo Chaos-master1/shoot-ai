@@ -23,12 +23,16 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import numpy as np
 
 from kawkab.core.logging import get_logger
+
+if TYPE_CHECKING:
+    from kawkab.services.raindrop_detection_service import RaindropDetectionService
+    from kawkab.services.weather_image_classifier import WeatherImageClassifier
 
 logger = get_logger(__name__)
 
@@ -110,14 +114,12 @@ class WeatherService:
         self._cache: dict[str, tuple[float, WeatherConditions]] = {}
         self._video_classifier_available = False
         self._try_init_video_classifier()
-        self._raindrop_service = None
-        self._weather_classifier = None
+        self._raindrop_service: RaindropDetectionService | None = None
+        self._weather_classifier: WeatherImageClassifier | None = None
         self._try_init_advanced_classifiers()
 
     def _try_init_video_classifier(self) -> None:
         try:
-            import torch
-            import torchvision.models as models
             self._video_classifier_available = True
             logger.info("Video weather classifier (torch) available")
         except Exception:
@@ -127,6 +129,7 @@ class WeatherService:
         try:
             from kawkab.services.raindrop_detection_service import RaindropDetectionService
             from kawkab.services.weather_image_classifier import WeatherImageClassifier
+
             self._raindrop_service = RaindropDetectionService()
             self._weather_classifier = WeatherImageClassifier()
             logger.info("Advanced weather classifiers loaded (raindrop + multi-class)")
@@ -217,7 +220,7 @@ class WeatherService:
             return self._cache[key][1]
 
         base = OPEN_METEO_FORECAST if is_forecast else OPEN_METEO_ARCHIVE
-        params = {
+        params: dict[str, float | str] = {
             "latitude": latitude,
             "longitude": longitude,
             "start_date": date,
@@ -249,8 +252,14 @@ class WeatherService:
             wind_dir = hourly.get("wind_direction_10m", [0.0] * len(times))[target_idx] or 0.0
             humidity = hourly.get("relative_humidity_2m", [50.0] * len(times))[target_idx] or 50.0
             cloud = hourly.get("cloud_cover", [0.0] * len(times))[target_idx] or 0.0
-            is_day = hourly.get("is_day", [1] * len(times))[target_idx] if hourly.get("is_day") else 1
-            source = WeatherSource.OPEN_METEO_FORECAST if is_forecast else WeatherSource.OPEN_METEO_ARCHIVE
+            is_day = (
+                hourly.get("is_day", [1] * len(times))[target_idx] if hourly.get("is_day") else 1
+            )
+            source = (
+                WeatherSource.OPEN_METEO_FORECAST
+                if is_forecast
+                else WeatherSource.OPEN_METEO_ARCHIVE
+            )
             conditions_str = self._classify_conditions_text(precip, cloud, wind)
             pitch = self._infer_pitch_state(temp, precip)
             result = WeatherConditions(
@@ -302,9 +311,7 @@ class WeatherService:
     # In-video weather classifier (frame analysis)
     # ------------------------------------------------------------------
 
-    def classify_from_video(
-        self, frames: list[np.ndarray]
-    ) -> VideoWeatherPrediction:
+    def classify_from_video(self, frames: list[np.ndarray]) -> VideoWeatherPrediction:
         """Classify weather conditions from a sample of match frames.
 
         Uses simple CV heuristics (no model required) so it works without
@@ -313,8 +320,12 @@ class WeatherService:
         """
         if not frames:
             return VideoWeatherPrediction(
-                is_rainy=False, is_foggy=False, is_snowy=False,
-                is_clear=False, is_dusk_dawn=False, confidence=0.0,
+                is_rainy=False,
+                is_foggy=False,
+                is_snowy=False,
+                is_clear=False,
+                is_dusk_dawn=False,
+                confidence=0.0,
                 avg_brightness=0.0,
             )
         brightness_vals = []
@@ -338,8 +349,12 @@ class WeatherService:
                 continue
         if not brightness_vals:
             return VideoWeatherPrediction(
-                is_rainy=False, is_foggy=False, is_snowy=False,
-                is_clear=False, is_dusk_dawn=False, confidence=0.0,
+                is_rainy=False,
+                is_foggy=False,
+                is_snowy=False,
+                is_clear=False,
+                is_dusk_dawn=False,
+                confidence=0.0,
                 avg_brightness=0.0,
             )
         avg_brightness = float(np.mean(brightness_vals))
@@ -371,15 +386,14 @@ class WeatherService:
     def _edge_density(frame: np.ndarray) -> float:
         try:
             import cv2
+
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
             edges = cv2.Canny(gray, 80, 200)
             return float(edges.mean()) / 255.0
         except Exception:
             return 0.0
 
-    def conditions_from_video_prediction(
-        self, pred: VideoWeatherPrediction
-    ) -> WeatherConditions:
+    def conditions_from_video_prediction(self, pred: VideoWeatherPrediction) -> WeatherConditions:
         if pred.is_rainy:
             return self.from_manual(temperature_c=15.0, precipitation_mm=3.0, conditions="rain")
         if pred.is_snowy:
@@ -402,9 +416,7 @@ class WeatherService:
     def has_multi_class_classifier(self) -> bool:
         return self._weather_classifier is not None
 
-    def classify_from_video_advanced(
-        self, frames: list[np.ndarray]
-    ) -> dict[str, Any]:
+    def classify_from_video_advanced(self, frames: list[np.ndarray]) -> dict[str, Any]:
         """Combined weather detection using raindrop + multi-class classifier.
 
         Returns dict with:
@@ -413,6 +425,7 @@ class WeatherService:
             - conditions: WeatherConditions (best estimate)
         """
         from dataclasses import asdict
+
         result: dict[str, Any] = {
             "raindrop_detection": None,
             "weather_classification": None,
@@ -434,9 +447,8 @@ class WeatherService:
                 result["weather_classification"] = asdict(weather_cls)
             except Exception as e:
                 logger.warning(f"Weather classification failed: {e}")
-        is_rainy = (
-            (raindrop_result is not None and raindrop_result.is_rainy)
-            or (weather_cls is not None and weather_cls.predicted_class == "rainy")
+        is_rainy = (raindrop_result is not None and raindrop_result.is_rainy) or (
+            weather_cls is not None and weather_cls.predicted_class == "rainy"
         )
         result["is_rainy"] = is_rainy
         conditions = None

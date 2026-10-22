@@ -37,10 +37,8 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Optional
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.base import BaseWearableParser
 from kawkab.services.wearables.models import WearableDataPoint, WearableSession
 
@@ -78,8 +76,6 @@ class TcxParser(BaseWearableParser):
 
         # Iterate all Trackpoints across all Laps
         for tp in root.iter():
-            if ET.TAG in (tp.tag, ""):
-                continue
             # Match any element whose local name is "Trackpoint"
             local = self._local_tag(tp.tag)
             if local == "Trackpoint":
@@ -116,7 +112,7 @@ class TcxParser(BaseWearableParser):
 
     # -- internals ---------------------------------------------------------
 
-    def _trackpoint_to_datapoint(self, tp: ET.Element) -> Optional[WearableDataPoint]:
+    def _trackpoint_to_datapoint(self, tp: ET.Element) -> WearableDataPoint | None:
         dp = WearableDataPoint()
 
         # timestamp
@@ -182,7 +178,7 @@ class TcxParser(BaseWearableParser):
         return tag
 
     @classmethod
-    def _find_child(cls, parent: ET.Element, local_name: str) -> Optional[ET.Element]:
+    def _find_child(cls, parent: ET.Element, local_name: str) -> ET.Element | None:
         """Find direct child by local tag name, namespace-agnostic."""
         for child in parent:
             if cls._local_tag(child.tag) == local_name:
@@ -190,12 +186,12 @@ class TcxParser(BaseWearableParser):
         return None
 
     @classmethod
-    def _find_child_text(cls, parent: ET.Element, local_name: str) -> Optional[str]:
+    def _find_child_text(cls, parent: ET.Element, local_name: str) -> str | None:
         el = cls._find_child(parent, local_name)
         return el.text.strip() if el is not None and el.text else None
 
     @classmethod
-    def _find_any(cls, root: ET.Element, local_name: str) -> Optional[ET.Element]:
+    def _find_any(cls, root: ET.Element, local_name: str) -> ET.Element | None:
         """Find first element anywhere in the tree with this local name."""
         for el in root.iter():
             if cls._local_tag(el.tag) == local_name:
@@ -210,7 +206,7 @@ class TcxParser(BaseWearableParser):
                 yield el
 
     @staticmethod
-    def _parse_dt(text: str) -> Optional[datetime]:
+    def _parse_dt(text: str) -> datetime | None:
         text = text.strip()
         if not text:
             return None

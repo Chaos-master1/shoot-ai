@@ -27,5 +27,3 @@ CREATE INDEX IF NOT EXISTS idx_reports_match_lang ON reports(match_id, language)
 
 -- coding_tags: composite type+time for timeline queries
 CREATE INDEX IF NOT EXISTS idx_coding_tags_match_type_time ON coding_tags(match_id, event_type, video_time);
-
-UPDATE schema_version SET version = 25;

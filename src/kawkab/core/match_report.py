@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 
@@ -33,11 +32,20 @@ class ReportSection:
 @dataclass
 class ReportTemplate:
     name: str = "standard"
-    sections: list[str] = field(default_factory=lambda: [
-        "executive_summary", "xg_flow", "key_moments", "player_ratings",
-        "tactical_observations", "notable_patterns", "set_pieces",
-        "phase_breakdown", "areas_for_improvement", "what_worked_well",
-    ])
+    sections: list[str] = field(
+        default_factory=lambda: [
+            "executive_summary",
+            "xg_flow",
+            "key_moments",
+            "player_ratings",
+            "tactical_observations",
+            "notable_patterns",
+            "set_pieces",
+            "phase_breakdown",
+            "areas_for_improvement",
+            "what_worked_well",
+        ]
+    )
     include_charts: bool = True
     include_stat_tables: bool = True
     detail_level: str = "normal"
@@ -170,43 +178,69 @@ def _extract_key_moments(
             xg_val = float(xg_val)
 
         if ev_type == "goal":
-            moments.append(MatchMoment(
-                minute=minute, type="goal",
-                description=f"{player or 'Unknown'} scored for {team}",
-                xg=xg_val, team=team, player=player,
-            ))
+            moments.append(
+                MatchMoment(
+                    minute=minute,
+                    type="goal",
+                    description=f"{player or 'Unknown'} scored for {team}",
+                    xg=xg_val,
+                    team=team,
+                    player=player,
+                )
+            )
         elif ev_type in ("card", "red_card", "yellow_card"):
             card_type = ev.get("card_type", ev_type)
             desc = f"{player or 'Unknown'} received a {card_type} card"
-            moments.append(MatchMoment(
-                minute=minute, type="card",
-                description=desc,
-                xg=None, team=team, player=player,
-            ))
+            moments.append(
+                MatchMoment(
+                    minute=minute,
+                    type="card",
+                    description=desc,
+                    xg=None,
+                    team=team,
+                    player=player,
+                )
+            )
         elif ev_type == "penalty" or ev_type == "penalty_goal":
-            moments.append(MatchMoment(
-                minute=minute, type="penalty",
-                description=f"Penalty {'scored by' if 'goal' in ev_type else 'awarded to'} {team}",
-                xg=0.76 if xg_val is None else xg_val, team=team, player=player,
-            ))
+            moments.append(
+                MatchMoment(
+                    minute=minute,
+                    type="penalty",
+                    description=f"Penalty {'scored by' if 'goal' in ev_type else 'awarded to'} {team}",
+                    xg=0.76 if xg_val is None else xg_val,
+                    team=team,
+                    player=player,
+                )
+            )
         elif ev_type == "substitution":
             player_off = ev.get("player_off", player)
             player_on = ev.get("player_on", "")
             desc = f"Substitution: {player_on} replaces {player_off}"
-            moments.append(MatchMoment(
-                minute=minute, type="substitution",
-                description=desc, xg=None, team=team, player=player_on,
-            ))
+            moments.append(
+                MatchMoment(
+                    minute=minute,
+                    type="substitution",
+                    description=desc,
+                    xg=None,
+                    team=team,
+                    player=player_on,
+                )
+            )
 
         if xg_val is not None and xg_val > 0.3 and ev_type != "goal":
             desc = f"Big chance for {player or team}"
             if team:
                 desc += f" ({team})"
-            moments.append(MatchMoment(
-                minute=minute, type="big_chance",
-                description=desc,
-                xg=xg_val, team=team, player=player,
-            ))
+            moments.append(
+                MatchMoment(
+                    minute=minute,
+                    type="big_chance",
+                    description=desc,
+                    xg=xg_val,
+                    team=team,
+                    player=player,
+                )
+            )
 
     moments.sort(key=lambda m: m.minute)
     return moments
@@ -224,14 +258,20 @@ def _generate_tactical_observations(
     total_shots = sum(1 for ev in events if ev.get("type") == "shot")
 
     if total_passes > 50:
-        observations.append(f"High pass volume ({total_passes} passes) indicates controlled possession approach.")
+        observations.append(
+            f"High pass volume ({total_passes} passes) indicates controlled possession approach."
+        )
     elif total_passes < 20:
-        observations.append(f"Low pass volume ({total_passes}) suggests direct play or disrupted rhythm.")
+        observations.append(
+            f"Low pass volume ({total_passes}) suggests direct play or disrupted rhythm."
+        )
     else:
         observations.append(f"Moderate pass volume ({total_passes}) — balanced approach.")
 
     if total_tackles > 10:
-        observations.append(f"High defensive intensity ({total_tackles} tackles/defensive actions).")
+        observations.append(
+            f"High defensive intensity ({total_tackles} tackles/defensive actions)."
+        )
     else:
         observations.append(f"Moderate defensive engagement ({total_tackles} defensive actions).")
 
@@ -252,16 +292,22 @@ def _generate_tactical_observations(
             observations.append("Away team dominated open-play creation.")
 
         if home_set_piece > 0.3:
-            observations.append(f"Home team generated {home_set_piece:.2f} xG from set pieces — a key weapon.")
+            observations.append(
+                f"Home team generated {home_set_piece:.2f} xG from set pieces — a key weapon."
+            )
         if away_set_piece > 0.3:
-            observations.append(f"Away team generated {away_set_piece:.2f} xG from set pieces — a key weapon.")
+            observations.append(
+                f"Away team generated {away_set_piece:.2f} xG from set pieces — a key weapon."
+            )
 
     if tactical_phases:
         for phase in tactical_phases:
             phase_name = phase.get("name", phase.get("phase", ""))
             phase_xg = phase.get("xg", 0)
             if phase_xg and float(phase_xg) > 0.4:
-                observations.append(f"Phase '{phase_name}' generated {float(phase_xg):.2f} xG — dominant period.")
+                observations.append(
+                    f"Phase '{phase_name}' generated {float(phase_xg):.2f} xG — dominant period."
+                )
 
     return observations
 
@@ -280,22 +326,32 @@ def _generate_notable_patterns(
         total = len(shot_events)
         if total > 0:
             if left_shots / total > 0.4:
-                patterns.append(f"Heavy left-flank shot bias ({left_shots}/{total} shots from left).")
+                patterns.append(
+                    f"Heavy left-flank shot bias ({left_shots}/{total} shots from left)."
+                )
             if right_shots / total > 0.4:
-                patterns.append(f"Heavy right-flank shot bias ({right_shots}/{total} shots from right).")
+                patterns.append(
+                    f"Heavy right-flank shot bias ({right_shots}/{total} shots from right)."
+                )
             if central_shots / total > 0.5:
                 patterns.append(f"Central shot emphasis ({central_shots}/{total} from middle).")
 
     pass_events = [ev for ev in events if ev.get("type") == "pass"]
     if pass_events:
-        forward_passes = sum(1 for ev in pass_events if ev.get("direction", "").lower() == "forward")
-        backward_passes = sum(1 for ev in pass_events if ev.get("direction", "").lower() == "backward")
-        lateral_passes = sum(1 for ev in pass_events if ev.get("direction", "").lower() in ("lateral", "square"))
+        forward_passes = sum(
+            1 for ev in pass_events if ev.get("direction", "").lower() == "forward"
+        )
+        backward_passes = sum(
+            1 for ev in pass_events if ev.get("direction", "").lower() == "backward"
+        )
+        _ = sum(1 for ev in pass_events if ev.get("direction", "").lower() in ("lateral", "square"))
         total_p = len(pass_events)
         if total_p > 0 and forward_passes / total_p > 0.5:
             patterns.append(f"Direct passing style ({forward_passes}/{total_p} passes forward).")
         if total_p > 0 and backward_passes / total_p > 0.2:
-            patterns.append(f"High backward pass rate ({backward_passes}/{total_p}) — possibly recycling possession.")
+            patterns.append(
+                f"High backward pass rate ({backward_passes}/{total_p}) — possibly recycling possession."
+            )
 
     card_events = [ev for ev in events if ev.get("type") in ("card", "red_card", "yellow_card")]
     if len(card_events) >= 3:
@@ -306,15 +362,13 @@ def _generate_notable_patterns(
 
 def _generate_set_piece_analysis(events: list[dict]) -> str:
     set_piece_events = [
-        ev for ev in events
-        if ev.get("type") in ("corner", "free_kick", "throw_in", "set_piece")
+        ev for ev in events if ev.get("type") in ("corner", "free_kick", "throw_in", "set_piece")
     ]
     n_corners = sum(1 for ev in set_piece_events if ev.get("type") == "corner")
     n_free_kicks = sum(1 for ev in set_piece_events if ev.get("type") == "free_kick")
 
     shot_from_set_piece = sum(
-        1 for ev in events
-        if ev.get("type") == "shot" and ev.get("set_piece", False)
+        1 for ev in events if ev.get("type") == "shot" and ev.get("set_piece", False)
     )
     set_piece_xg = sum(
         float(ev.get("xg", 0.0))
@@ -331,7 +385,9 @@ def _generate_set_piece_analysis(events: list[dict]) -> str:
         return "Limited set piece activity during the match."
 
     base = f"Match featured {', '.join(parts)}. "
-    base += f"Generated {shot_from_set_piece} shot(s) from set pieces totaling {set_piece_xg:.2f} xG."
+    base += (
+        f"Generated {shot_from_set_piece} shot(s) from set pieces totaling {set_piece_xg:.2f} xG."
+    )
     if set_piece_xg > 0.5:
         base += " Set pieces were a significant threat."
     return base
@@ -344,11 +400,16 @@ def _generate_areas_for_improvement(
     areas: list[str] = []
 
     if phase_xg_report:
-        if phase_xg_report.get("home_set_piece_xg", 0) > 0 and phase_xg_report.get("away_set_piece_xg", 0) > 0:
-            if phase_xg_report["home_set_piece_xg"] > phase_xg_report["away_set_piece_xg"] * 2:
-                areas.append("Improve set piece defending — conceded significant xG from dead-ball situations.")
-            elif phase_xg_report["away_set_piece_xg"] > phase_xg_report["home_set_piece_xg"] * 2:
-                areas.append("Improve set piece defending — conceded significant xG from dead-ball situations.")
+        if (
+            phase_xg_report.get("home_set_piece_xg", 0) > 0
+            and phase_xg_report.get("away_set_piece_xg", 0) > 0
+        ) and (
+            phase_xg_report["home_set_piece_xg"] > phase_xg_report["away_set_piece_xg"] * 2
+            or phase_xg_report["away_set_piece_xg"] > phase_xg_report["home_set_piece_xg"] * 2
+        ):
+            areas.append(
+                "Improve set piece defending — conceded significant xG from dead-ball situations."
+            )
         if phase_xg_report.get("home_transition_xg", 0) > 0.3:
             areas.append("Tighten transition defense — opponent created from counter-attacks.")
 
@@ -356,7 +417,9 @@ def _generate_areas_for_improvement(
     if conceded_goals:
         late_goals = [ev for ev in conceded_goals if int(ev.get("minute", 0)) > 75]
         if late_goals:
-            areas.append(f"Conceded {len(late_goals)} goal(s) after 75' — address late-game concentration.")
+            areas.append(
+                f"Conceded {len(late_goals)} goal(s) after 75' — address late-game concentration."
+            )
 
     failed_clearances = sum(1 for ev in events if ev.get("type") in ("failed_clearance", "error"))
     if failed_clearances > 2:
@@ -387,10 +450,7 @@ def _generate_what_worked_well(
         if phase_xg_report.get("home_set_piece_xg", 0) > 0.3:
             positives.append("Set pieces provided a reliable attacking threat.")
 
-    clean_sheet = not any(
-        ev.get("type") == "goal" and ev.get("team") != "home"
-        for ev in events
-    )
+    clean_sheet = not any(ev.get("type") == "goal" and ev.get("team") != "home" for ev in events)
     if clean_sheet:
         positives.append("Defensive solidity — kept a clean sheet.")
 
@@ -398,7 +458,9 @@ def _generate_what_worked_well(
     if pass_events:
         completed = sum(1 for ev in pass_events if ev.get("outcome", "complete") == "complete")
         if len(pass_events) > 0 and completed / len(pass_events) > 0.85:
-            positives.append(f"High pass completion ({completed}/{len(pass_events)}, {100 * completed // len(pass_events)}%).")
+            positives.append(
+                f"High pass completion ({completed}/{len(pass_events)}, {100 * completed // len(pass_events)}%)."
+            )
 
     if not positives:
         positives.append("Areas of success not clearly identifiable from available data.")
@@ -431,7 +493,9 @@ def generate_match_report(
         xg_timeline,
         phase_xg_report,
     )
-    tactical_observations = _generate_tactical_observations(events, phase_xg_report, tactical_phases)
+    tactical_observations = _generate_tactical_observations(
+        events, phase_xg_report, tactical_phases
+    )
     notable_patterns = _generate_notable_patterns(events)
     set_piece_analysis = _generate_set_piece_analysis(events)
     areas_for_improvement = _generate_areas_for_improvement(events, phase_xg_report)
@@ -448,13 +512,17 @@ def generate_match_report(
 
     player_highlights: list[dict] = []
     if player_ratings:
-        sorted_ratings = sorted(player_ratings, key=lambda r: float(r.get("rating", 0)), reverse=True)
+        sorted_ratings = sorted(
+            player_ratings, key=lambda r: float(r.get("rating", 0)), reverse=True
+        )
         for pr in sorted_ratings[:5]:
-            player_highlights.append({
-                "player": pr.get("name", pr.get("player_name", "Unknown")),
-                "rating": pr.get("rating", 0),
-                "highlight": pr.get("highlight", pr.get("summary", "")),
-            })
+            player_highlights.append(
+                {
+                    "player": pr.get("name", pr.get("player_name", "Unknown")),
+                    "rating": pr.get("rating", 0),
+                    "highlight": pr.get("highlight", pr.get("summary", "")),
+                }
+            )
 
     phase_text: str | None = None
     if phase_xg_report:
@@ -472,11 +540,14 @@ def generate_match_report(
             f"- **{m.minute}'** [{m.type}] {m.description}"
             + (f" (xG: {m.xg:.2f})" if m.xg is not None else "")
             for m in key_moments
-        ) if key_moments else "No key moments identified.",
+        )
+        if key_moments
+        else "No key moments identified.",
         "player_ratings": "\n".join(
-            f"- {h['player']}: {h['rating']}/10 — {h['highlight']}"
-            for h in player_highlights
-        ) if player_highlights else "No player ratings available.",
+            f"- {h['player']}: {h['rating']}/10 — {h['highlight']}" for h in player_highlights
+        )
+        if player_highlights
+        else "No player ratings available.",
         "tactical_observations": "\n".join(f"- {o}" for o in tactical_observations),
         "notable_patterns": "\n".join(f"- {p}" for p in notable_patterns),
         "set_pieces": set_piece_analysis,
@@ -492,9 +563,16 @@ def generate_match_report(
             included=key in template.sections,
         )
         for key in [
-            "executive_summary", "xg_flow", "key_moments", "player_ratings",
-            "tactical_observations", "notable_patterns", "set_pieces",
-            "phase_breakdown", "areas_for_improvement", "what_worked_well",
+            "executive_summary",
+            "xg_flow",
+            "key_moments",
+            "player_ratings",
+            "tactical_observations",
+            "notable_patterns",
+            "set_pieces",
+            "phase_breakdown",
+            "areas_for_improvement",
+            "what_worked_well",
         ]
     ]
 

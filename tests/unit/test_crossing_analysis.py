@@ -1,13 +1,9 @@
 """Tests for crossing analysis module."""
 
-import pytest
 from kawkab.core.crossing_analysis import (
     CrossingAnalysis,
     CrossingReport,
-    CrossResult,
     _zone_label,
-    _six_yard_x,
-    _penalty_area_x,
 )
 
 
@@ -79,20 +75,30 @@ class TestDangerRating:
         self.ca = CrossingAnalysis()
 
     def test_byline_more_dangerous_than_deep(self):
-        byline = self.ca.compute_cross_danger_rating({"start_x": 98, "end_x": 100, "end_y": 34, "metadata": {}})
-        deep = self.ca.compute_cross_danger_rating({"start_x": 0, "end_x": 5, "end_y": 34, "metadata": {}})
+        byline = self.ca.compute_cross_danger_rating(
+            {"start_x": 98, "end_x": 100, "end_y": 34, "metadata": {}}
+        )
+        deep = self.ca.compute_cross_danger_rating(
+            {"start_x": 0, "end_x": 5, "end_y": 34, "metadata": {}}
+        )
         assert byline > deep
 
     def test_pulled_back_high_danger(self):
-        pb = self.ca.compute_cross_danger_rating({"start_x": 80, "end_x": 60, "end_y": 34, "metadata": {}})
+        pb = self.ca.compute_cross_danger_rating(
+            {"start_x": 80, "end_x": 60, "end_y": 34, "metadata": {}}
+        )
         assert pb > 0.5
 
     def test_danger_clipped_to_one(self):
-        dr = self.ca.compute_cross_danger_rating({"start_x": 100, "end_x": 105, "end_y": 34, "metadata": {}})
+        dr = self.ca.compute_cross_danger_rating(
+            {"start_x": 100, "end_x": 105, "end_y": 34, "metadata": {}}
+        )
         assert 0.0 <= dr <= 1.0
 
     def test_danger_min_zero(self):
-        dr = self.ca.compute_cross_danger_rating({"start_x": 0, "end_x": 5, "end_y": 68, "metadata": {}})
+        dr = self.ca.compute_cross_danger_rating(
+            {"start_x": 0, "end_x": 5, "end_y": 68, "metadata": {}}
+        )
         assert dr >= 0.0
 
 
@@ -102,11 +108,32 @@ class TestAnalyzeCrosses:
 
     def test_basic_counts(self):
         events = [
-            {"type": "cross", "start_x": 60, "end_x": 90, "end_y": 34, "height": "low", "metadata": {}},
-            {"type": "cross", "start_x": 30, "end_x": 80, "end_y": 34, "height": "high", "metadata": {}},
+            {
+                "type": "cross",
+                "start_x": 60,
+                "end_x": 90,
+                "end_y": 34,
+                "height": "low",
+                "metadata": {},
+            },
+            {
+                "type": "cross",
+                "start_x": 30,
+                "end_x": 80,
+                "end_y": 34,
+                "height": "high",
+                "metadata": {},
+            },
             {"type": "cross", "start_x": 80, "end_x": 60, "end_y": 34, "metadata": {}},
             {"type": "cross", "start_x": 96, "end_x": 100, "end_y": 10, "metadata": {}},
-            {"type": "cross", "start_x": 50, "end_x": 90, "end_y": 50, "height": "low", "metadata": {}},
+            {
+                "type": "cross",
+                "start_x": 50,
+                "end_x": 90,
+                "end_y": 50,
+                "height": "low",
+                "metadata": {},
+            },
         ]
         report = self.ca.analyze_crosses(events)
         assert report.total_crosses == 5
@@ -120,8 +147,22 @@ class TestAnalyzeCrosses:
 
     def test_analyze_corner_crosses(self):
         events = [
-            {"type": "cross", "start_x": 104, "end_x": 100, "end_y": 10, "corner": True, "metadata": {}},
-            {"type": "cross", "start_x": 60, "end_x": 85, "end_y": 34, "height": "low", "metadata": {}},
+            {
+                "type": "cross",
+                "start_x": 104,
+                "end_x": 100,
+                "end_y": 10,
+                "corner": True,
+                "metadata": {},
+            },
+            {
+                "type": "cross",
+                "start_x": 60,
+                "end_x": 85,
+                "end_y": 34,
+                "height": "low",
+                "metadata": {},
+            },
         ]
         report = self.ca.analyze_crosses(events)
         assert report.corner_crosses == 1
@@ -129,21 +170,42 @@ class TestAnalyzeCrosses:
 
     def test_headed_shot_tracking(self):
         events = [
-            {"type": "cross", "start_x": 60, "end_x": 90, "end_y": 34, "height": "high", "metadata": {"headed_shot_created": True}},
+            {
+                "type": "cross",
+                "start_x": 60,
+                "end_x": 90,
+                "end_y": 34,
+                "height": "high",
+                "metadata": {"headed_shot_created": True},
+            },
         ]
         report = self.ca.analyze_crosses(events)
         assert report.headed_shots_created == 1
 
     def test_goal_tracking(self):
         events = [
-            {"type": "cross", "start_x": 60, "end_x": 90, "end_y": 34, "height": "low", "metadata": {"goal_created": True}},
+            {
+                "type": "cross",
+                "start_x": 60,
+                "end_x": 90,
+                "end_y": 34,
+                "height": "low",
+                "metadata": {"goal_created": True},
+            },
         ]
         report = self.ca.analyze_crosses(events)
         assert report.goals_created == 1
 
     def test_report_cross_objects(self):
         events = [
-            {"type": "cross", "start_x": 70, "end_x": 95, "end_y": 20, "height": "low", "metadata": {}},
+            {
+                "type": "cross",
+                "start_x": 70,
+                "end_x": 95,
+                "end_y": 20,
+                "height": "low",
+                "metadata": {},
+            },
         ]
         report = self.ca.analyze_crosses(events)
         assert len(report.crosses) == 1
@@ -151,7 +213,14 @@ class TestAnalyzeCrosses:
 
     def test_report_to_dict(self):
         events = [
-            {"type": "cross", "start_x": 60, "end_x": 90, "end_y": 34, "height": "low", "metadata": {}},
+            {
+                "type": "cross",
+                "start_x": 60,
+                "end_x": 90,
+                "end_y": 34,
+                "height": "low",
+                "metadata": {},
+            },
         ]
         report = self.ca.analyze_crosses(events)
         d = report.to_dict()

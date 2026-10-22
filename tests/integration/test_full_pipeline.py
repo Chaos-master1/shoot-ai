@@ -19,15 +19,15 @@ from __future__ import annotations
 
 import pytest
 
-from kawkab.services.cv_service import Detection, FrameDetections, MatchTrackData
-from kawkab.services.analysis_service import AnalysisService, PlayerStats, TeamStats, MatchAnalysis
 from kawkab.services.advanced_event_detection_service import AdvancedEventDetectionService
+from kawkab.services.analysis_service import AnalysisService
+from kawkab.services.anomaly_detection_service import AnomalyDetectionService
+from kawkab.services.cv_service import Detection, FrameDetections, MatchTrackData
+from kawkab.services.data_export_service import DataExportService
+from kawkab.services.homography_service import HomographyMatrix
 from kawkab.services.physical_load_service import PhysicalLoadService
 from kawkab.services.pressure_metrics_service import PressureMetricsService
-from kawkab.services.anomaly_detection_service import AnomalyDetectionService
 from kawkab.services.quality_scoring_service import QualityScoringService
-from kawkab.services.homography_service import HomographyMatrix
-from kawkab.services.data_export_service import DataExportService
 
 
 def make_detection(track_id, class_name, x, y, w=20.0, h=40.0, confidence=0.9):
@@ -65,7 +65,9 @@ def create_test_tracking_data() -> MatchTrackData:
         # Ball moving across the field
         ball_x = 100 + (i % 50) * 5
         ball_y = 300 + 20 * (i % 10) / 10
-        detections.append(make_detection(99, "sports ball", ball_x, ball_y, w=5, h=5, confidence=0.8))
+        detections.append(
+            make_detection(99, "sports ball", ball_x, ball_y, w=5, h=5, confidence=0.8)
+        )
 
         # 22 players moving around
         for p in range(1, 23):
@@ -120,7 +122,9 @@ async def test_full_pipeline() -> None:
 
     # 1. Basic analysis
     analysis_service = AnalysisService(use_kalman=True)
-    analysis = await analysis_service.analyze_match(track_data, match_id=1, homography_matrix=homography)
+    analysis = await analysis_service.analyze_match(
+        track_data, match_id=1, homography_matrix=homography
+    )
 
     assert analysis is not None
     assert len(analysis.players) > 0
@@ -146,7 +150,7 @@ async def test_full_pipeline() -> None:
     physical_loads = await phys_svc.compute_physical_load(track_data, homography)
 
     assert len(physical_loads) > 0
-    for tid, metrics in physical_loads.items():
+    for _tid, metrics in physical_loads.items():
         assert metrics.total_distance_m >= 0
         assert metrics.max_speed_kmh <= 40.0  # human limit
 
@@ -159,7 +163,7 @@ async def test_full_pipeline() -> None:
     )
 
     assert "home" in pressure_metrics or "away" in pressure_metrics
-    for team, metrics in pressure_metrics.items():
+    for _team, metrics in pressure_metrics.items():
         assert metrics.ppda_overall >= 0
         assert metrics.pressure_events >= 0
 
@@ -198,8 +202,10 @@ async def test_full_pipeline() -> None:
     )
     assert "home" in team_summary or "away" in team_summary
 
-    print(f"Pipeline complete: {len(all_events)} events, {len(physical_loads)} players, "
-          f"quality={scores.overall:.2f}")
+    print(
+        f"Pipeline complete: {len(all_events)} events, {len(physical_loads)} players, "
+        f"quality={scores.overall:.2f}"
+    )
 
 
 @pytest.mark.asyncio
@@ -215,8 +221,12 @@ async def test_advanced_event_dribble_detection() -> None:
         frames.append(make_frame(i, i * 0.1, [ball, player]))
 
     track_data = MatchTrackData(
-        match_id=1, fps=10, total_frames=15, duration_seconds=1.5,
-        frames=frames, track_registry={1: {"track_id": 1}},
+        match_id=1,
+        fps=10,
+        total_frames=15,
+        duration_seconds=1.5,
+        frames=frames,
+        track_registry={1: {"track_id": 1}},
         player_teams={1: "home"},
     )
 
@@ -241,8 +251,12 @@ async def test_physical_load_speed_capping() -> None:
         frames.append(make_frame(i, i * 0.1, [ball, player]))
 
     track_data = MatchTrackData(
-        match_id=1, fps=10, total_frames=10, duration_seconds=1.0,
-        frames=frames, track_registry={1: {"track_id": 1}},
+        match_id=1,
+        fps=10,
+        total_frames=10,
+        duration_seconds=1.0,
+        frames=frames,
+        track_registry={1: {"track_id": 1}},
     )
 
     loads = await svc.compute_physical_load(track_data)
@@ -258,8 +272,7 @@ async def test_pressure_metrics_ppda() -> None:
 
     # Simple events: 10 opponent passes, 2 defensive actions
     events = [
-        {"type": "pass", "team": "home", "completed": True, "timestamp": i * 1.0}
-        for i in range(10)
+        {"type": "pass", "team": "home", "completed": True, "timestamp": i * 1.0} for i in range(10)
     ] + [
         {"type": "tackle", "team": "away", "timestamp": 5.0},
         {"type": "interception", "team": "away", "timestamp": 8.0},
@@ -267,14 +280,24 @@ async def test_pressure_metrics_ppda() -> None:
 
     frames = []
     for i in range(5):
-        frames.append(make_frame(i, i * 1.0, [
-            make_detection(1, "person", 100, 200),
-            make_detection(12, "person", 150, 200),
-        ]))
+        frames.append(
+            make_frame(
+                i,
+                i * 1.0,
+                [
+                    make_detection(1, "person", 100, 200),
+                    make_detection(12, "person", 150, 200),
+                ],
+            )
+        )
 
     track_data = MatchTrackData(
-        match_id=1, fps=1, total_frames=5, duration_seconds=5.0,
-        frames=frames, track_registry={1: {}, 12: {}},
+        match_id=1,
+        fps=1,
+        total_frames=5,
+        duration_seconds=5.0,
+        frames=frames,
+        track_registry={1: {}, 12: {}},
         player_teams={1: "home", 12: "away"},
     )
 

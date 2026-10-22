@@ -30,6 +30,7 @@ logger = get_logger(__name__)
 
 class ModelPriority(Enum):
     """Model loading priority (higher = loaded first)."""
+
     YOLO = 100
     LLM = 50
     WHISPER = 25
@@ -39,6 +40,7 @@ class ModelPriority(Enum):
 @dataclass
 class VRAMStats:
     """Current VRAM usage statistics."""
+
     total_gb: float
     used_gb: float
     free_gb: float
@@ -68,15 +70,13 @@ class VRAMManager:
         self.safety_margin = safety_margin_gb
         self._loaded_model: str | None = None
         self._loaded_objects: dict[str, Any] = {}
-        logger.info(
-            f"VRAMManager: budget={total_budget_gb}GB, "
-            f"safety_margin={safety_margin_gb}GB"
-        )
+        logger.info(f"VRAMManager: budget={total_budget_gb}GB, safety_margin={safety_margin_gb}GB")
 
     def get_stats(self) -> VRAMStats:
         """Get current VRAM usage."""
         try:
             import torch
+
             if not torch.cuda.is_available():
                 return VRAMStats(0, 0, 0, 0, None)
 
@@ -108,6 +108,7 @@ class VRAMManager:
         gc.collect()
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()

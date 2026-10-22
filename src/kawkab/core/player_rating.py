@@ -10,8 +10,7 @@ attackers high) or assigned explicitly.
 
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -58,40 +57,76 @@ class PlayerRating:
 # Position weight templates: how each sub-score contributes to overall
 _WEIGHTS: dict[PlayerPosition, dict[str, float]] = {
     PlayerPosition.GK: {
-        "passing": 0.30, "shooting": 0.00, "defending": 0.40,
-        "physical": 0.10, "positioning": 0.15, "dribbling": 0.05,
+        "passing": 0.30,
+        "shooting": 0.00,
+        "defending": 0.40,
+        "physical": 0.10,
+        "positioning": 0.15,
+        "dribbling": 0.05,
     },
     PlayerPosition.CB: {
-        "passing": 0.15, "shooting": 0.05, "defending": 0.50,
-        "physical": 0.15, "positioning": 0.10, "dribbling": 0.05,
+        "passing": 0.15,
+        "shooting": 0.05,
+        "defending": 0.50,
+        "physical": 0.15,
+        "positioning": 0.10,
+        "dribbling": 0.05,
     },
     PlayerPosition.FB: {
-        "passing": 0.20, "shooting": 0.05, "defending": 0.30,
-        "physical": 0.20, "positioning": 0.10, "dribbling": 0.15,
+        "passing": 0.20,
+        "shooting": 0.05,
+        "defending": 0.30,
+        "physical": 0.20,
+        "positioning": 0.10,
+        "dribbling": 0.15,
     },
     PlayerPosition.CDM: {
-        "passing": 0.25, "shooting": 0.05, "defending": 0.35,
-        "physical": 0.20, "positioning": 0.10, "dribbling": 0.05,
+        "passing": 0.25,
+        "shooting": 0.05,
+        "defending": 0.35,
+        "physical": 0.20,
+        "positioning": 0.10,
+        "dribbling": 0.05,
     },
     PlayerPosition.CM: {
-        "passing": 0.30, "shooting": 0.10, "defending": 0.15,
-        "physical": 0.20, "positioning": 0.15, "dribbling": 0.10,
+        "passing": 0.30,
+        "shooting": 0.10,
+        "defending": 0.15,
+        "physical": 0.20,
+        "positioning": 0.15,
+        "dribbling": 0.10,
     },
     PlayerPosition.CAM: {
-        "passing": 0.25, "shooting": 0.20, "defending": 0.05,
-        "physical": 0.10, "positioning": 0.20, "dribbling": 0.20,
+        "passing": 0.25,
+        "shooting": 0.20,
+        "defending": 0.05,
+        "physical": 0.10,
+        "positioning": 0.20,
+        "dribbling": 0.20,
     },
     PlayerPosition.WING: {
-        "passing": 0.20, "shooting": 0.15, "defending": 0.05,
-        "physical": 0.15, "positioning": 0.20, "dribbling": 0.25,
+        "passing": 0.20,
+        "shooting": 0.15,
+        "defending": 0.05,
+        "physical": 0.15,
+        "positioning": 0.20,
+        "dribbling": 0.25,
     },
     PlayerPosition.ST: {
-        "passing": 0.10, "shooting": 0.40, "defending": 0.05,
-        "physical": 0.15, "positioning": 0.20, "dribbling": 0.10,
+        "passing": 0.10,
+        "shooting": 0.40,
+        "defending": 0.05,
+        "physical": 0.15,
+        "positioning": 0.20,
+        "dribbling": 0.10,
     },
     PlayerPosition.UNASSIGNED: {
-        "passing": 0.20, "shooting": 0.15, "defending": 0.20,
-        "physical": 0.20, "positioning": 0.10, "dribbling": 0.15,
+        "passing": 0.20,
+        "shooting": 0.15,
+        "defending": 0.20,
+        "physical": 0.20,
+        "positioning": 0.10,
+        "dribbling": 0.15,
     },
 }
 
@@ -190,43 +225,51 @@ def compute_rating(
     per90 = 90.0 / minutes_played
 
     pos = position or (
-        _infer_position_from_x(avg_x, pitch_length) if avg_x is not None
+        _infer_position_from_x(avg_x, pitch_length)
+        if avg_x is not None
         else PlayerPosition.UNASSIGNED
     )
 
     pass_acc_score = _norm(pass_accuracy, 0.4, 0.95)
     pass_vol_score = _norm(passes_completed * per90, 10, 70)
 
-    passing = (pass_acc_score * 0.5 + pass_vol_score * 0.3
-               + _norm(progressive_passes * per90, 0, 10) * 0.1
-               + _norm(key_passes * per90, 0, 3) * 0.1)
+    passing = (
+        pass_acc_score * 0.5
+        + pass_vol_score * 0.3
+        + _norm(progressive_passes * per90, 0, 10) * 0.1
+        + _norm(key_passes * per90, 0, 3) * 0.1
+    )
 
     shot_vol = _norm(shots * per90, 0, 5)
     shot_acc = _norm(shots_on_target / max(shots, 1), 0.1, 0.8) if shots > 0 else 0.0
-    shooting = (shot_vol * 0.3 + shot_acc * 0.3
-                + _norm(goals * per90, 0, 2) * 0.2
-                + _norm(xg * per90, 0, 2) * 0.2)
+    shooting = (
+        shot_vol * 0.3
+        + shot_acc * 0.3
+        + _norm(goals * per90, 0, 2) * 0.2
+        + _norm(xg * per90, 0, 2) * 0.2
+    )
 
     def_vol = _norm(defensive_actions * per90, 0, 20)
     tackling = _norm(tackles * per90, 0, 6)
     intercepting = _norm(interceptions * per90, 0, 4)
-    defending = (def_vol * 0.3 + tackling * 0.3 + intercepting * 0.4)
+    defending = def_vol * 0.3 + tackling * 0.3 + intercepting * 0.4
 
     dist = _norm(distance_covered_m / 1000.0, 3, 14)
     speed = _norm(max_speed_kmh, 15, 35)
     sprint_score = _norm(sprints * per90, 0, 15)
-    physical = (dist * 0.4 + speed * 0.3 + sprint_score * 0.3)
+    physical = dist * 0.4 + speed * 0.3 + sprint_score * 0.3
 
     pos_time = _norm(possession_time_s * per90, 10, 120)
-    positioning = (_norm(distance_covered_m * per90 / 1000.0, 3, 14) * 0.3
-                   + pos_time * 0.3
-                   + _norm(interceptions * per90, 0, 3) * 0.2
-                   + _norm(defensive_actions * per90, 0, 15) * 0.2)
+    positioning = (
+        _norm(distance_covered_m * per90 / 1000.0, 3, 14) * 0.3
+        + pos_time * 0.3
+        + _norm(interceptions * per90, 0, 3) * 0.2
+        + _norm(defensive_actions * per90, 0, 15) * 0.2
+    )
 
     carry_vol = _norm(carries * per90, 0, 40)
     prog_carry = _norm(progressive_carries * per90, 0, 8)
-    dribbling = (carry_vol * 0.4 + prog_carry * 0.4
-                 + _norm(progressive_passes * per90, 0, 6) * 0.2)
+    dribbling = carry_vol * 0.4 + prog_carry * 0.4 + _norm(progressive_passes * per90, 0, 6) * 0.2
 
     scores = {
         "passing": min(10.0, passing * 10.0),

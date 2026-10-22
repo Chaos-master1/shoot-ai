@@ -1,18 +1,15 @@
 """Tests for deep-learning xG model — neural network + heuristic fallback."""
+
 import numpy as np
-import pytest
 
 from kawkab.core.dl_xg_model import (
-    DLXgModel,
-    DenseLayer,
-    predict_dl_xg,
-    FI_DISTANCE,
     FI_ANGLE,
     FI_ANGLE_SIN,
     FI_IS_HEADER,
-    FI_IS_PENALTY,
-    FI_GK_DISTANCE,
     N_FEATURES,
+    DenseLayer,
+    DLXgModel,
+    predict_dl_xg,
 )
 
 
@@ -153,7 +150,9 @@ class TestDLXgModel:
         model = DLXgModel(seed=42)
         feats, labels = model.generate_example_data(n_samples=200)
         model.train(feats, labels, epochs=50, batch_size=32, lr=0.005)
-        unpressed = model.compute_single({"distance_m": 12.0, "angle_deg": 20.0, "was_pressed": False})
+        unpressed = model.compute_single(
+            {"distance_m": 12.0, "angle_deg": 20.0, "was_pressed": False}
+        )
         pressed = model.compute_single({"distance_m": 12.0, "angle_deg": 20.0, "was_pressed": True})
         assert pressed < unpressed
 

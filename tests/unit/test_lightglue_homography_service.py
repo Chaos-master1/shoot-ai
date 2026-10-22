@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -20,10 +18,19 @@ install_kawkab_stubs()
 # HomographyMatrix stub — avoid loading homography_service.py and its imports
 # ---------------------------------------------------------------------------
 
+
 class HomographyMatrixStub:
     """Minimal HomographyMatrix for testing LightGlueHomographyService."""
-    def __init__(self, matrix=None, pitch_length_m=105.0, pitch_width_m=68.0,
-                 source="manual", confidence=0.0, error_px=0.0):
+
+    def __init__(
+        self,
+        matrix=None,
+        pitch_length_m=105.0,
+        pitch_width_m=68.0,
+        source="manual",
+        confidence=0.0,
+        error_px=0.0,
+    ):
         self.matrix = matrix or [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         self.pitch_length_m = pitch_length_m
         self.pitch_width_m = pitch_width_m
@@ -35,12 +42,14 @@ class HomographyMatrixStub:
 # Register the stub so lightglue_homography_service's import resolves
 if "kawkab.services.homography_service" not in sys.modules:
     import types
+
     _hmod = types.ModuleType("kawkab.services.homography_service")
     _hmod.HomographyMatrix = HomographyMatrixStub
     sys.modules["kawkab.services.homography_service"] = _hmod
 
 if "kawkab.services" not in sys.modules:
     import types
+
     _smod = types.ModuleType("kawkab.services")
     _smod.__path__ = []
     sys.modules["kawkab.services"] = _smod
@@ -78,9 +87,7 @@ def mock_onnx_session():
     session.get_inputs.return_value[0].name = "input"
     session.run.return_value = (
         np.random.rand(2, 100, 2).astype(np.float32),
-        np.column_stack([np.arange(50), np.arange(50), np.arange(50) + 1]).astype(
-            np.float32
-        ),
+        np.column_stack([np.arange(50), np.arange(50), np.arange(50) + 1]).astype(np.float32),
         np.ones(50, dtype=np.float32) * 0.9,
     )
     return session
@@ -157,9 +164,7 @@ class TestMatch:
         with pytest.raises(RuntimeError, match="LightGlue model not found"):
             svc.match(img0, img1)
 
-    def test_match_returns_none_when_few_matches(
-        self, svc, sample_image, mock_onnx_session
-    ):
+    def test_match_returns_none_when_few_matches(self, svc, sample_image, mock_onnx_session):
         mock_onnx_session.run.return_value = (
             np.random.rand(2, 10, 2).astype(np.float32),
             np.ones((1, 3), dtype=np.float32),
@@ -182,13 +187,13 @@ class TestMatch:
 
 
 class TestComputeHomography:
-    def test_compute_homography_returns_matrix(
-        self, svc, sample_image, mock_onnx_session
-    ):
+    def test_compute_homography_returns_matrix(self, svc, sample_image, mock_onnx_session):
         svc._session = mock_onnx_session
         svc.model_path.write_text("dummy")
-        with patch("cv2.findHomography") as mock_findH, \
-             patch("cv2.perspectiveTransform") as mock_persp:
+        with (
+            patch("cv2.findHomography") as mock_findH,
+            patch("cv2.perspectiveTransform") as mock_persp,
+        ):
             mock_findH.return_value = (
                 np.eye(3, dtype=np.float64),
                 np.ones(50, dtype=np.uint8),
@@ -196,7 +201,7 @@ class TestComputeHomography:
             mock_persp.return_value = np.zeros((1, 1, 2))
             H = svc.compute_homography(sample_image, sample_image)
         assert H is not None
-        assert isinstance(H, HomographyMatrixStub)
+        assert isinstance(H, _mod.HomographyMatrix)
         assert H.source == "lightglue"
         assert H.pitch_length_m == 105.0
 
@@ -213,9 +218,7 @@ class TestComputeHomography:
 
 
 class TestAutoCalibrate:
-    def test_auto_calibrate_returns_homography(
-        self, svc, sample_image, mock_onnx_session
-    ):
+    def test_auto_calibrate_returns_homography(self, svc, sample_image, mock_onnx_session):
         svc._session = mock_onnx_session
         svc.model_path.write_text("dummy")
         H = svc.auto_calibrate(sample_image)
@@ -233,9 +236,7 @@ class TestAutoCalibrate:
         result = svc.auto_calibrate(sample_image)
         assert result is None
 
-    def test_auto_calibrate_custom_pitch_dimensions(
-        self, svc, sample_image, mock_onnx_session
-    ):
+    def test_auto_calibrate_custom_pitch_dimensions(self, svc, sample_image, mock_onnx_session):
         svc._session = mock_onnx_session
         svc.model_path.write_text("dummy")
         H = svc.auto_calibrate(sample_image, pitch_length=100.0, pitch_width=60.0)
@@ -245,9 +246,7 @@ class TestAutoCalibrate:
 
 
 class TestPropagateHomography:
-    def test_propagate_returns_homography(
-        self, svc, sample_image, mock_onnx_session
-    ):
+    def test_propagate_returns_homography(self, svc, sample_image, mock_onnx_session):
         svc._session = mock_onnx_session
         svc.model_path.write_text("dummy")
         ref_H = HomographyMatrix(
@@ -284,8 +283,10 @@ class TestErrorPx:
     def test_auto_calibrate_returns_nonzero_error_px(self, svc, sample_image, mock_onnx_session):
         svc._session = mock_onnx_session
         svc.model_path.write_text("dummy")
-        with patch("cv2.findHomography") as mock_findH, \
-             patch("cv2.perspectiveTransform") as mock_persp:
+        with (
+            patch("cv2.findHomography") as mock_findH,
+            patch("cv2.perspectiveTransform") as mock_persp,
+        ):
             mock_findH.return_value = (
                 np.eye(3, dtype=np.float64),
                 np.ones(50, dtype=np.uint8),
@@ -305,8 +306,10 @@ class TestErrorPx:
             source="manual",
             confidence=1.0,
         )
-        with patch("cv2.findHomography") as mock_findH, \
-             patch("cv2.perspectiveTransform") as mock_persp:
+        with (
+            patch("cv2.findHomography") as mock_findH,
+            patch("cv2.perspectiveTransform") as mock_persp,
+        ):
             mock_findH.return_value = (
                 np.eye(3, dtype=np.float64),
                 np.ones(50, dtype=np.uint8),

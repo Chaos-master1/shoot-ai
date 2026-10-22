@@ -11,7 +11,6 @@ hand-rolled parser is used (the glossary file format is simple).
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -36,7 +35,9 @@ class ArabicGlossary:
         glossary_path: Path to the YAML file.
     """
 
-    DEFAULT_PATH = Path(__file__).resolve().parent.parent.parent.parent / "docs" / "translations" / "ar.yml"
+    DEFAULT_PATH = (
+        Path(__file__).resolve().parent.parent.parent.parent / "docs" / "translations" / "ar.yml"
+    )
 
     def __init__(self, glossary_path: Path | None = None) -> None:
         self.glossary_path = glossary_path or self.DEFAULT_PATH
@@ -50,6 +51,7 @@ class ArabicGlossary:
         text = self.glossary_path.read_text(encoding="utf-8")
         try:
             import yaml
+
             data = yaml.safe_load(text)
         except ImportError:
             data = self._parse_simple(text)
@@ -62,7 +64,7 @@ class ArabicGlossary:
         for key, entry in terms.items():
             if isinstance(entry, dict):
                 self._entries[key] = GlossaryEntry(
-                    en=entry.get("en", key),
+                    en=entry.get("en") or key,
                     ar=entry.get("ar", ""),
                     transliteration=entry.get("transliteration", ""),
                     definition=entry.get("definition", ""),
@@ -72,7 +74,6 @@ class ArabicGlossary:
         result: dict[str, Any] = {"terms": {}}
         current_section: dict[str, dict] | None = None
         current_term: dict | None = None
-        current_key: str = ""
         for line in text.splitlines():
             if not line.strip() or line.strip().startswith("#"):
                 continue
@@ -90,7 +91,7 @@ class ArabicGlossary:
                 term_key = content[:-1]
                 current_term = {}
                 current_section[term_key] = current_term
-                current_key = term_key
+                _ = term_key
                 continue
             if current_term is None:
                 continue
@@ -132,11 +133,12 @@ class ArabicGlossary:
         return key in self._entries
 
 
+_singleton: ArabicGlossary | None = None
+
+
 def get_glossary(path: Path | None = None) -> ArabicGlossary:
     """Singleton-style accessor for the Arabic glossary."""
     global _singleton
-    try:
-        return _singleton
-    except NameError:
+    if _singleton is None:
         _singleton = ArabicGlossary(path)
-        return _singleton
+    return _singleton

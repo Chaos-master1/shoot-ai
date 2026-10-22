@@ -1,7 +1,11 @@
 """Tests for season aggregation."""
 
-import pytest
-from kawkab.core.season_aggregator import SeasonAggregator, SeasonReport, HeadToHeadComparison, PlayerSeasonStats
+from kawkab.core.season_aggregator import (
+    HeadToHeadComparison,
+    PlayerSeasonStats,
+    SeasonAggregator,
+    SeasonReport,
+)
 
 
 class TestPlayerSeasonStats:
@@ -35,13 +39,25 @@ class TestSeasonAggregator:
 
     def test_single_match_aggregation(self):
         sa = SeasonAggregator()
-        data = [{
-            "home_team": {"team_name": "Team A", "possession": 55.0, "pass_accuracy": 0.82, "shots": 12},
-            "away_team": {"team_name": "Team B", "possession": 45.0, "pass_accuracy": 0.78, "shots": 8},
-            "events": [],
-            "duration": 5400,
-            "players": {},
-        }]
+        data = [
+            {
+                "home_team": {
+                    "team_name": "Team A",
+                    "possession": 55.0,
+                    "pass_accuracy": 0.82,
+                    "shots": 12,
+                },
+                "away_team": {
+                    "team_name": "Team B",
+                    "possession": 45.0,
+                    "pass_accuracy": 0.78,
+                    "shots": 8,
+                },
+                "events": [],
+                "duration": 5400,
+                "players": {},
+            }
+        ]
         report = sa.aggregate_team_season(data, team_name="Team A")
         assert report.matches == 1
         assert report.avg_possession == 55.0
@@ -50,10 +66,30 @@ class TestSeasonAggregator:
     def test_multiple_matches(self):
         sa = SeasonAggregator()
         data = [
-            {"home_team": {"team_name": "Team A", "possession": 55.0, "pass_accuracy": 0.82, "shots": 12},
-             "away_team": {"team_name": "Team B", "possession": 45.0}, "events": [], "duration": 5400, "players": {}},
-            {"home_team": {"team_name": "Team A", "possession": 60.0, "pass_accuracy": 0.85, "shots": 15},
-             "away_team": {"team_name": "Team C", "possession": 40.0}, "events": [], "duration": 5400, "players": {}},
+            {
+                "home_team": {
+                    "team_name": "Team A",
+                    "possession": 55.0,
+                    "pass_accuracy": 0.82,
+                    "shots": 12,
+                },
+                "away_team": {"team_name": "Team B", "possession": 45.0},
+                "events": [],
+                "duration": 5400,
+                "players": {},
+            },
+            {
+                "home_team": {
+                    "team_name": "Team A",
+                    "possession": 60.0,
+                    "pass_accuracy": 0.85,
+                    "shots": 15,
+                },
+                "away_team": {"team_name": "Team C", "possession": 40.0},
+                "events": [],
+                "duration": 5400,
+                "players": {},
+            },
         ]
         report = sa.aggregate_team_season(data, team_name="Team A")
         assert report.matches == 2
@@ -62,15 +98,24 @@ class TestSeasonAggregator:
 
     def test_player_aggregation(self):
         sa = SeasonAggregator()
-        data = [{
-            "home_team": {"team_name": "Team A", "possession": 50.0},
-            "away_team": {"team_name": "Team B", "possession": 50.0},
-            "events": [],
-            "duration": 5400,
-            "players": {
-                "1": {"name": "Player X", "shots": 3, "passes_attempted": 30, "passes_completed": 25, "tackles": 2, "distance_covered_m": 9000},
-            },
-        }]
+        data = [
+            {
+                "home_team": {"team_name": "Team A", "possession": 50.0},
+                "away_team": {"team_name": "Team B", "possession": 50.0},
+                "events": [],
+                "duration": 5400,
+                "players": {
+                    "1": {
+                        "name": "Player X",
+                        "shots": 3,
+                        "passes_attempted": 30,
+                        "passes_completed": 25,
+                        "tackles": 2,
+                        "distance_covered_m": 9000,
+                    },
+                },
+            }
+        ]
         report = sa.aggregate_team_season(data, team_name="Team A")
         assert 1 in report.players
         p = report.players[1]
@@ -90,16 +135,32 @@ class TestHeadToHead:
     def test_comparison_with_data(self):
         sa = SeasonAggregator()
         data = [
-            {"home_team": {"team_name": "Team A", "possession": 55.0, "pass_accuracy": 0.82, "shots": 12},
-             "away_team": {"team_name": "Team B", "possession": 45.0, "pass_accuracy": 0.78, "shots": 8},
-             "events": [], "duration": 5400, "players": {}},
+            {
+                "home_team": {
+                    "team_name": "Team A",
+                    "possession": 55.0,
+                    "pass_accuracy": 0.82,
+                    "shots": 12,
+                },
+                "away_team": {
+                    "team_name": "Team B",
+                    "possession": 45.0,
+                    "pass_accuracy": 0.78,
+                    "shots": 8,
+                },
+                "events": [],
+                "duration": 5400,
+                "players": {},
+            },
         ]
         comp = sa.compare_teams(data, "Team A", "Team B")
         assert comp.team_a_name == "Team A"
         assert comp.team_b_name == "Team B"
 
     def test_comparison_to_dict(self):
-        comp = HeadToHeadComparison(team_a_name="A", team_b_name="B", possession_a=55.0, possession_b=45.0)
+        comp = HeadToHeadComparison(
+            team_a_name="A", team_b_name="B", possession_a=55.0, possession_b=45.0
+        )
         d = comp.to_dict()
         assert d["possession"]["a"] == 55.0
         assert d["possession"]["b"] == 45.0

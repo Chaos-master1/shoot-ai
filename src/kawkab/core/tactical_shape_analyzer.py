@@ -54,7 +54,9 @@ def _classify_line_count(counts: list[int]) -> str:
     return "unknown"
 
 
-def _detect_diamond_midfield(positions: list[tuple[float, float]], x_threshold: float = 15.0) -> bool:
+def _detect_diamond_midfield(
+    positions: list[tuple[float, float]], x_threshold: float = 15.0
+) -> bool:
     """Detect if midfield 4 form a diamond shape (1 deep, 2 wide, 1 advanced)."""
     if len(positions) < 4:
         return False
@@ -108,7 +110,7 @@ def _classify_attacking_shape(positions: list[tuple[float, float]]) -> str:
             current_line.append(sorted_pos[i])
     if current_line:
         lines.append(current_line)
-    line_counts = [len(l) for l in lines]
+    line_counts = [len(ln) for ln in lines]
     # Classify
     shape = _classify_line_count(line_counts)
     return shape
@@ -133,17 +135,21 @@ def _compute_support_angles(
         if dist < 1.0:
             continue
         angle = math.degrees(math.atan2(dy, dx))
-        supports.append({
-            "dx": round(dx, 1),
-            "dy": round(dy, 1),
-            "distance_m": round(dist, 1),
-            "angle_deg": round(angle, 1),
-            "is_forward": dx > 0,
-        })
+        supports.append(
+            {
+                "dx": round(dx, 1),
+                "dy": round(dy, 1),
+                "distance_m": round(dist, 1),
+                "angle_deg": round(angle, 1),
+                "is_forward": dx > 0,
+            }
+        )
     return supports
 
 
-def _find_triangles_in_shape(positions: list[tuple[float, float]], max_dist: float = 20.0) -> list[list[int]]:
+def _find_triangles_in_shape(
+    positions: list[tuple[float, float]], max_dist: float = 20.0
+) -> list[list[int]]:
     """Find all triangles formed by players within max_dist of each other."""
     n = len(positions)
     triangles = []
@@ -153,8 +159,12 @@ def _find_triangles_in_shape(positions: list[tuple[float, float]], max_dist: flo
             if d_ij > max_dist:
                 continue
             for k in range(j + 1, n):
-                d_ik = math.hypot(positions[i][0] - positions[k][0], positions[i][1] - positions[k][1])
-                d_jk = math.hypot(positions[j][0] - positions[k][0], positions[j][1] - positions[k][1])
+                d_ik = math.hypot(
+                    positions[i][0] - positions[k][0], positions[i][1] - positions[k][1]
+                )
+                d_jk = math.hypot(
+                    positions[j][0] - positions[k][0], positions[j][1] - positions[k][1]
+                )
                 if d_ik <= max_dist and d_jk <= max_dist:
                     triangles.append([i, j, k])
     return triangles
@@ -225,7 +235,7 @@ class TacticalShapeAnalyzer:
         snapshots: list[ShapeSnapshot] = []
         ts_min = min(e.get("timestamp", 0) for e in team_events)
         ts_max = max(e.get("timestamp", 0) for e in team_events)
-        duration = max(ts_max - ts_min, 1.0)
+        _ = max(ts_max - ts_min, 1.0)
 
         # Group events into windows
         window_s = 30.0
@@ -258,8 +268,10 @@ class TacticalShapeAnalyzer:
             if shape_history[i] != shape_history[i - 1]:
                 changes += 1
 
-        primary_att = max(shape_counts, key=shape_counts.get) if shape_counts else "unknown"
-        primary_def = max(def_shape_counts, key=def_shape_counts.get) if def_shape_counts else "unknown"
+        primary_att = max(shape_counts, key=shape_counts.get) if shape_counts else "unknown"  # type: ignore[arg-type,return-value]
+        primary_def = (
+            max(def_shape_counts, key=def_shape_counts.get) if def_shape_counts else "unknown"  # type: ignore[arg-type,return-value]
+        )
 
         return ShapeReport(
             team=team,
@@ -283,8 +295,19 @@ class TacticalShapeAnalyzer:
         for ev in window_events:
             tid = ev.get("from_track_id") or ev.get("player_track_id", 0)
             if tid and tid not in seen_track_ids:
-                x = ev.get("start_x") or ev.get("x", 0.5) * PITCH_LENGTH
-                y = ev.get("start_y") or ev.get("y", 0.5) * PITCH_WIDTH
+                # ev.get("x", 0.5) does NOT fall back to 0.5 when "x" is
+                # present with value None -- and get_match_events() always
+                # includes the "x" key (via json_extract on metadata),
+                # None whenever an event has no spatial metadata. That
+                # made `None * PITCH_LENGTH` raise on any such event.
+                x = ev.get("start_x")
+                if x is None:
+                    x_frac = ev.get("x")
+                    x = (x_frac if x_frac is not None else 0.5) * PITCH_LENGTH
+                y = ev.get("start_y")
+                if y is None:
+                    y_frac = ev.get("y")
+                    y = (y_frac if y_frac is not None else 0.5) * PITCH_WIDTH
                 if isinstance(x, float) and isinstance(y, float):
                     positions.append((x, y))
                     seen_track_ids.add(tid)
@@ -305,7 +328,7 @@ class TacticalShapeAnalyzer:
             attacking_shape=attacking_shape,
             defensive_shape=attacking_shape,
             has_diamond_midfield=diamond,
-            attacking_line_count=len(set(p[0] for p in positions)),
+            attacking_line_count=len({p[0] for p in positions}),
             triangle_count=len(triangles),
             is_attacking_phase=True,
         )

@@ -29,10 +29,8 @@ column-name drift between OpenField versions (e.g. ``Speed (m/s)`` vs
 from __future__ import annotations
 
 import csv
-from typing import Optional
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.base import BaseWearableParser
 from kawkab.services.wearables.models import WearableDataPoint, WearableSession
 
@@ -126,15 +124,13 @@ class CatapultCsvParser(BaseWearableParser):
     def _aliases(field: str) -> tuple[str, ...]:
         return _FIELD_ALIASES[field]
 
-    def _resolve_columns(
-        self, lowered: list[str], raw_headers: list[str]
-    ) -> dict[str, Optional[str]]:
+    def _resolve_columns(self, lowered: list[str], raw_headers: list[str]) -> dict[str, str | None]:
         """Return {logical_field: ORIGINAL_header_or_None} for the given file.
 
         ``lowered`` is the lowercase form used for alias matching; ``raw_headers``
         is the original-case form csv.DictReader will use as row keys.
         """
-        col: dict[str, Optional[str]] = {}
+        col: dict[str, str | None] = {}
         for field, aliases in _FIELD_ALIASES.items():
             for alias in aliases:
                 if alias in lowered:
@@ -144,9 +140,7 @@ class CatapultCsvParser(BaseWearableParser):
                 col[field] = None
         return col
 
-    def _row_to_datapoint(
-        self, row: dict, col: dict[str, Optional[str]]
-    ) -> Optional[WearableDataPoint]:
+    def _row_to_datapoint(self, row: dict, col: dict[str, str | None]) -> WearableDataPoint | None:
         ts_raw = self._cell(row, col.get("timestamp"))
         if ts_raw is None:
             return None
@@ -172,7 +166,7 @@ class CatapultCsvParser(BaseWearableParser):
         return dp
 
     @staticmethod
-    def _cell(row: dict, key: Optional[str]):
+    def _cell(row: dict, key: str | None):
         if key is None:
             return None
         return row.get(key)

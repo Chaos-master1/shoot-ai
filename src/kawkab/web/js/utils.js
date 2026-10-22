@@ -21,6 +21,15 @@ window.KawkabUtils = window.KawkabUtils || {};
   window.__kawkab = window.__kawkab || {};
   window.__kawkab.escapeHtml = KU.escapeHtml;
 
+  // Resolve the QWebChannel bridge at call time. app.js assigns both
+  // window.__kawkab.bridge and window.bridge once the channel connects;
+  // window.kawkabBridge is the legacy alias some modules still probe.
+  // Single source of truth so the split modules stop re-implementing it.
+  KU.getBridge = function() {
+    return (window.__kawkab && window.__kawkab.bridge) || window.bridge || window.kawkabBridge || null;
+  };
+  window.__kawkab.getBridge = KU.getBridge;
+
   KU.showToast = function(message, type, duration) {
     type = type || 'info';
     duration = duration || 3000;

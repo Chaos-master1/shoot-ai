@@ -61,9 +61,7 @@ class PluginManager:
             if ep.name == name:
                 plugin_cls: type[KawkabPlugin] = ep.load()
                 if not issubclass(plugin_cls, KawkabPlugin):
-                    raise TypeError(
-                        f"Plugin {name!r} does not subclass KawkabPlugin"
-                    )
+                    raise TypeError(f"Plugin {name!r} does not subclass KawkabPlugin")
                 instance: KawkabPlugin = plugin_cls()
                 await instance.on_plugin_load(app)
                 self._plugins[name] = instance
@@ -123,16 +121,12 @@ class PluginManager:
             except Exception as exc:
                 logger.error("Plugin %r on_frame error: %s", plugin.name, exc)
 
-    async def on_event_detected(
-        self, match_id: int, event: dict[str, Any]
-    ) -> None:
+    async def on_event_detected(self, match_id: int, event: dict[str, Any]) -> None:
         for plugin in self._plugins.values():
             try:
                 await plugin.on_event_detected(match_id, event)
             except Exception as exc:
-                logger.error(
-                    "Plugin %r on_event_detected error: %s", plugin.name, exc
-                )
+                logger.error("Plugin %r on_event_detected error: %s", plugin.name, exc)
 
     def __repr__(self) -> str:
         return f"<PluginManager plugins={list(self._plugins)}>"

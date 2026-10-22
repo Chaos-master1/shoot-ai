@@ -1,4 +1,5 @@
 """Copy the user's video with a simple name."""
+
 import os
 import shutil
 

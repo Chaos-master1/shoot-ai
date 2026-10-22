@@ -20,7 +20,7 @@ import sys
 import types
 from dataclasses import dataclass, field
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -34,6 +34,7 @@ AnalysisService = _as.AnalysisService
 MatchAnalysis = _as.MatchAnalysis
 
 # ── Synthetic data generators ─────────────────────────────────────────
+
 
 def make_event(
     etype: str,
@@ -71,24 +72,62 @@ def synthetic_events() -> list[dict]:
     """Generate 20 events spanning multiple types for end-to-end testing."""
     return [
         # Goals
-        make_event("shot", "home", 300.0, on_target=True, is_goal=True,
-                   metadata={"distance_to_goal_m": 8, "angle_to_goal_deg": 15, "xg": 0.45}),
-        make_event("shot", "away", 1800.0, on_target=True, is_goal=True,
-                   metadata={"distance_to_goal_m": 12, "angle_to_goal_deg": 20, "xg": 0.28}),
+        make_event(
+            "shot",
+            "home",
+            300.0,
+            on_target=True,
+            is_goal=True,
+            metadata={"distance_to_goal_m": 8, "angle_to_goal_deg": 15, "xg": 0.45},
+        ),
+        make_event(
+            "shot",
+            "away",
+            1800.0,
+            on_target=True,
+            is_goal=True,
+            metadata={"distance_to_goal_m": 12, "angle_to_goal_deg": 20, "xg": 0.28},
+        ),
         # Shots
-        make_event("shot", "home", 600.0,
-                   metadata={"distance_to_goal_m": 18, "angle_to_goal_deg": 30}),
-        make_event("shot", "away", 2400.0,
-                   metadata={"distance_to_goal_m": 22, "angle_to_goal_deg": 35}),
+        make_event(
+            "shot", "home", 600.0, metadata={"distance_to_goal_m": 18, "angle_to_goal_deg": 30}
+        ),
+        make_event(
+            "shot", "away", 2400.0, metadata={"distance_to_goal_m": 22, "angle_to_goal_deg": 35}
+        ),
         # Passes
-        make_event("pass", "home", 100.0,
-                   metadata={"start_x_pct": 0.3, "end_x_pct": 0.38}, from_track_id=1, to_track_id=2),
-        make_event("pass", "away", 400.0,
-                   metadata={"start_x_pct": 0.2, "end_x_pct": 0.45}, from_track_id=11, to_track_id=12),
-        make_event("pass", "home", 700.0,
-                   metadata={"start_x_pct": 0.1, "end_x_pct": 0.75}, from_track_id=3, to_track_id=4),
-        make_event("pass", "away", 900.0,
-                   metadata={"start_x_pct": 0.15, "end_x_pct": 0.65}, from_track_id=13, to_track_id=14),
+        make_event(
+            "pass",
+            "home",
+            100.0,
+            metadata={"start_x_pct": 0.3, "end_x_pct": 0.38},
+            from_track_id=1,
+            to_track_id=2,
+        ),
+        make_event(
+            "pass",
+            "away",
+            400.0,
+            metadata={"start_x_pct": 0.2, "end_x_pct": 0.45},
+            from_track_id=11,
+            to_track_id=12,
+        ),
+        make_event(
+            "pass",
+            "home",
+            700.0,
+            metadata={"start_x_pct": 0.1, "end_x_pct": 0.75},
+            from_track_id=3,
+            to_track_id=4,
+        ),
+        make_event(
+            "pass",
+            "away",
+            900.0,
+            metadata={"start_x_pct": 0.15, "end_x_pct": 0.65},
+            from_track_id=13,
+            to_track_id=14,
+        ),
         # Tackles
         make_event("tackle", "home", 500.0, player_track_id=5),
         make_event("tackle", "away", 1500.0, player_track_id=15),
@@ -105,15 +144,27 @@ def synthetic_events() -> list[dict]:
         make_event("corner_kick", "home", 1400.0, metadata={"x": 100, "y": 5}),
         make_event("corner_kick", "away", 2700.0, metadata={"x": 0, "y": 5}),
         # Carries
-        make_event("carry", "home", 1700.0,
-                   metadata={"start_x_pct": 0.3, "end_x_pct": 0.55}, player_track_id=8),
-        make_event("carry", "away", 3100.0,
-                   metadata={"start_x_pct": 0.2, "end_x_pct": 0.45}, player_track_id=18),
+        make_event(
+            "carry",
+            "home",
+            1700.0,
+            metadata={"start_x_pct": 0.3, "end_x_pct": 0.55},
+            player_track_id=8,
+        ),
+        make_event(
+            "carry",
+            "away",
+            3100.0,
+            metadata={"start_x_pct": 0.2, "end_x_pct": 0.45},
+            player_track_id=18,
+        ),
     ]
 
 
 def build_minimal_track_data(
-    n_frames: int = 30, fps: float = 30.0, n_players: int = 22,
+    n_frames: int = 30,
+    fps: float = 30.0,
+    n_players: int = 22,
 ) -> object:
     """Build minimal MatchTrackData stub with synthetic detections."""
     cv_mod = sys.modules.get("kawkab.services.cv_service")
@@ -134,28 +185,48 @@ def build_minimal_track_data(
         ts = fno / fps
         dets = []
         # Ball
-        dets.append(Detection(
-            bbox=(640 - 5, 360 - 5, 640 + 5, 360 + 5),
-            confidence=0.95, class_id=32, class_name="sports ball", track_id=999,
-        ))
+        dets.append(
+            Detection(
+                bbox=(640 - 5, 360 - 5, 640 + 5, 360 + 5),
+                confidence=0.95,
+                class_id=32,
+                class_name="sports ball",
+                track_id=999,
+            )
+        )
         for j in range(n_players // 2):
             px = 200 + j * 60 + 10 * math.sin(ts + j)
             py = 50 + j * 55 + 10 * math.cos(ts * 0.5 + j)
-            dets.append(Detection(
-                bbox=(px - 15, py - 15, px + 15, py + 15),
-                confidence=0.9, class_id=0, class_name="person", track_id=j + 1,
-            ))
+            dets.append(
+                Detection(
+                    bbox=(px - 15, py - 15, px + 15, py + 15),
+                    confidence=0.9,
+                    class_id=0,
+                    class_name="person",
+                    track_id=j + 1,
+                )
+            )
         for j in range(n_players // 2):
             px = 800 + j * 40 + 10 * math.sin(ts + j * 0.7)
             py = 50 + j * 55 + 10 * math.cos(ts * 0.4 + j * 0.5)
-            dets.append(Detection(
-                bbox=(px - 15, py - 15, px + 15, py + 15),
-                confidence=0.9, class_id=0, class_name="person", track_id=100 + j,
-            ))
-        frames.append(FrameDetections(
-            frame_number=fno, timestamp=ts, detections=dets,
-            image_width=1280, image_height=720,
-        ))
+            dets.append(
+                Detection(
+                    bbox=(px - 15, py - 15, px + 15, py + 15),
+                    confidence=0.9,
+                    class_id=0,
+                    class_name="person",
+                    track_id=100 + j,
+                )
+            )
+        frames.append(
+            FrameDetections(
+                frame_number=fno,
+                timestamp=ts,
+                detections=dets,
+                image_width=1280,
+                image_height=720,
+            )
+        )
 
     track_registry = {}
     for tid in list(player_teams.keys())[:11]:
@@ -164,10 +235,15 @@ def build_minimal_track_data(
         track_registry[tid] = {"first_pixel_x": 800.0}
 
     return MatchTrackData(
-        match_id=1, fps=fps, total_frames=n_frames,
-        duration_seconds=n_frames / fps, frames=frames,
-        track_registry=track_registry, player_teams=player_teams,
-        tracking_metrics={}, match_type="test",
+        match_id=1,
+        fps=fps,
+        total_frames=n_frames,
+        duration_seconds=n_frames / fps,
+        frames=frames,
+        track_registry=track_registry,
+        player_teams=player_teams,
+        tracking_metrics={},
+        match_type="test",
     )
 
 
@@ -176,7 +252,7 @@ def install_cv_stub() -> None:
     svc_mod = sys.modules.get("kawkab.services.cv_service")
     if svc_mod is not None and hasattr(svc_mod, "MatchTrackData"):
         return
-    from conftest import load_service_module as _lsm
+
     _mod = types.ModuleType("kawkab.services.cv_service")
 
     @dataclass
@@ -206,12 +282,18 @@ def install_cv_stub() -> None:
         player_teams: dict[int, str] = field(default_factory=dict)
         tracking_metrics: dict = field(default_factory=dict)
         match_type: str = "unknown"
+
         def swap_teams(self) -> None:
-            self.player_teams = {tid: ("away" if t == "home" else "home") for tid, t in self.player_teams.items()}
+            self.player_teams = {
+                tid: ("away" if t == "home" else "home") for tid, t in self.player_teams.items()
+            }
 
     class CVService:
-        async def detect_frame(self, *a, **k): return FrameDetections()
-        async def process_video(self, *a, **k): return MatchTrackData()
+        async def detect_frame(self, *a, **k):
+            return FrameDetections()
+
+        async def process_video(self, *a, **k):
+            return MatchTrackData()
 
     _mod.Detection = Detection
     _mod.FrameDetections = FrameDetections
@@ -220,12 +302,30 @@ def install_cv_stub() -> None:
     sys.modules["kawkab.services.cv_service"] = _mod
 
 
-install_cv_stub()
+# The stub is installed at TEST TIME (module-scoped autouse fixture), not at
+# collection time, and the teardown always REMOVES it rather than reinstating
+# whatever was in sys.modules at collection. Collection happens for all files
+# before any test runs, so a later-collected file can snapshot an EARLIER
+# file's stub as its "original" and reinstate it at teardown -- permanently
+# poisoning sys.modules for every subsequent module (observed as
+# AttributeError: CVService has no _interpolate_skip_frames in
+# test_accuracy_audit_fixes). Popping forces any later importer to re-import
+# the real module.
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _cv_service_stub():
+    install_cv_stub()
+    yield
+    sys.modules.pop("kawkab.services.cv_service", None)
+
+
 _as_ref = load_service_module("as_e2e_pipeline_refresh", "analysis_service.py")
 AnalysisService = _as_ref.AnalysisService
 
 
 # ── 1. Pipeline execution flow ─────────────────────────────────────
+
 
 class TestE2ePipelineExecution:
     """Verify the full analysis pipeline produces structured results."""
@@ -259,7 +359,7 @@ class TestE2ePipelineExecution:
     async def test_analyze_match_populates_players(self, svc, track_data):
         result = await svc.analyze_match(track_data, match_id=1)
         assert len(result.players) >= 1
-        for pid, pstats in result.players.items():
+        for _pid, pstats in result.players.items():
             assert pstats.track_id is not None
             assert pstats.distance_covered_m >= 0
             assert pstats.passes_attempted >= 0
@@ -286,6 +386,7 @@ class TestE2ePipelineExecution:
 
     def test_pitch_control_module(self):
         from kawkab.core.pitch_control import VoronoiPitchControl
+
         pc = VoronoiPitchControl()
         home_pos = [(20.0, 20.0), (30.0, 30.0), (40.0, 20.0)]
         away_pos = [(70.0, 40.0), (80.0, 30.0), (90.0, 50.0)]
@@ -295,22 +396,37 @@ class TestE2ePipelineExecution:
 
     def test_formation_analysis_module(self):
         from kawkab.core.formation_analysis import FormationAnalyzer
+
         fa = FormationAnalyzer()
-        positions = [(10, 10), (20, 15), (30, 20), (40, 25), (50, 30),
-                     (60, 35), (70, 40), (80, 45), (90, 50), (100, 55)]
+        positions = [
+            (10, 10),
+            (20, 15),
+            (30, 20),
+            (40, 25),
+            (50, 30),
+            (60, 35),
+            (70, 40),
+            (80, 45),
+            (90, 50),
+            (100, 55),
+        ]
         formation = fa._classify_formation(positions)
         assert isinstance(formation, str)
 
     def test_vaep_module(self):
         from kawkab.core.vaep import compute_vaep
+
         events = synthetic_events()
         result = compute_vaep(events)
         assert isinstance(result, list)
         if result:
-            assert "value" in result[0] or "vaep_value" in result[0] or "offensive_value" in result[0]
+            assert (
+                "value" in result[0] or "vaep_value" in result[0] or "offensive_value" in result[0]
+            )
 
     def test_win_probability_module(self):
         from kawkab.core.win_probability import compute_win_probability
+
         events = synthetic_events()
         result = compute_win_probability(events)
         assert result.starting_home_win > 0
@@ -318,6 +434,7 @@ class TestE2ePipelineExecution:
 
     def test_momentum_module(self):
         from kawkab.core.momentum import compute_momentum_index
+
         events = synthetic_events()
         result = compute_momentum_index(events)
         assert result.home_momentum_pct >= 0
@@ -325,6 +442,7 @@ class TestE2ePipelineExecution:
 
 
 # ── 2. Determinism ──────────────────────────────────────────────────
+
 
 class TestE2eDeterminism:
     """Verify same input → same output."""
@@ -351,6 +469,7 @@ class TestE2eDeterminism:
 
 # ── 3. Storage service mock integration ──────────────────────────────
 
+
 class TestE2eStorageIntegration:
     """Verify events can be saved and retrieved through storage service."""
 
@@ -370,6 +489,7 @@ class TestE2eStorageIntegration:
 
 
 # ── 4. Data export service integration ──────────────────────────────
+
 
 class TestE2eDataExport:
     """Verify data export service produces well-formed output."""
@@ -415,6 +535,7 @@ class TestE2eDataExport:
         """Verify CSV structure matches expected columns."""
         import csv
         import io
+
         events_csv = io.StringIO()
         writer = csv.writer(events_csv)
         writer.writerow(["event_id", "event_type", "timestamp", "team", "completed"])
@@ -429,6 +550,7 @@ class TestE2eDataExport:
 
 
 # ── 5. Bridge layer integration ─────────────────────────────────────
+
 
 class TestE2eBridgeLayer:
     """Verify bridge slot → handler → service → result chain."""
@@ -461,6 +583,7 @@ class TestE2eBridgeLayer:
 
 # ── 6. Empty/edge-case handling ─────────────────────────────────────
 
+
 class TestE2eEdgeCases:
     """Verify the pipeline handles edge cases gracefully."""
 
@@ -481,9 +604,17 @@ class TestE2eEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_track_data(self, svc):
         cv_mod = sys.modules["kawkab.services.cv_service"]
-        empty = cv_mod.MatchTrackData(match_id=1, fps=30, total_frames=0, duration_seconds=0,
-                                       frames=[], track_registry={}, player_teams={},
-                                       tracking_metrics={}, match_type="test")
+        empty = cv_mod.MatchTrackData(
+            match_id=1,
+            fps=30,
+            total_frames=0,
+            duration_seconds=0,
+            frames=[],
+            track_registry={},
+            player_teams={},
+            tracking_metrics={},
+            match_type="test",
+        )
         result = await svc.analyze_match(empty, match_id=0)
         assert result.match_id == 0
         assert result.duration_seconds == 0
@@ -491,9 +622,17 @@ class TestE2eEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_track_data_no_teams(self, svc):
         cv_mod = sys.modules["kawkab.services.cv_service"]
-        mt = cv_mod.MatchTrackData(match_id=1, fps=30, total_frames=0, duration_seconds=0,
-                                    frames=[], track_registry={}, player_teams={},
-                                    tracking_metrics={}, match_type="test")
+        mt = cv_mod.MatchTrackData(
+            match_id=1,
+            fps=30,
+            total_frames=0,
+            duration_seconds=0,
+            frames=[],
+            track_registry={},
+            player_teams={},
+            tracking_metrics={},
+            match_type="test",
+        )
         result = await svc.analyze_match(mt, match_id=0)
         assert result is not None
         assert result.players == {}

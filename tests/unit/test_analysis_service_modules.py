@@ -17,10 +17,10 @@ Coverage: basic functionality, edge cases (empty data, missing keys), bounds.
 from __future__ import annotations
 
 import math
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
 import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -33,12 +33,12 @@ AnalysisService = _as_mod.AnalysisService
 MatchAnalysis = _as_mod.MatchAnalysis
 PlayerStats = _as_mod.PlayerStats
 TeamStats = _as_mod.TeamStats
-from kawkab.core.events import PassEvent, ShotEvent, PassType, EventType
-
+from kawkab.core.events import PassEvent, PassType, ShotEvent
 
 # ============================================================
 # Fixtures
 # ============================================================
+
 
 @pytest.fixture
 def svc():
@@ -48,20 +48,41 @@ def svc():
 @pytest.fixture
 def mock_pass_events():
     return [
-        {"type": "pass", "team": "home", "from_track_id": 1, "to_track_id": 2,
-         "completed": True, "timestamp": 10.0,
-         "metadata": {"start_x_pct": 0.2, "start_y_pct": 0.4,
-                      "end_x_pct": 0.6, "end_y_pct": 0.5}},
-        {"type": "pass", "team": "home", "from_track_id": 2, "to_track_id": 3,
-         "completed": True, "timestamp": 12.0,
-         "metadata": {"start_x_pct": 0.6, "start_y_pct": 0.5,
-                      "end_x_pct": 0.8, "end_y_pct": 0.3}},
+        {
+            "type": "pass",
+            "team": "home",
+            "from_track_id": 1,
+            "to_track_id": 2,
+            "completed": True,
+            "timestamp": 10.0,
+            "metadata": {
+                "start_x_pct": 0.2,
+                "start_y_pct": 0.4,
+                "end_x_pct": 0.6,
+                "end_y_pct": 0.5,
+            },
+        },
+        {
+            "type": "pass",
+            "team": "home",
+            "from_track_id": 2,
+            "to_track_id": 3,
+            "completed": True,
+            "timestamp": 12.0,
+            "metadata": {
+                "start_x_pct": 0.6,
+                "start_y_pct": 0.5,
+                "end_x_pct": 0.8,
+                "end_y_pct": 0.3,
+            },
+        },
     ]
 
 
 # ====================================================================
 # XgXtMixin (xg_xt.py)
 # ====================================================================
+
 
 class TestXgXtAnalysis:
     """compute_xg_simple / compute_xt_simple — pure functions, no deps."""
@@ -71,73 +92,156 @@ class TestXgXtAnalysis:
         assert r["home"] == 0.0 and r["away"] == 0.0 and r["shot_details"] == []
 
     def test_xg_single_home_shot(self, svc):
-        r = svc.compute_xg_simple([
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 30}},
-        ])
+        r = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 30},
+                },
+            ]
+        )
         assert r["home"] > 0 and r["away"] == 0 and len(r["shot_details"]) == 1
 
     def test_xg_away_shot(self, svc):
-        r = svc.compute_xg_simple([
-            {"type": "shot", "team": "away", "metadata": {"distance_to_goal_m": 18, "angle_to_goal_deg": 25}},
-        ])
+        r = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "away",
+                    "metadata": {"distance_to_goal_m": 18, "angle_to_goal_deg": 25},
+                },
+            ]
+        )
         assert r["home"] == 0 and r["away"] > 0
 
     def test_xg_non_shot_ignored(self, svc):
-        r = svc.compute_xg_simple([{"type": "pass", "team": "home"}, {"type": "foul", "team": "away"}])
+        r = svc.compute_xg_simple(
+            [{"type": "pass", "team": "home"}, {"type": "foul", "team": "away"}]
+        )
         assert r["home"] == 0 and r["away"] == 0 and r["shot_details"] == []
 
     def test_xg_distance_factor(self, svc):
-        close = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 6, "angle_to_goal_deg": 30}}])
-        far = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 30, "angle_to_goal_deg": 30}}])
+        close = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 6, "angle_to_goal_deg": 30},
+                }
+            ]
+        )
+        far = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 30, "angle_to_goal_deg": 30},
+                }
+            ]
+        )
         assert close["home"] > far["home"]
 
     def test_xg_angle_factor(self, svc):
-        center = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 0}}])
-        wide = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 75}}])
+        center = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 0},
+                }
+            ]
+        )
+        wide = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 75},
+                }
+            ]
+        )
         assert center["home"] > wide["home"]
 
     def test_xg_bounds(self, svc):
-        r = svc.compute_xg_simple([
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 1, "angle_to_goal_deg": 0}},
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 80, "angle_to_goal_deg": 89}},
-        ])
+        r = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 1, "angle_to_goal_deg": 0},
+                },
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 80, "angle_to_goal_deg": 89},
+                },
+            ]
+        )
         for s in r["shot_details"]:
             assert 0.0 <= s["xg"] <= 1.0
 
     def test_xg_missing_metadata_defaults(self, svc):
+        # Honest-absent: a shot with no spatial metadata contributes xg 0
+        # and is marked xg_available=False — never a fabricated estimate.
         r = svc.compute_xg_simple([{"type": "shot", "team": "home"}])
-        assert 0 < r["home"] < 1  # defaults: d=18, angle=30
+        assert r["home"] == 0.0
+        assert r["shot_details"][0]["xg_available"] is False
 
     def test_xt_empty_events(self, svc):
         r = svc.compute_xt_simple([])
         assert r["home"] == 0.0 and r["away"] == 0.0
 
     def test_xt_forward_pass(self, svc):
-        r = svc.compute_xt_simple([
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7}},
-        ])
+        r = svc.compute_xt_simple(
+            [
+                {
+                    "type": "pass",
+                    "team": "home",
+                    "completed": True,
+                    "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7},
+                },
+            ]
+        )
         assert r["home"] > 0 and r["away"] == 0
 
     def test_xt_uncompleted_pass(self, svc):
-        r = svc.compute_xt_simple([
-            {"type": "pass", "team": "home", "completed": False,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7}},
-        ])
+        r = svc.compute_xt_simple(
+            [
+                {
+                    "type": "pass",
+                    "team": "home",
+                    "completed": False,
+                    "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7},
+                },
+            ]
+        )
         assert r["home"] == 0
 
     def test_xt_backward_pass(self, svc):
-        r = svc.compute_xt_simple([
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.7, "end_x_pct": 0.3}},
-        ])
+        r = svc.compute_xt_simple(
+            [
+                {
+                    "type": "pass",
+                    "team": "home",
+                    "completed": True,
+                    "metadata": {"start_x_pct": 0.7, "end_x_pct": 0.3},
+                },
+            ]
+        )
         assert r["home"] == 0
 
     def test_xt_away_team(self, svc):
-        r = svc.compute_xt_simple([
-            {"type": "pass", "team": "away", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7}},
-        ])
+        r = svc.compute_xt_simple(
+            [
+                {
+                    "type": "pass",
+                    "team": "away",
+                    "completed": True,
+                    "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7},
+                },
+            ]
+        )
         assert r["away"] > 0 and r["home"] == 0
 
     def test_xt_non_pass_ignored(self, svc):
@@ -149,15 +253,31 @@ class TestXgXtAnalysis:
 # PassingMixin (passing.py)
 # ====================================================================
 
+
 class TestPassingAnalysis:
     """Pass network, line-breaking passes, possession attribution."""
 
     def test_pass_network_basic(self, svc, mock_pass_events):
+        # _compute_pass_network delegates to core.pass_network.PassNetwork,
+        # whose per-edge shape is {source,target,attempted,completed,
+        # completion_pct} -- a superset of the old bare {source,target,weight}.
         r = svc._compute_pass_network(mock_pass_events)
         assert len(r["nodes"]) == 3
         assert len(r["edges"]) == 2
-        assert {"source": 1, "target": 2, "weight": 1} in r["edges"]
-        assert {"source": 2, "target": 3, "weight": 1} in r["edges"]
+        assert {
+            "source": 1,
+            "target": 2,
+            "attempted": 1,
+            "completed": 1,
+            "completion_pct": 100.0,
+        } in r["edges"]
+        assert {
+            "source": 2,
+            "target": 3,
+            "attempted": 1,
+            "completed": 1,
+            "completion_pct": 100.0,
+        } in r["edges"]
 
     def test_pass_network_empty(self, svc):
         r = svc._compute_pass_network([])
@@ -177,8 +297,12 @@ class TestPassingAnalysis:
 
     def test_line_breaking_passes(self, svc):
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9},
+            },
         ]
         breaks = svc.detect_line_breaking_passes(events, n_lines=3)
         assert len(breaks) == 1
@@ -186,31 +310,47 @@ class TestPassingAnalysis:
 
     def test_line_breaking_none(self, svc):
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.2}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.2},
+            },
         ]
         breaks = svc.detect_line_breaking_passes(events, n_lines=3)
         assert breaks == []
 
     def test_line_breaking_backward(self, svc):
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.7, "end_x_pct": 0.3}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.7, "end_x_pct": 0.3},
+            },
         ]
         breaks = svc.detect_line_breaking_passes(events, n_lines=3)
         assert breaks == []
 
     def test_line_breaking_incomplete_ignored(self, svc):
         events = [
-            {"type": "pass", "team": "home", "completed": False,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": False,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9},
+            },
         ]
         assert svc.detect_line_breaking_passes(events, n_lines=3) == []
 
     def test_line_breaking_crosses_two_lines(self, svc):
         events = [
-            {"type": "pass", "team": "home", "completed": True,
-             "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.6}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.6},
+            },
         ]
         breaks = svc.detect_line_breaking_passes(events, n_lines=3)
         assert len(breaks) == 1
@@ -253,6 +393,7 @@ class TestPassingAnalysis:
 # AnalysisServiceCore (core.py)
 # ====================================================================
 
+
 class TestCoreAnalysis:
     """Event building, pass classification, progressive passes, breakdown, possession, confidence, team stats."""
 
@@ -270,9 +411,20 @@ class TestCoreAnalysis:
     # -- _build_typed_pass --
 
     def test_build_pass_basic(self, svc):
-        ev = {"timestamp": 10.5, "team": "home", "from_track_id": 1, "to_track_id": 2,
-              "completed": True, "confidence": 0.9,
-              "metadata": {"start_x_pct": 0.3, "start_y_pct": 0.4, "end_x_pct": 0.7, "end_y_pct": 0.5}}
+        ev = {
+            "timestamp": 10.5,
+            "team": "home",
+            "from_track_id": 1,
+            "to_track_id": 2,
+            "completed": True,
+            "confidence": 0.9,
+            "metadata": {
+                "start_x_pct": 0.3,
+                "start_y_pct": 0.4,
+                "end_x_pct": 0.7,
+                "end_y_pct": 0.5,
+            },
+        }
         pe = svc._build_typed_pass(ev)
         assert pe.timestamp == 10.5 and pe.team == "home" and pe.track_id == 1
         assert pe.to_track_id == 2 and pe.completed is True
@@ -288,9 +440,14 @@ class TestCoreAnalysis:
     # -- _build_typed_shot --
 
     def test_build_shot_basic(self, svc):
-        ev = {"timestamp": 20.0, "team": "away", "track_id": 3, "on_target": True,
-              "confidence": 0.85,
-              "metadata": {"distance_to_goal_m": 15.0, "angle_to_goal_deg": 25.0, "xg": 0.12}}
+        ev = {
+            "timestamp": 20.0,
+            "team": "away",
+            "track_id": 3,
+            "on_target": True,
+            "confidence": 0.85,
+            "metadata": {"distance_to_goal_m": 15.0, "angle_to_goal_deg": 25.0, "xg": 0.12},
+        }
         se = svc._build_typed_shot(ev)
         assert se.timestamp == 20.0 and se.team == "away"
         assert se.track_id == 3 and se.on_target is True
@@ -299,13 +456,19 @@ class TestCoreAnalysis:
     def test_build_shot_defaults(self, svc):
         se = svc._build_typed_shot({})
         assert se.timestamp == 0 and se.team == "unknown"
-        assert se.on_target is False and se.distance_m == 18.0
-        assert se.angle_deg == 30.0 and se.xg == 0.0
+        # Honest-absent: no spatial metadata → None, not the old
+        # fabricated distance=18/angle=30 defaults that made the xG model
+        # produce plausible-looking numbers for unknowable shots.
+        assert se.on_target is False and se.distance_m is None
+        assert se.angle_deg is None and se.xg == 0.0
 
     # -- _pixel_dist_to_meters --
 
     def test_pixel_dist_no_homography(self, svc):
-        assert svc._pixel_dist_to_meters(0, 0, 3, 4, None) == 5.0
+        # Without calibration, pixels are approximated to meters with
+        # CARRY_PIXEL_TO_METER_RATIO (0.015), NOT returned raw -- raw pixel
+        # distances fed the 2m "is_pressed" threshold as if they were meters.
+        assert svc._pixel_dist_to_meters(0, 0, 3, 4, None) == pytest.approx(5.0 * 0.015)
 
     def test_pixel_dist_with_homography(self, svc):
         h = MagicMock()
@@ -318,7 +481,10 @@ class TestCoreAnalysis:
         h = MagicMock()
         h.pixel_to_pitch.side_effect = ValueError("bad")
         d = svc._pixel_dist_to_meters(0, 0, 3, 4, h)
-        assert d == 5.0
+        # Conversion failed mid-match: fall back to the pixel->meter
+        # approximation, not raw pixels (a "nearest defender distance" of
+        # 5 "meters" for a 5-pixel gap made the is_pressed check useless).
+        assert d == pytest.approx(5.0 * 0.015)
 
     # -- _classify_pass_types --
 
@@ -333,8 +499,16 @@ class TestCoreAnalysis:
         assert pe.pass_type == PassType.BACK_PASS
 
     def test_classify_cross(self, svc):
-        pe = PassEvent(timestamp=0, team="home", track_id=1, length_m=10.0,
-                       start_x=0.6, start_y=0.1, end_x=0.8, end_y=0.1)
+        pe = PassEvent(
+            timestamp=0,
+            team="home",
+            track_id=1,
+            length_m=10.0,
+            start_x=0.6,
+            start_y=0.1,
+            end_x=0.8,
+            end_y=0.1,
+        )
         svc._classify_pass_types([pe])
         assert pe.pass_type == PassType.CROSS
         assert pe.is_cross is True
@@ -356,8 +530,16 @@ class TestCoreAnalysis:
         assert pe.pass_type == PassType.STANDARD
 
     def test_classify_switch(self, svc):
-        pe = PassEvent(timestamp=0, team="home", track_id=1, length_m=15.0,
-                       start_x=0.3, start_y=0.2, end_x=0.4, end_y=0.8)
+        pe = PassEvent(
+            timestamp=0,
+            team="home",
+            track_id=1,
+            length_m=15.0,
+            start_x=0.3,
+            start_y=0.2,
+            end_x=0.4,
+            end_y=0.8,
+        )
         svc._classify_pass_types([pe])
         assert pe.pass_type == PassType.SWITCH
 
@@ -370,9 +552,33 @@ class TestCoreAnalysis:
 
     def test_progressive_passes(self, svc):
         events = [
-            PassEvent(timestamp=0, team="home", track_id=1, completed=True, start_x=0.3, end_x=0.5, length_m=15.0),
-            PassEvent(timestamp=1, team="home", track_id=2, completed=True, start_x=0.5, end_x=0.52, length_m=5.0),
-            PassEvent(timestamp=2, team="home", track_id=1, completed=False, start_x=0.3, end_x=0.6, length_m=20.0),
+            PassEvent(
+                timestamp=0,
+                team="home",
+                track_id=1,
+                completed=True,
+                start_x=0.3,
+                end_x=0.5,
+                length_m=15.0,
+            ),
+            PassEvent(
+                timestamp=1,
+                team="home",
+                track_id=2,
+                completed=True,
+                start_x=0.5,
+                end_x=0.52,
+                length_m=5.0,
+            ),
+            PassEvent(
+                timestamp=2,
+                team="home",
+                track_id=1,
+                completed=False,
+                start_x=0.3,
+                end_x=0.6,
+                length_m=20.0,
+            ),
         ]
         r = svc._find_progressive_passes(events)
         assert len(r) == 1
@@ -384,10 +590,31 @@ class TestCoreAnalysis:
 
     def test_pass_type_breakdown(self, svc):
         events = [
-            PassEvent(timestamp=0, team="home", track_id=1, completed=True, pass_type=PassType.STANDARD),
-            PassEvent(timestamp=1, team="home", track_id=2, completed=True, pass_type=PassType.THROUGH_BALL, is_progressive=True, is_key_pass=True),
-            PassEvent(timestamp=2, team="home", track_id=3, completed=False, pass_type=PassType.LONG_BALL),
-            PassEvent(timestamp=3, team="home", track_id=1, completed=True, pass_type=PassType.CROSS, is_progressive=True, is_key_pass=True, is_assist=True),
+            PassEvent(
+                timestamp=0, team="home", track_id=1, completed=True, pass_type=PassType.STANDARD
+            ),
+            PassEvent(
+                timestamp=1,
+                team="home",
+                track_id=2,
+                completed=True,
+                pass_type=PassType.THROUGH_BALL,
+                is_progressive=True,
+                is_key_pass=True,
+            ),
+            PassEvent(
+                timestamp=2, team="home", track_id=3, completed=False, pass_type=PassType.LONG_BALL
+            ),
+            PassEvent(
+                timestamp=3,
+                team="home",
+                track_id=1,
+                completed=True,
+                pass_type=PassType.CROSS,
+                is_progressive=True,
+                is_key_pass=True,
+                is_assist=True,
+            ),
         ]
         r = svc._compute_pass_type_breakdown(events)
         assert r["total"] == 3
@@ -406,7 +633,9 @@ class TestCoreAnalysis:
         td = MagicMock()
         td.total_frames = 10
         td.frames = [
-            MagicMock(detections=[MagicMock(class_name="person"), MagicMock(class_name="sports ball")])
+            MagicMock(
+                detections=[MagicMock(class_name="person"), MagicMock(class_name="sports ball")]
+            )
             for _ in range(10)
         ]
         c = svc._compute_confidence(td, [])
@@ -430,8 +659,24 @@ class TestCoreAnalysis:
 
     def test_team_stats(self, svc):
         players = {
-            1: PlayerStats(track_id=1, team="home", distance_covered_m=5000, passes_completed=20, passes_attempted=25, shots=3, tackles=2),
-            2: PlayerStats(track_id=2, team="away", distance_covered_m=4800, passes_completed=18, passes_attempted=22, shots=4, tackles=1),
+            1: PlayerStats(
+                track_id=1,
+                team="home",
+                distance_covered_m=5000,
+                passes_completed=20,
+                passes_attempted=25,
+                shots=3,
+                tackles=2,
+            ),
+            2: PlayerStats(
+                track_id=2,
+                team="away",
+                distance_covered_m=4800,
+                passes_completed=18,
+                passes_attempted=22,
+                shots=4,
+                tackles=1,
+            ),
         }
         r = svc._compute_team_stats(players, [], MagicMock())
         assert r["home"].distance_covered_km == 5.0
@@ -450,24 +695,31 @@ class TestCoreAnalysis:
         td.player_teams = {1: "home", 2: "away"}
         for i in range(5):
             ball = MagicMock(class_name="sports ball", bbox=(100, 200, 110, 210))
-            player = MagicMock(class_name="person", track_id=1 if i < 3 else 2, bbox=(105, 200, 125, 240))
+            player = MagicMock(
+                class_name="person", track_id=1 if i < 3 else 2, bbox=(105, 200, 125, 240)
+            )
             td.frames.append(MagicMock(detections=[ball, player]))
         r = svc._compute_possession(td)
         assert 59 < r["home"] < 61  # 3/5 = 60%
 
     def test_possession_no_ball(self, svc):
         td = MagicMock()
-        td.frames = [MagicMock(detections=[MagicMock(class_name="person", track_id=1, bbox=(0, 0, 10, 20))])]
+        td.frames = [
+            MagicMock(detections=[MagicMock(class_name="person", track_id=1, bbox=(0, 0, 10, 20))])
+        ]
         td.player_teams = {}
         r = svc._compute_possession(td)
-        assert r["home"] == 50.0 and r["away"] == 50.0
+        # No ball detection => no possession evidence => honest zeros
+        # (the old behavior fabricated a 50/50 split from nothing).
+        assert r["home"] == 0.0 and r["away"] == 0.0
 
     def test_possession_empty_frames(self, svc):
         td = MagicMock()
         td.frames = []
         td.player_teams = {}
         r = svc._compute_possession(td)
-        assert r["home"] == 50.0 and r["away"] == 50.0
+        # No frames => no possession evidence => honest zeros.
+        assert r["home"] == 0.0 and r["away"] == 0.0
 
     def test_possession_no_player_teams(self, svc):
         td = MagicMock()
@@ -479,8 +731,10 @@ class TestCoreAnalysis:
             player = MagicMock(class_name="person", track_id=pid, bbox=(105, 200, 125, 240))
             td.frames.append(MagicMock(detections=[ball, player]))
         r = svc._compute_possession(td)
-        # even ids → home, odd ids → away
-        assert r["home"] == 50.0 and r["away"] == 50.0
+        # No team assignment exists: track-ID parity has no relation to team
+        # membership, so possession must NOT be fabricated from it -- honest
+        # zeros beat a made-up 50/50.
+        assert r["home"] == 0.0 and r["away"] == 0.0
 
     # -- PlayerStats helper --
 
@@ -504,6 +758,7 @@ class TestCoreAnalysis:
 # TrackingMixin (tracking.py)
 # ====================================================================
 
+
 class TestTrackingAnalysis:
     """Player ratings, PPDA, formation detection, formation timeline."""
 
@@ -514,7 +769,15 @@ class TestTrackingAnalysis:
         assert r == {}
 
     def test_player_ratings_basic(self, svc):
-        players = {1: PlayerStats(track_id=1, team="home", distance_covered_m=5000, max_speed_kmh=30, positions=[(0, 50, 34)])}
+        players = {
+            1: PlayerStats(
+                track_id=1,
+                team="home",
+                distance_covered_m=5000,
+                max_speed_kmh=30,
+                positions=[(0, 50, 34)],
+            )
+        }
         td = MagicMock()
         td.duration_seconds = 3600
         events = [PassEvent(timestamp=0, team="home", track_id=1, completed=True)]
@@ -571,7 +834,10 @@ class TestTrackingAnalysis:
         td.duration_seconds = 90
         td.frames = []
         for i in range(5):
-            dets = [MagicMock(class_name="person", track_id=tid, bbox=(i * 50, 200, i * 50 + 20, 240)) for tid in [1, 2, 3, 4]]
+            dets = [
+                MagicMock(class_name="person", track_id=tid, bbox=(i * 50, 200, i * 50 + 20, 240))
+                for tid in [1, 2, 3, 4]
+            ]
             td.frames.append(MagicMock(detections=dets, timestamp=float(i)))
         r = svc.detect_formation(td, team="home")
         assert r["formation"] == "unknown"

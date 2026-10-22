@@ -31,7 +31,6 @@ from kawkab.services.wearables import (
     detect_parser,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixture writers — synthesize the kind of files each vendor produces.
 # ---------------------------------------------------------------------------
@@ -86,11 +85,9 @@ def _write_gpx(path: Path, n: int = 50) -> None:
         'xmlns:speed="http://www.garmin.com/xmlschemas/SpeedExtension/v1">',
         "  <trk><trkseg>",
     ]
-    base_ts = 1751700000  # arbitrary epoch (unused; kept for reference)
+    _ = 1751700000  # arbitrary epoch (unused; kept for reference)
     for i in range(n):
-        lines.append(
-            f'    <trkpt lat="{53.430 + i * 1e-5:.6f}" lon="{-2.960 + i * 1e-5:.6f}">'
-        )
+        lines.append(f'    <trkpt lat="{53.430 + i * 1e-5:.6f}" lon="{-2.960 + i * 1e-5:.6f}">')
         lines.append(f"      <ele>{10.0 + i * 0.01:.2f}</ele>")
         lines.append(f"      <time>2026-07-05T10:{i // 60:02d}:{i % 60:02d}Z</time>")
         lines.append("      <extensions>")
@@ -216,8 +213,8 @@ class TestCatapultCsvParser:
         f.write_text(
             "Timestamp (s),Speed (m/s),Heart Rate (bpm)\n"
             "0.0,3.0,140\n"
-            "not_a_number,3.0,141\n"   # bad timestamp → skipped
-            "1.0,,142\n"                # missing speed → still parsed (None)
+            "not_a_number,3.0,141\n"  # bad timestamp → skipped
+            "1.0,,142\n"  # missing speed → still parsed (None)
             "2.0,4.0,143\n",
             encoding="utf-8",
         )
@@ -340,11 +337,7 @@ class TestPolarHrCsvParser:
     def test_skips_blank_rows(self, tmp_path):
         f = tmp_path / "blanks.csv"
         f.write_text(
-            "Time,HR (bpm)\n---\n"
-            "00:00:00,140\n"
-            "\n"
-            ",\n"
-            "00:00:01,142\n",
+            "Time,HR (bpm)\n---\n00:00:00,140\n\n,\n00:00:01,142\n",
             encoding="utf-8",
         )
         session = PolarHrCsvParser().parse(str(f))
@@ -447,9 +440,14 @@ class TestWearableImportService:
         # The old import path must still work
         from kawkab.services.wearable_import_service import (
             WearableDataPoint as ShimDataPoint,
+        )
+        from kawkab.services.wearable_import_service import (
             WearableImportService as ShimService,
+        )
+        from kawkab.services.wearable_import_service import (
             WearableSession as ShimSession,
         )
+
         assert ShimService is WearableImportService
         assert ShimSession is WearableSession
         assert ShimDataPoint is WearableDataPoint
@@ -481,15 +479,18 @@ class TestBaseParserContract:
 # FIT binary parser (via fitdecode mock/stub)
 # ---------------------------------------------------------------------------
 
+
 class TestFitParser:
     def test_supports_extension(self):
         from kawkab.services.wearables.fit_parser import FitParser
+
         assert FitParser().supports("session.fit") is True
         assert FitParser().supports("data.fit") is True
         assert FitParser().supports("data.csv") is False
 
     def test_parse_raises_on_missing_file(self):
         from kawkab.services.wearables.fit_parser import FitParser
+
         with pytest.raises(FileNotFoundError):
             FitParser().parse("no_such_file.fit")
 
@@ -498,14 +499,17 @@ class TestFitParser:
 # TCX XML parser
 # ---------------------------------------------------------------------------
 
+
 class TestTcxParser:
     def test_supports_extension(self):
         from kawkab.services.wearables.tcx_parser import TcxParser
+
         assert TcxParser().supports("activity.tcx") is True
         assert TcxParser().supports("data.csv") is False
 
     def test_parse_raises_on_missing_file(self):
         from kawkab.services.wearables.tcx_parser import TcxParser
+
         with pytest.raises(FileNotFoundError):
             TcxParser().parse("no_such_file.tcx")
 
@@ -514,14 +518,17 @@ class TestTcxParser:
 # STATSports CSV aggregate parser
 # ---------------------------------------------------------------------------
 
+
 class TestStatsportsCsvParser:
     def test_supports_extension(self):
         from kawkab.services.wearables.statsports_csv import StatsportsCsvParser
+
         assert StatsportsCsvParser().supports("sonra.csv") is True
         assert StatsportsCsvParser().supports("data.gpx") is False
 
     def test_parse_raises_on_missing_file(self):
         from kawkab.services.wearables.statsports_csv import StatsportsCsvParser
+
         with pytest.raises(FileNotFoundError):
             StatsportsCsvParser().parse("no_such_file.csv")
 
@@ -530,20 +537,25 @@ class TestStatsportsCsvParser:
 # Storage / save
 # ---------------------------------------------------------------------------
 
+
 class TestWearableSave:
-    def test_save_session_no_storage(self):
+    @pytest.mark.asyncio
+    async def test_save_session_no_storage(self):
         s = WearableSession(device_type="catapult")
-        result = WearableImportService().save_session(s)
+        result = await WearableImportService().save_session(s)
         assert "error" in result
 
-    def test_save_session_with_mock_storage(self):
+    @pytest.mark.asyncio
+    async def test_save_session_with_mock_storage(self):
         class MockStorage:
             def save_wearable_session(self, row):
-                return 42  # simulated session_id
+                return 42  # simulated sync session_id
 
-        s = WearableSession(device_type="catapult", athlete_id="ATH-001", athlete_name="Test Player")
+        s = WearableSession(
+            device_type="catapult", athlete_id="ATH-001", athlete_name="Test Player"
+        )
         s.data = [WearableDataPoint(timestamp_s=0.0, heart_rate_bpm=140, speed_ms=4.0)]
         s.finalize()
-        result = WearableImportService().save_session(s, storage_service=MockStorage())
+        result = await WearableImportService().save_session(s, storage_service=MockStorage())
         assert result.get("ok") is True
         assert result.get("session_id") == 42

@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-from numpy.random import Generator, PCG64, SeedSequence
+from numpy.random import PCG64, Generator, SeedSequence
 
 # Module-level local RNG to avoid global seed contamination
 _rng = Generator(PCG64(SeedSequence(42)))
@@ -98,7 +98,11 @@ def _simulate_remaining(
     draws = np.sum(home_final == away_final)
     away_wins = n_sims - home_wins - draws
 
-    return (home_wins / n_sims, draws / n_sims, away_wins / n_sims)
+    return (
+        float(home_wins) / n_sims,
+        float(draws) / n_sims,
+        float(away_wins) / n_sims,
+    )
 
 
 def compute_win_probability(
@@ -128,7 +132,7 @@ def compute_win_probability(
     home_xg_total = sum(e.get("xg", 0.0) for e in shot_events if e.get("team") == "home")
     away_xg_total = sum(e.get("xg", 0.0) for e in shot_events if e.get("team") == "away")
 
-    use_xg = (home_xg_total > 0 or away_xg_total > 0)
+    use_xg = home_xg_total > 0 or away_xg_total > 0
 
     # Pre-match probabilities
     if use_xg and (home_xg_total > 0 or away_xg_total > 0):
@@ -155,19 +159,24 @@ def compute_win_probability(
     away_score = 0
     timeline: list[WinProbabilityPoint] = []
 
-    timeline.append(WinProbabilityPoint(
-        minute=0, home_win=hw, draw=dr, away_win=aw,
-        home_score=0, away_score=0,
-    ))
+    timeline.append(
+        WinProbabilityPoint(
+            minute=0,
+            home_win=hw,
+            draw=dr,
+            away_win=aw,
+            home_score=0,
+            away_score=0,
+        )
+    )
 
     sorted_events = sorted(events, key=lambda e: e.get("timestamp", 0))
 
     if use_xg:
         # Compute xG distribution over time for remaining-xG tracking
-        total_duration_s = match_duration_minutes * 60.0
+        _ = match_duration_minutes * 60.0
         home_xg_used = 0.0
         away_xg_used = 0.0
-        last_minute = 0.0
 
         for ev in sorted_events:
             minute = ev.get("timestamp", 0) / 60.0
@@ -191,14 +200,21 @@ def compute_win_probability(
                 hw, dr, aw = _simulate_remaining(
                     home_xg_rate * remaining_minutes,
                     away_xg_rate * remaining_minutes,
-                    home_score, away_score,
+                    home_score,
+                    away_score,
                 )
 
-                timeline.append(WinProbabilityPoint(
-                    minute=minute, home_win=hw, draw=dr, away_win=aw,
-                    home_score=home_score, away_score=away_score,
-                ))
-                last_minute = minute
+                timeline.append(
+                    WinProbabilityPoint(
+                        minute=minute,
+                        home_win=hw,
+                        draw=dr,
+                        away_win=aw,
+                        home_score=home_score,
+                        away_score=away_score,
+                    )
+                )
+                _ = minute
     else:
         # Legacy: Elo-based updates on goals
         for ev in sorted_events:
@@ -222,10 +238,16 @@ def compute_win_probability(
                 hw /= s2
                 aw /= s2
 
-            timeline.append(WinProbabilityPoint(
-                minute=minute, home_win=hw, draw=dr, away_win=aw,
-                home_score=home_score, away_score=away_score,
-            ))
+            timeline.append(
+                WinProbabilityPoint(
+                    minute=minute,
+                    home_win=hw,
+                    draw=dr,
+                    away_win=aw,
+                    home_score=home_score,
+                    away_score=away_score,
+                )
+            )
 
     report.timeline = [p.to_dict() for p in timeline]
     if timeline:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kawkab.core.calibration import ModelCalibrator
 
 
@@ -65,9 +66,18 @@ class TestReliabilityCurve:
         assert len(curve) == 10
 
     def test_all_bins_have_entries(self, calibrator: ModelCalibrator) -> None:
-        events = [make_shot(0.05), make_shot(0.15), make_shot(0.25), make_shot(0.35),
-                  make_shot(0.45), make_shot(0.55), make_shot(0.65), make_shot(0.75),
-                  make_shot(0.85), make_shot(0.95)]
+        events = [
+            make_shot(0.05),
+            make_shot(0.15),
+            make_shot(0.25),
+            make_shot(0.35),
+            make_shot(0.45),
+            make_shot(0.55),
+            make_shot(0.65),
+            make_shot(0.75),
+            make_shot(0.85),
+            make_shot(0.95),
+        ]
         curve = calibrator.compute_reliability_curve(events)
         filled = [b for b in curve if b["count"] > 0]
         assert len(filled) == 10

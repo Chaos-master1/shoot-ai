@@ -331,15 +331,31 @@
     }
 
     function toggleShortlist(trackId, name, position, btn) {
-        var idx = _scoutState.shortlist.findIndex(function(s) { return s.track_id === trackId; });
+        var idx = _scoutState.shortlist.findIndex(function(s) { return String(s.track_id) === String(trackId); });
         if (idx >= 0) {
-            _scoutState.shortlist.splice(idx, 1);
+            removeFromShortlist(_scoutState.shortlist[idx].entry_id);
             if (btn) { btn.textContent = '☆'; btn.classList.remove('added'); }
-            showToast('Removed from shortlist.', 'info');
         } else {
-            _scoutState.shortlist.push({ track_id: trackId, name: name, position: position });
-            if (btn) { btn.textContent = '★'; btn.classList.add('added'); }
-            showToast('Added to shortlist!', 'success');
+            if (typeof bridge === 'undefined' || !bridge) {
+                _scoutState.shortlist.push({ track_id: trackId, name: name, position: position });
+                renderShortlist();
+                return;
+            }
+            bridge.add_shortlist_entry(JSON.stringify({
+                player_id: String(trackId),
+                player_name: name,
+                position: position || '',
+                status: 'shortlisted',
+            }), function(result) {
+                try {
+                    var data = typeof result === 'string' ? JSON.parse(result) : result;
+                    if (data.error) throw new Error(data.error);
+                    if (btn) { btn.textContent = '★'; btn.classList.add('added'); }
+                    showToast('Added to shortlist!', 'success');
+                    loadShortlist();
+                } catch (e) { showToast('Could not save to shortlist.', 'error'); }
+            });
+            return;
         }
         renderShortlist();
     }
@@ -361,10 +377,14 @@
                 '<div class="scout-player-avatar">' + initial + '</div>' +
                 '<div class="scout-player-info">' +
                 '<div class="scout-player-name">' + escapeHtml(p.name || 'Unknown') + '</div>' +
-                '<div class="scout-player-meta"><span>' + escapeHtml(p.position || '--') + '</span></div>' +
+                '<div class="scout-player-meta"><span>' + escapeHtml(p.position || '--') + '</span>' +
+                (p.status ? ' <span class="scout-status-badge">' + escapeHtml(p.status) + '</span>' : '') +
+                (p.estimated_value ? ' <span>£' + Number(p.estimated_value).toLocaleString() + '</span>' : '') +
+                '</div>' +
                 '</div>' +
                 '<div class="scout-icons">' +
-                '<button class="scout-icon" data-action="remove-shortlist" data-track-id="' + p.track_id + '">✕</button>' +
+                '<button class="scout-icon" data-action="advance-shortlist" data-entry-id="' + p.entry_id + '" title="Advance status">▶</button>' +
+                '<button class="scout-icon" data-action="remove-shortlist" data-entry-id="' + p.entry_id + '">✕</button>' +
                 '</div></div>';
         });
         html += '</div>';
@@ -372,15 +392,48 @@
 
         container.querySelectorAll('[data-action="remove-shortlist"]').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                var trackId = parseInt(this.dataset.trackId, 10);
-                var idx = _scoutState.shortlist.findIndex(function(s) { return s.track_id === trackId; });
+                removeFromShortlist(parseInt(this.dataset.entryId, 10));
+            });
+        });
+        container.querySelectorAll('[data-action="advance-shortlist"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                advanceShortlistStatus(parseInt(this.dataset.entryId, 10));
+            });
+        });
+    }
+
+    var STATUS_FLOW = ['scouted', 'shortlisted', 'contacted', 'trial', 'signed'];
+
+    function advanceShortlistStatus(entryId) {
+        if (typeof bridge === 'undefined' || !bridge) return;
+        var entry = _scoutState.shortlist.find(function(s) { return s.entry_id === entryId; });
+        if (!entry) return;
+        var next = STATUS_FLOW[Math.min(STATUS_FLOW.indexOf(entry.status || 'scouted') + 1, STATUS_FLOW.length - 1)];
+        bridge.update_shortlist_entry(entryId, JSON.stringify({ status: next }), function(result) {
+            try {
+                var data = typeof result === 'string' ? JSON.parse(result) : result;
+                if (data.error) throw new Error(data.error);
+                entry.status = next;
+                renderShortlist();
+                showToast('Status: ' + next, 'success');
+            } catch (e) { showToast('Update failed.', 'error'); }
+        });
+    }
+
+    function removeFromShortlist(entryId) {
+        if (typeof bridge === 'undefined' || !bridge) return;
+        bridge.delete_shortlist_entry(entryId, function(result) {
+            try {
+                var data = typeof result === 'string' ? JSON.parse(result) : result;
+                if (data.error) throw new Error(data.error);
+                var idx = _scoutState.shortlist.findIndex(function(s) { return s.entry_id === entryId; });
                 if (idx >= 0) {
                     _scoutState.shortlist.splice(idx, 1);
                     renderShortlist();
                     renderScoutResults();
-                    showToast('Removed from shortlist.', 'info');
                 }
-            });
+                showToast('Removed from shortlist.', 'info');
+            } catch (e) { showToast('Remove failed.', 'error'); }
         });
     }
 
@@ -389,10 +442,26 @@
             renderShortlist();
             return;
         }
+        // Server-backed shortlist (player_shortlist table, migration 016):
+        // previously this UI kept a local array that died on restart, and the
+        // get_shortlist result was fetched and then ignored by the renderer.
         bridge.get_shortlist(function(result) {
             try {
                 var data = typeof result === 'string' ? JSON.parse(result) : result;
-                _scoutState.shortlist = data.players || [];
+                if (data.error) throw new Error(data.error);
+                _scoutState.shortlist = (data.players || []).map(function(p) {
+                    return {
+                        entry_id: p.id,
+                        track_id: p.player_id,
+                        name: p.player_name,
+                        position: p.position,
+                        team: p.team,
+                        status: p.status,
+                        priority: p.priority,
+                        scout_rating: p.scout_rating,
+                        estimated_value: p.estimated_value,
+                    };
+                });
                 renderShortlist();
             } catch(e) { showToast('Failed to load shortlist.', 'error'); console.warn('Shortlist load error:', e); }
         });
@@ -520,6 +589,8 @@
     window.generateScoutReport = generateScoutReport;
     window.scoutCompare = scoutCompare;
     window.toggleShortlist = toggleShortlist;
+    window.advanceShortlistStatus = advanceShortlistStatus;
+    window.removeFromShortlist = removeFromShortlist;
     window.addToCompare = addToCompare;
     window.populateCompareSelects = populateCompareSelects;
     window.showPlayerDetail = showPlayerDetail;

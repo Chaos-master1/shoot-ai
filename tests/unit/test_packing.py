@@ -1,7 +1,5 @@
 """Tests for packing passes — opponent bypass count."""
 
-import pytest
-
 from kawkab.core.packing import (
     PackingReport,
     PackingResult,
@@ -13,36 +11,60 @@ from kawkab.core.packing import (
 
 class TestIsBehindLine:
     def test_player_behind_line(self):
-        assert _is_behind_line(
-            60, 34,  # player
-            50, 34,  # line start
-            80, 34,  # line end
-            attacking_direction=1,
-        ) is True
+        assert (
+            _is_behind_line(
+                60,
+                34,  # player
+                50,
+                34,  # line start
+                80,
+                34,  # line end
+                attacking_direction=1,
+            )
+            is True
+        )
 
     def test_player_in_front_of_line(self):
-        assert _is_behind_line(
-            85, 34,  # player past end
-            50, 34,
-            80, 34,
-            attacking_direction=1,
-        ) is False
+        assert (
+            _is_behind_line(
+                85,
+                34,  # player past end
+                50,
+                34,
+                80,
+                34,
+                attacking_direction=1,
+            )
+            is False
+        )
 
     def test_player_far_side(self):
-        assert _is_behind_line(
-            60, 20,  # vertically far
-            50, 34,
-            80, 34,
-            attacking_direction=1,
-        ) is False
+        assert (
+            _is_behind_line(
+                60,
+                20,  # vertically far
+                50,
+                34,
+                80,
+                34,
+                attacking_direction=1,
+            )
+            is False
+        )
 
     def test_attacking_left(self):
-        assert _is_behind_line(
-            40, 34,  # player
-            60, 34,  # line start (the attacking side's own half)
-            30, 34,  # line end (deeper in opposition half)
-            attacking_direction=-1,
-        ) is True
+        assert (
+            _is_behind_line(
+                40,
+                34,  # player
+                60,
+                34,  # line start (the attacking side's own half)
+                30,
+                34,  # line end (deeper in opposition half)
+                attacking_direction=-1,
+            )
+            is True
+        )
 
     def test_short_line_returns_false(self):
         assert _is_behind_line(55, 34, 54.9, 34, 55.1, 34) is False
@@ -120,8 +142,16 @@ class TestMatchPacking:
     def test_non_pass_filtered(self):
         events = [
             {"type": "shot", "timestamp": 5.0, "team": "home", "x": 80, "y": 34, "is_goal": True},
-            {"type": "pass", "timestamp": 10.0, "team": "home", "start_x": 50, "start_y": 34,
-             "end_x": 80, "end_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "timestamp": 10.0,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "completed": True,
+            },
             {"type": "tackle", "timestamp": 11.0, "team": "away", "x": 60, "y": 34},
         ]
         result = compute_match_packing(events)
@@ -129,11 +159,27 @@ class TestMatchPacking:
 
     def test_both_teams(self):
         events = [
-            {"type": "pass", "timestamp": 1.0, "team": "home", "start_x": 40, "start_y": 34,
-             "end_x": 75, "end_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "timestamp": 1.0,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 75,
+                "end_y": 34,
+                "completed": True,
+            },
             {"type": "tackle", "timestamp": 2.0, "team": "away", "x": 55, "y": 34},
-            {"type": "pass", "timestamp": 3.0, "team": "away", "start_x": 60, "start_y": 34,
-             "end_x": 30, "end_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "timestamp": 3.0,
+                "team": "away",
+                "start_x": 60,
+                "start_y": 34,
+                "end_x": 30,
+                "end_y": 34,
+                "completed": True,
+            },
             {"type": "interception", "timestamp": 4.0, "team": "home", "x": 45, "y": 34},
         ]
         result = compute_match_packing(events, team_attacks_right=True)
@@ -153,11 +199,27 @@ class TestMatchPacking:
 
     def test_territory_penetration_aggregated(self):
         events = [
-            {"type": "pass", "timestamp": 1.0, "team": "home", "start_x": 30, "start_y": 34,
-             "end_x": 70, "end_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "timestamp": 1.0,
+                "team": "home",
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "completed": True,
+            },
             {"type": "tackle", "timestamp": 1.5, "team": "away", "x": 50, "y": 34},
-            {"type": "pass", "timestamp": 2.0, "team": "home", "start_x": 40, "start_y": 34,
-             "end_x": 65, "end_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "timestamp": 2.0,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 65,
+                "end_y": 34,
+                "completed": True,
+            },
             {"type": "interception", "timestamp": 2.5, "team": "away", "x": 55, "y": 34},
         ]
         result = compute_match_packing(events, team_attacks_right=True)
@@ -166,8 +228,16 @@ class TestMatchPacking:
 
     def test_uncompleted_pass_filtered(self):
         events = [
-            {"type": "pass", "timestamp": 1.0, "team": "home", "start_x": 40, "start_y": 34,
-             "end_x": 70, "end_y": 34, "completed": False},
+            {
+                "type": "pass",
+                "timestamp": 1.0,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "completed": False,
+            },
         ]
         result = compute_match_packing(events, team_attacks_right=True)
         assert result["home"].total_passes == 0

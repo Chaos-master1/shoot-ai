@@ -9,8 +9,6 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-import numpy as np
-
 from kawkab.core.game_constants import GAME
 
 PITCH_LENGTH = getattr(GAME, "PITCH_LENGTH_M", 105.0)
@@ -44,9 +42,7 @@ class CornerKickXgModel:
     """Corner kick xG model with delivery danger ratings and efficiency."""
 
     @staticmethod
-    def compute_corner_danger_rating(
-        corner_event: dict[str, Any]
-    ) -> float:
+    def compute_corner_danger_rating(corner_event: dict[str, Any]) -> float:
         """Compute 0-1 danger rating for a corner delivery.
 
         Factors: delivery zone (base rating), delivery type
@@ -81,9 +77,7 @@ class CornerKickXgModel:
         return round(min(1.0, max(0.0, base)), 4)
 
     @staticmethod
-    def compute_corner_xg(
-        events: list[dict[str, Any]]
-    ) -> dict[str, float]:
+    def compute_corner_xg(events: list[dict[str, Any]]) -> dict[str, float]:
         """Total xG from corner kicks = sum of shot xG values where
         shot is preceded by a corner within 3 events.
 
@@ -95,11 +89,7 @@ class CornerKickXgModel:
         home = 0.0
         away = 0.0
 
-        corner_indices = [
-            i
-            for i, e in enumerate(sorted_ev)
-            if e.get("type") == "corner_kick"
-        ]
+        corner_indices = [i for i, e in enumerate(sorted_ev) if e.get("type") == "corner_kick"]
 
         for ci in corner_indices:
             window = sorted_ev[ci + 1 : min(n, ci + 4)]
@@ -121,9 +111,7 @@ class CornerKickXgModel:
         }
 
     @staticmethod
-    def compute_corner_efficiency(
-        events: list[dict[str, Any]]
-    ) -> dict[str, dict[str, float]]:
+    def compute_corner_efficiency(events: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
         """Total corners → shot conversion, goal conversion, xG per corner."""
         sorted_ev = sorted(events, key=lambda e: e.get("timestamp", 0.0))
         n = len(sorted_ev)
@@ -155,23 +143,15 @@ class CornerKickXgModel:
                 "shots": float(shots),
                 "goals": float(goals),
                 "total_xg": round(xg_total, 4),
-                "shot_conversion": (
-                    shots / total_corners if total_corners > 0 else 0.0
-                ),
-                "goal_conversion": (
-                    goals / total_corners if total_corners > 0 else 0.0
-                ),
-                "xg_per_corner": (
-                    xg_total / total_corners if total_corners > 0 else 0.0
-                ),
+                "shot_conversion": (shots / total_corners if total_corners > 0 else 0.0),
+                "goal_conversion": (goals / total_corners if total_corners > 0 else 0.0),
+                "xg_per_corner": (xg_total / total_corners if total_corners > 0 else 0.0),
             }
 
         return result
 
     @staticmethod
-    def analyze_delivery_zones(
-        events: list[dict[str, Any]]
-    ) -> dict[str, dict[str, Any]]:
+    def analyze_delivery_zones(events: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Classify each corner into 5 delivery zones.
 
         Returns dict with zone breakdown per team and overall:
@@ -180,16 +160,10 @@ class CornerKickXgModel:
         sorted_ev = sorted(events, key=lambda e: e.get("timestamp", 0.0))
         n = len(sorted_ev)
         zones: dict[str, dict[str, dict[str, float]]] = defaultdict(
-            lambda: defaultdict(
-                lambda: {"count": 0.0, "xg": 0.0, "shots": 0.0, "goals": 0.0}
-            )
+            lambda: defaultdict(lambda: {"count": 0.0, "xg": 0.0, "shots": 0.0, "goals": 0.0})
         )
 
-        corner_indices = [
-            i
-            for i, e in enumerate(sorted_ev)
-            if e.get("type") == "corner_kick"
-        ]
+        corner_indices = [i for i, e in enumerate(sorted_ev) if e.get("type") == "corner_kick"]
 
         for ci in corner_indices:
             ev = sorted_ev[ci]

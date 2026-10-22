@@ -1,5 +1,7 @@
 """Assess Kawkab AI progress vs PLAN.md."""
+
 import os
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 import sys
 from pathlib import Path
@@ -28,9 +30,15 @@ def main() -> int:
 
     print("## SERVICES IMPLEMENTED (Target: 10) ##")
     services = [
-        "cv_service", "enhancement_service", "analysis_service",
-        "llm_service", "knowledge_service", "storage_service",
-        "audio_service", "reasoning_service", "clip_service",
+        "cv_service",
+        "enhancement_service",
+        "analysis_service",
+        "llm_service",
+        "knowledge_service",
+        "storage_service",
+        "audio_service",
+        "reasoning_service",
+        "clip_service",
         "training_plan_service",
     ]
     for s in services:
@@ -73,7 +81,7 @@ def main() -> int:
         marker = "OK" if done else "  "
         print(f"  [{marker}] {task}")
     p1_done = sum(1 for v in phase1.values() if v)
-    print(f"  => {p1_done}/{len(phase1)} ({p1_done/len(phase1)*100:.0f}%)")
+    print(f"  => {p1_done}/{len(phase1)} ({p1_done / len(phase1) * 100:.0f}%)")
     print()
 
     phase2 = {
@@ -91,7 +99,7 @@ def main() -> int:
         marker = "OK" if done else "  "
         print(f"  [{marker}] {task}")
     p2_done = sum(1 for v in phase2.values() if v)
-    print(f"  => {p2_done}/{len(phase2)} ({p2_done/len(phase2)*100:.0f}%)")
+    print(f"  => {p2_done}/{len(phase2)} ({p2_done / len(phase2) * 100:.0f}%)")
     print()
 
     phase3 = {
@@ -111,7 +119,7 @@ def main() -> int:
         marker = "OK" if done else "  "
         print(f"  [{marker}] {task}")
     p3_done = sum(1 for v in phase3.values() if v)
-    print(f"  => {p3_done}/{len(phase3)} ({p3_done/len(phase3)*100:.0f}%)")
+    print(f"  => {p3_done}/{len(phase3)} ({p3_done / len(phase3) * 100:.0f}%)")
     print()
 
     phase4 = {
@@ -129,7 +137,7 @@ def main() -> int:
         marker = "OK" if done else "  "
         print(f"  [{marker}] {task}")
     p4_done = sum(1 for v in phase4.values() if v)
-    print(f"  => {p4_done}/{len(phase4)} ({p4_done/len(phase4)*100:.0f}%)")
+    print(f"  => {p4_done}/{len(phase4)} ({p4_done / len(phase4) * 100:.0f}%)")
     print()
 
     phase5 = {
@@ -149,7 +157,7 @@ def main() -> int:
         marker = "OK" if done else "  "
         print(f"  [{marker}] {task}")
     p5_done = sum(1 for v in phase5.values() if v)
-    print(f"  => {p5_done}/{len(phase5)} ({p5_done/len(phase5)*100:.0f}%)")
+    print(f"  => {p5_done}/{len(phase5)} ({p5_done / len(phase5) * 100:.0f}%)")
     print()
 
     all_tasks = {**phase1, **phase2, **phase3, **phase4, **phase5}
@@ -161,15 +169,15 @@ def main() -> int:
     print("=" * 60)
     print()
     print("## SUMMARY ##")
-    print(f"  Phase 1 (Foundation): {p1_done}/{len(phase1)} = {p1_done/len(phase1)*100:.0f}%")
-    print(f"  Phase 2 (Analyst):    {p2_done}/{len(phase2)} = {p2_done/len(phase2)*100:.0f}%")
-    print(f"  Phase 3 (Detective): {p3_done}/{len(phase3)} = {p3_done/len(phase3)*100:.0f}%")
-    print(f"  Phase 4 (Coach):     {p4_done}/{len(phase4)} = {p4_done/len(phase4)*100:.0f}%")
-    print(f"  Phase 5 (Product):   {p5_done}/{len(phase5)} = {p5_done/len(phase5)*100:.0f}%")
+    print(f"  Phase 1 (Foundation): {p1_done}/{len(phase1)} = {p1_done / len(phase1) * 100:.0f}%")
+    print(f"  Phase 2 (Analyst):    {p2_done}/{len(phase2)} = {p2_done / len(phase2) * 100:.0f}%")
+    print(f"  Phase 3 (Detective): {p3_done}/{len(phase3)} = {p3_done / len(phase3) * 100:.0f}%")
+    print(f"  Phase 4 (Coach):     {p4_done}/{len(phase4)} = {p4_done / len(phase4) * 100:.0f}%")
+    print(f"  Phase 5 (Product):   {p5_done}/{len(phase5)} = {p5_done / len(phase5) * 100:.0f}%")
     print(f"  Total:               {done_tasks}/{total_tasks} = {pct:.0f}%")
     print()
     print("## GITHUB ##")
-    print("  Repo: https://github.com/jraya106/kawkab-ai")
+    print("  Repo: https://github.com/wizard404error/shoot-ai")
     print("  Commit: fe22880 v0.3.0")
     return 0
 

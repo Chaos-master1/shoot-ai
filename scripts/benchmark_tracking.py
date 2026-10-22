@@ -16,7 +16,7 @@ import argparse
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -65,9 +65,7 @@ def run_benchmark(data_dir: Path) -> dict[str, Any]:
 
     gt = load_metrica_ground_truth(data_dir)
     player_count = len(gt.home_tracks) + len(gt.away_tracks)
-    total_frames = sum(
-        len(t.frames) for t in (*gt.home_tracks.values(), *gt.away_tracks.values())
-    )
+    total_frames = sum(len(t.frames) for t in (*gt.home_tracks.values(), *gt.away_tracks.values()))
 
     gt_tracks = _gt_tracks_to_dict(gt)
 
@@ -102,7 +100,7 @@ def run_benchmark(data_dir: Path) -> dict[str, Any]:
 
     return {
         "status": "ok",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "data_dir": str(data_dir),
         "ground_truth": {
             "home_players": len(gt.home_tracks),
@@ -131,12 +129,14 @@ def print_summary(report: dict[str, Any]) -> None:
         return
 
     gt = report.get("ground_truth", {})
-    print(f"\n  Ground Truth:  {gt.get('total_players', 0)} players, "
-          f"{gt.get('total_tracked_frames', 0)} frames, "
-          f"{gt.get('fps', 0):.1f} fps")
+    print(
+        f"\n  Ground Truth:  {gt.get('total_players', 0)} players, "
+        f"{gt.get('total_tracked_frames', 0)} frames, "
+        f"{gt.get('fps', 0):.1f} fps"
+    )
 
     mot = report.get("mot_metrics", {})
-    print(f"\n  ── MOT Metrics ──")
+    print("\n  ── MOT Metrics ──")
     print(f"    MOTA:              {mot.get('mota', 'N/A')}")
     print(f"    MOTP:              {mot.get('motp', 'N/A')}")
     print(f"    IDF1:              {mot.get('idf1', 'N/A')}")
@@ -148,7 +148,7 @@ def print_summary(report: dict[str, Any]) -> None:
 
     frag = report.get("fragmentation", {})
     if "error" not in frag:
-        print(f"\n  ── Fragmentation ──")
+        print("\n  ── Fragmentation ──")
         print(f"    Tracks:            {frag.get('n_tracks', 'N/A')}")
         print(f"    Avg Lifetime:      {frag.get('avg_lifetime_frames', 'N/A')} frames")
         buckets = frag.get("quality_buckets", {})
@@ -157,7 +157,7 @@ def print_summary(report: dict[str, Any]) -> None:
 
     stab = report.get("id_stability", {})
     if "error" not in stab:
-        print(f"\n  ── ID Stability ──")
+        print("\n  ── ID Stability ──")
         print(f"    Switch Rate:       {stab.get('switch_rate', 'N/A')}")
         print(f"    Total Switches:    {stab.get('total_id_switches', 'N/A')}")
 
@@ -194,7 +194,7 @@ def main() -> None:
     if not _has_ground_truth(data_dir):
         report: dict[str, Any] = {
             "status": "no_data",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "data_dir": str(data_dir),
             "message": "No Metrica ground truth CSV files found in data directory",
         }

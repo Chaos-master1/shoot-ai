@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
 
 from kawkab.services.feedback_service import (
-    FeedbackService,
     CoachFeedback,
+    FeedbackService,
     IssueReport,
     UsageSession,
 )
@@ -131,6 +131,7 @@ class TestFeedbackService:
         svc = FeedbackService(storage_service=None)
         feedback = CoachFeedback(coach_id="c1", match_id=1, overall_rating=5)
         import asyncio
+
         asyncio.run(svc.submit_feedback(feedback))
 
         assert svc.get_pending_counts()["feedback"] == 1

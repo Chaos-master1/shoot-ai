@@ -116,12 +116,14 @@ def detect_through_balls(
         if not is_through:
             continue
 
-        results.append(ThroughBall(
-            pass_event=ev,
-            xT_gained=0.0,
-            receiver=ev.get("to_track_id", 0),
-            split_defenders=split_ids,
-        ))
+        results.append(
+            ThroughBall(
+                pass_event=ev,
+                xT_gained=0.0,
+                receiver=ev.get("to_track_id", 0),
+                split_defenders=split_ids,
+            )
+        )
 
     return results
 

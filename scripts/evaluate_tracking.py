@@ -11,9 +11,9 @@ Usage:
   # Against Metrica ground truth
   python scripts/evaluate_tracking.py --metrica data/ground_truth/metrica
 """
+
 from __future__ import annotations
 
-import csv
 import json
 import logging
 import sys
@@ -28,6 +28,7 @@ logger = logging.getLogger("evaluate_tracking")
 
 # ── Data Models ────────────────────────────────────────────────────
 
+
 @dataclass
 class TrackFrame:
     frame: int
@@ -35,21 +36,26 @@ class TrackFrame:
     x: float
     y: float
 
+
 @dataclass
 class GroundTruthTrack:
     player_id: str  # jersey number or team_role
     frames: list[TrackFrame] = field(default_factory=list)
 
+
 @dataclass
 class GroundTruthMatch:
     """Parsed ground truth tracking data from Metrica."""
+
     home_tracks: dict[str, GroundTruthTrack] = field(default_factory=dict)
     away_tracks: dict[str, GroundTruthTrack] = field(default_factory=dict)
     ball_track: GroundTruthTrack = field(default_factory=lambda: GroundTruthTrack("ball"))
     fps: float = 25.0
     total_frames: int = 0
 
+
 # ── Ground Truth Parsers ────────────────────────────────────────────
+
 
 def parse_metrica_csv(csv_path: Path, team_label: str) -> dict[str, GroundTruthTrack]:
     """Parse a Metrica tracking CSV into per-player tracks.
@@ -59,7 +65,7 @@ def parse_metrica_csv(csv_path: Path, team_label: str) -> dict[str, GroundTruthT
     Coordinates are normalized 0-1 (pitch-relative).
     """
     # Read all lines and parse
-    with open(csv_path, "r", encoding="utf-8") as f:
+    with open(csv_path, encoding="utf-8") as f:
         lines = f.readlines()
 
     if len(lines) < 4:
@@ -118,7 +124,7 @@ def load_metrica_ground_truth(data_dir: Path) -> GroundTruthMatch:
         gt.away_tracks = parse_metrica_csv(away_csv[0], "away")
 
     if home_csv:
-        with open(home_csv[0], "r", encoding="utf-8") as f:
+        with open(home_csv[0], encoding="utf-8") as f:
             lines = f.readlines()
             data_end = len(lines) - 3  # after 3 header rows
         # Estimate total frames and fps from last row
@@ -153,19 +159,22 @@ def load_self_tracking(tracking_dir: Path) -> dict[str, Any]:
 
     result = {}
     if summary_path.exists():
-        with open(summary_path, "r") as f:
+        with open(summary_path) as f:
             result["summary"] = json.load(f)
         logger.info(f"Loaded tracking summary: {len(result['summary'].get('tracks', {}))} tracks")
 
     if frames_path.exists():
         import pickle
+
         with open(frames_path, "rb") as f:
             result["frames"] = pickle.load(f)
         logger.info(f"Loaded {len(result.get('frames', []))} sampled frames")
 
     return result
 
+
 # ── Metrics ────────────────────────────────────────────────────────
+
 
 def compute_fragmentation(track_summary: dict) -> dict:
     """Compute track fragmentation metrics from summary."""
@@ -189,7 +198,7 @@ def compute_fragmentation(track_summary: dict) -> dict:
         else:
             quality_buckets["low (<2%)"] += 1
 
-    team_dist = {}
+    team_dist: dict[str, int] = {}
     for t in tracks.values():
         team = t.get("team", "?")
         team_dist[team] = team_dist.get(team, 0) + 1
@@ -249,7 +258,8 @@ def compare_to_ground_truth(
     # For now, compute coverage statistics
     gt_total_players = len(gt_match.home_tracks) + len(gt_match.away_tracks)
     gt_total_player_frames = sum(
-        len(t.frames) for t in list(gt_match.home_tracks.values()) + list(gt_match.away_tracks.values())
+        len(t.frames)
+        for t in list(gt_match.home_tracks.values()) + list(gt_match.away_tracks.values())
     )
 
     return {
@@ -257,7 +267,7 @@ def compare_to_ground_truth(
         "ground_truth_player_frames": gt_total_player_frames,
         "ground_truth_fps": gt_match.fps,
         "ground_truth_total_frames": gt_match.total_frames,
-        "note": "Full pixel-to-pitch comparison requires homography projection (see evaluate_pitch_alignment)"
+        "note": "Full pixel-to-pitch comparison requires homography projection (see evaluate_pitch_alignment)",
     }
 
 
@@ -284,6 +294,7 @@ def evaluate_pitch_alignment(gt_match: GroundTruthMatch) -> dict:
 
 
 # ── Reporter ────────────────────────────────────────────────────────
+
 
 def print_report(results: dict[str, Any]):
     """Print a formatted evaluation report."""
@@ -315,13 +326,19 @@ def print_report(results: dict[str, Any]):
 
 # ── Main ────────────────────────────────────────────────────────────
 
+
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Evaluate tracking quality")
     parser.add_argument("--self", type=str, help="Self-evaluate tracking_output/ directory")
     parser.add_argument("--metrica", type=str, help="Metrica ground truth data directory")
-    parser.add_argument("--output-dir", type=str, default="data/ground_truth/metrica",
-                        help="Metrica data directory (default: data/ground_truth/metrica)")
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="data/ground_truth/metrica",
+        help="Metrica data directory (default: data/ground_truth/metrica)",
+    )
     args = parser.parse_args()
 
     results: dict[str, Any] = {}
@@ -351,9 +368,7 @@ def main():
         }
         results["pitch_alignment"] = evaluate_pitch_alignment(gt)
         if args.self:
-            results["vs_ground_truth"] = compare_to_ground_truth(
-                Path(args.self), gt
-            )
+            results["vs_ground_truth"] = compare_to_ground_truth(Path(args.self), gt)
     else:
         logger.info(f"No Metrica data at {metrica_dir}, skipping ground truth comparison")
 

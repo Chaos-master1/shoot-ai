@@ -16,8 +16,9 @@ player load, prevent injury, and optimize conditioning.
 
 from __future__ import annotations
 
+import contextlib
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from kawkab.core.logging import get_logger
@@ -92,10 +93,8 @@ class PhysicalLoadService:
                 cy = (y1 + y2) / 2
 
                 if homography_matrix is not None:
-                    try:
+                    with contextlib.suppress(Exception):
                         cx, cy = homography_matrix.pixel_to_pitch(cx, cy)
-                    except Exception:
-                        pass
 
                 if tid not in player_trajectories:
                     player_trajectories[tid] = []
@@ -187,10 +186,14 @@ class PhysicalLoadService:
 
                     if acceleration >= self.ACCELERATION_THRESHOLD:
                         metrics.acceleration_count += 1
-                        metrics.peak_acceleration_mps2 = max(metrics.peak_acceleration_mps2, acceleration)
+                        metrics.peak_acceleration_mps2 = max(
+                            metrics.peak_acceleration_mps2, acceleration
+                        )
                     elif acceleration <= self.DECELERATION_THRESHOLD:
                         metrics.deceleration_count += 1
-                        metrics.peak_deceleration_mps2 = min(metrics.peak_deceleration_mps2, acceleration)
+                        metrics.peak_deceleration_mps2 = min(
+                            metrics.peak_deceleration_mps2, acceleration
+                        )
 
         # Close any open sprint
         if in_sprint and trajectory:
@@ -204,7 +207,9 @@ class PhysicalLoadService:
             metrics.avg_speed_kmh = sum(speeds) / len(speeds)
 
         # High intensity bouts (periods of >15 km/h)
-        metrics.high_intensity_bouts = self._count_bouts(speeds, threshold=15.0, min_duration_frames=5)
+        metrics.high_intensity_bouts = self._count_bouts(
+            speeds, threshold=15.0, min_duration_frames=5
+        )
 
         # Work-to-rest ratio
         if rest_time > 0:
@@ -216,10 +221,10 @@ class PhysicalLoadService:
         # Based on di Prampero model: MP ≈ speed * (1 + 0.5 * (acceleration / g)²)
         # We use a simplified version: MP = sprint_distance * 2 + high_intensity_distance * 1.5 + jogging_distance
         metrics.metabolic_power_estimate = (
-            metrics.sprint_distance_m * 2.0 +
-            metrics.high_intensity_distance_m * 1.5 +
-            metrics.jogging_distance_m * 1.0 +
-            metrics.walking_distance_m * 0.5
+            metrics.sprint_distance_m * 2.0
+            + metrics.high_intensity_distance_m * 1.5
+            + metrics.jogging_distance_m * 1.0
+            + metrics.walking_distance_m * 0.5
         )
 
         return metrics

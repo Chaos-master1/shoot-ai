@@ -1,6 +1,6 @@
 """Tests for match timeline / xG flow."""
 
-from kawkab.core.match_timeline import compute_xg_timeline, XGFlowReport
+from kawkab.core.match_timeline import XGFlowReport, compute_xg_timeline
 
 
 class TestXGFlow:

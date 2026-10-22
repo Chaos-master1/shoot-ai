@@ -1,7 +1,8 @@
 """Tests for game constants."""
 
 import pytest
-from kawkab.core.game_constants import GameConstants, GAME
+
+from kawkab.core.game_constants import GAME, GameConstants
 
 
 class TestGameConstants:

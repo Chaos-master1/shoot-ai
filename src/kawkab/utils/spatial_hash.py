@@ -15,7 +15,7 @@ zalo/MathUtilities) and is useful for:
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Hashable, Iterable, Sequence
+from collections.abc import Hashable, Iterable, Sequence
 
 import numpy as np
 
@@ -51,9 +51,7 @@ class SpatialHash2D:
         """Return all objects in the cell containing (x, y)."""
         return self.grid.get(self._cell_coords(x, y), [])
 
-    def query_neighbors(
-        self, x: float, y: float, radius: float
-    ) -> list[Hashable]:
+    def query_neighbors(self, x: float, y: float, radius: float) -> list[Hashable]:
         """Return all objects within `radius` of (x, y).
 
         Inspects the 3x3 neighborhood of cells around the query point,
@@ -103,17 +101,13 @@ class SpatialHash3D:
     def insert(self, obj: Hashable, position: Sequence[float]) -> None:
         if len(position) < 3:
             raise ValueError(f"position must have 3 elements, got {len(position)}")
-        cx, cy, cz = self._cell_coords(
-            float(position[0]), float(position[1]), float(position[2])
-        )
+        cx, cy, cz = self._cell_coords(float(position[0]), float(position[1]), float(position[2]))
         self.grid[(cx, cy, cz)].append(obj)
 
     def query_cell(self, x: float, y: float, z: float) -> list[Hashable]:
         return self.grid.get(self._cell_coords(x, y, z), [])
 
-    def query_neighbors(
-        self, x: float, y: float, z: float, radius: float
-    ) -> list[Hashable]:
+    def query_neighbors(self, x: float, y: float, z: float, radius: float) -> list[Hashable]:
         if radius < 0:
             raise ValueError(f"radius must be non-negative, got {radius}")
         cx, cy, cz = self._cell_coords(x, y, z)
@@ -140,16 +134,16 @@ def bulk_insert_2d(
     sh: SpatialHash2D, positions: Iterable[Sequence[float]], objs: Iterable[Hashable] | None = None
 ) -> list[Hashable]:
     """Insert many points at once. Returns list of inserted objects."""
-    inserted = []
+    inserted: list[Hashable] = []
     if objs is None:
         positions_list = list(positions)
-        objs_iter = range(len(positions_list))
+        objs_iter: Iterable[int] | list[Hashable] = range(len(positions_list))
     else:
         positions_list = list(positions)
         objs_iter = list(objs)
         if len(objs_iter) != len(positions_list):
             raise ValueError("positions and objs must have the same length")
-    for obj, pos in zip(objs_iter, positions_list):
+    for obj, pos in zip(objs_iter, positions_list, strict=False):
         sh.insert(obj, pos)
         inserted.append(obj)
     return inserted

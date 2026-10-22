@@ -4,7 +4,7 @@
 #define MyAppName "Kawkab AI"
 #define MyAppVersion "0.1.0"
 #define MyAppPublisher "Kawkab AI"
-#define MyAppURL "https://github.com/yourusername/kawkab-ai"
+#define MyAppURL "https://github.com/wizard404error/shoot-ai"
 #define MyAppExeName "KawkabAI.exe"
 
 [Setup]

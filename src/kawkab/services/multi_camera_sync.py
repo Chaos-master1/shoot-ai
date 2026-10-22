@@ -7,7 +7,7 @@ audio cross-correlation for automatic synchronization.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -20,6 +20,7 @@ logger = get_logger(__name__)
 @dataclass
 class CameraFeed:
     """A single camera feed with metadata for synchronization."""
+
     camera_id: str
     video_path: str
     fps: float
@@ -30,6 +31,7 @@ class CameraFeed:
 @dataclass
 class SyncPoint:
     """A timestamp where two or more camera feeds align."""
+
     global_time_s: float
     camera_times: dict[str, float]
 
@@ -141,15 +143,11 @@ class MultiCameraSyncService:
 
         for cid in feed_ids:
             if cid == reference_id:
-                result[cid] = self._build_sync_points(
-                    cid, reference, 0.0, 1.0, sample_rate
-                )
+                result[cid] = self._build_sync_points(cid, reference, 0.0, 1.0, sample_rate)
                 continue
 
             feed = self._feeds[cid]
-            lag_samples, correlation = self._cross_correlate_feeds(
-                reference, feed, sample_rate
-            )
+            lag_samples, correlation = self._cross_correlate_feeds(reference, feed, sample_rate)
 
             if correlation < correlation_threshold:
                 logger.info(
@@ -165,9 +163,7 @@ class MultiCameraSyncService:
                 f"lag={lag_seconds:.3f}s, correlation={correlation:.3f}"
             )
 
-            result[cid] = self._build_sync_points(
-                cid, feed, lag_seconds, correlation, sample_rate
-            )
+            result[cid] = self._build_sync_points(cid, feed, lag_seconds, correlation, sample_rate)
 
         return result
 
@@ -245,13 +241,15 @@ class MultiCameraSyncService:
             global_time = t + feed.timecode_offset - lag_seconds
             if global_time < 0:
                 continue
-            points.append({
-                "camera_id": camera_id,
-                "local_time_s": round(t, 3),
-                "global_time_s": round(global_time, 3),
-                "lag_s": round(lag_seconds, 3),
-                "correlation": round(correlation, 4),
-            })
+            points.append(
+                {
+                    "camera_id": camera_id,
+                    "local_time_s": round(t, 3),
+                    "global_time_s": round(global_time, 3),
+                    "lag_s": round(lag_seconds, 3),
+                    "correlation": round(correlation, 4),
+                }
+            )
         return points
 
     @staticmethod
@@ -284,9 +282,7 @@ class MultiCameraSyncService:
         peak_idx = int(np.argmax(np.abs(correlation)))
         peak_value = float(np.abs(correlation[peak_idx]))
 
-        max_possible = float(np.sqrt(
-            np.sum(envelope_a ** 2) * np.sum(envelope_b ** 2)
-        ))
+        max_possible = float(np.sqrt(np.sum(envelope_a**2) * np.sum(envelope_b**2)))
         if max_possible > 0:
             peak_value /= max_possible
 

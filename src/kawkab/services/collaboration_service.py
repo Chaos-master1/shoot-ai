@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import json
-import os
 import re
-import sqlite3
-import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from kawkab.core.logging import get_logger
 
@@ -23,7 +19,12 @@ class CollabUser:
     created_at: str = ""
 
     def to_dict(self):
-        return {"id": self.id, "username": self.username, "display_name": self.display_name, "role": self.role}
+        return {
+            "id": self.id,
+            "username": self.username,
+            "display_name": self.display_name,
+            "role": self.role,
+        }
 
 
 @dataclass
@@ -37,7 +38,15 @@ class Comment:
     created_at: str = ""
 
     def to_dict(self):
-        return {"id": self.id, "match_id": self.match_id, "event_id": self.event_id, "user_id": self.user_id, "username": self.username, "text": self.text, "created_at": self.created_at}
+        return {
+            "id": self.id,
+            "match_id": self.match_id,
+            "event_id": self.event_id,
+            "user_id": self.user_id,
+            "username": self.username,
+            "text": self.text,
+            "created_at": self.created_at,
+        }
 
 
 @dataclass
@@ -51,7 +60,15 @@ class ActivityEntry:
     created_at: str = ""
 
     def to_dict(self):
-        return {"id": self.id, "user_id": self.user_id, "username": self.username, "action": self.action, "description": self.description, "match_id": self.match_id, "created_at": self.created_at}
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "username": self.username,
+            "action": self.action,
+            "description": self.description,
+            "match_id": self.match_id,
+            "created_at": self.created_at,
+        }
 
 
 @dataclass
@@ -66,7 +83,16 @@ class Mention:
     created_at: str = ""
 
     def to_dict(self):
-        return {"id": self.id, "username": self.username, "from_user": self.from_user, "text": self.text, "match_id": self.match_id, "event_id": self.event_id, "read": self.read, "created_at": self.created_at}
+        return {
+            "id": self.id,
+            "username": self.username,
+            "from_user": self.from_user,
+            "text": self.text,
+            "match_id": self.match_id,
+            "event_id": self.event_id,
+            "read": self.read,
+            "created_at": self.created_at,
+        }
 
 
 class CollaborationService:
@@ -97,23 +123,50 @@ class CollaborationService:
             cursor.execute("SELECT id, username, role, created_at FROM collab_users ORDER BY id")
             rows = cursor.fetchall()
             for row in rows:
-                user = CollabUser(id=row["id"], username=row["username"], display_name=row["username"], role=row["role"], created_at=row["created_at"])
+                user = CollabUser(
+                    id=row["id"],
+                    username=row["username"],
+                    display_name=row["username"],
+                    role=row["role"],
+                    created_at=row["created_at"],
+                )
                 self._users[user.id] = user
             if not self._users:
                 self._add_default_users()
             else:
                 self._next_user_id = max(u.id for u in self._users.values()) + 1
-            cursor.execute("SELECT id, match_id, event_id, user_id, username, text, created_at FROM collab_comments ORDER BY id")
+            cursor.execute(
+                "SELECT id, match_id, event_id, user_id, username, text, created_at FROM collab_comments ORDER BY id"
+            )
             rows = cursor.fetchall()
             for row in rows:
-                comment = Comment(id=row["id"], match_id=row["match_id"], event_id=row["event_id"], user_id=row["user_id"], username=row["username"], text=row["text"], created_at=row["created_at"])
+                comment = Comment(
+                    id=row["id"],
+                    match_id=row["match_id"],
+                    event_id=row["event_id"],
+                    user_id=row["user_id"],
+                    username=row["username"],
+                    text=row["text"],
+                    created_at=row["created_at"],
+                )
                 self._comments.append(comment)
             if self._comments:
                 self._next_comment_id = max(c.id for c in self._comments) + 1
-            cursor.execute("SELECT id, username, from_user, text, match_id, event_id, read, created_at FROM collab_mentions ORDER BY id")
+            cursor.execute(
+                "SELECT id, username, from_user, text, match_id, event_id, read, created_at FROM collab_mentions ORDER BY id"
+            )
             rows = cursor.fetchall()
             for row in rows:
-                mention = Mention(id=row["id"], username=row["username"], from_user=row["from_user"], text=row["text"], match_id=row["match_id"], event_id=row["event_id"], read=row["read"], created_at=row["created_at"])
+                mention = Mention(
+                    id=row["id"],
+                    username=row["username"],
+                    from_user=row["from_user"],
+                    text=row["text"],
+                    match_id=row["match_id"],
+                    event_id=row["event_id"],
+                    read=row["read"],
+                    created_at=row["created_at"],
+                )
                 self._mentions.append(mention)
             if self._mentions:
                 self._next_mention_id = max(m.id for m in self._mentions) + 1
@@ -127,7 +180,10 @@ class CollaborationService:
             return
         try:
             cursor = svc._conn.cursor()
-            cursor.execute("INSERT OR IGNORE INTO collab_users (id, username, role, created_at) VALUES (?, ?, ?, ?)", (user.id, user.username, user.role, user.created_at))
+            cursor.execute(
+                "INSERT OR IGNORE INTO collab_users (id, username, role, created_at) VALUES (?, ?, ?, ?)",
+                (user.id, user.username, user.role, user.created_at),
+            )
             svc._conn.commit()
         except Exception as e:
             logger.warning(f"Could not save user to DB: {e}")
@@ -138,7 +194,18 @@ class CollaborationService:
             return
         try:
             cursor = svc._conn.cursor()
-            cursor.execute("INSERT INTO collab_comments (id, match_id, event_id, user_id, username, text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", (comment.id, comment.match_id, comment.event_id, comment.user_id, comment.username, comment.text, comment.created_at))
+            cursor.execute(
+                "INSERT INTO collab_comments (id, match_id, event_id, user_id, username, text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    comment.id,
+                    comment.match_id,
+                    comment.event_id,
+                    comment.user_id,
+                    comment.username,
+                    comment.text,
+                    comment.created_at,
+                ),
+            )
             svc._conn.commit()
         except Exception as e:
             logger.warning(f"Could not save comment to DB: {e}")
@@ -149,14 +216,38 @@ class CollaborationService:
             return
         try:
             cursor = svc._conn.cursor()
-            cursor.execute("INSERT INTO collab_mentions (id, username, from_user, text, match_id, event_id, read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (mention.id, mention.username, mention.from_user, mention.text, mention.match_id, mention.event_id, mention.read, mention.created_at))
+            cursor.execute(
+                "INSERT INTO collab_mentions (id, username, from_user, text, match_id, event_id, read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    mention.id,
+                    mention.username,
+                    mention.from_user,
+                    mention.text,
+                    mention.match_id,
+                    mention.event_id,
+                    mention.read,
+                    mention.created_at,
+                ),
+            )
             svc._conn.commit()
         except Exception as e:
             logger.warning(f"Could not save mention to DB: {e}")
 
     def _add_default_users(self):
-        self._users[0] = CollabUser(id=0, username="admin", display_name="Head Coach", role="admin", created_at=datetime.now().isoformat())
-        self._users[1] = CollabUser(id=1, username="analyst1", display_name="Video Analyst", role="analyst", created_at=datetime.now().isoformat())
+        self._users[0] = CollabUser(
+            id=0,
+            username="admin",
+            display_name="Head Coach",
+            role="admin",
+            created_at=datetime.now().isoformat(),
+        )
+        self._users[1] = CollabUser(
+            id=1,
+            username="analyst1",
+            display_name="Video Analyst",
+            role="analyst",
+            created_at=datetime.now().isoformat(),
+        )
         self._next_user_id = 2
 
     @staticmethod
@@ -170,7 +261,13 @@ class CollaborationService:
                     return json.dumps({"error": "Username already exists"})
             uid = self._next_user_id
             self._next_user_id += 1
-            user = CollabUser(id=uid, username=username, display_name=display_name, role=role, created_at=datetime.now().isoformat())
+            user = CollabUser(
+                id=uid,
+                username=username,
+                display_name=display_name,
+                role=role,
+                created_at=datetime.now().isoformat(),
+            )
             self._users[uid] = user
             self._add_activity(uid, username, "user_created", f"User {username} created")
             self._save_user_to_db(user)
@@ -181,7 +278,9 @@ class CollaborationService:
 
     def get_users(self) -> str:
         try:
-            return json.dumps({"users": [u.to_dict() for u in self._users.values()], "total": len(self._users)})
+            return json.dumps(
+                {"users": [u.to_dict() for u in self._users.values()], "total": len(self._users)}
+            )
         except Exception as e:
             logger.error(f"get_users failed: {e}")
             return json.dumps({"error": str(e)})
@@ -201,16 +300,35 @@ class CollaborationService:
             cid = self._next_comment_id
             self._next_comment_id += 1
             username = self._users.get(user_id, CollabUser(username="unknown")).username
-            comment = Comment(id=cid, match_id=match_id, event_id=event_id, user_id=user_id, username=username, text=text, created_at=datetime.now().isoformat())
+            comment = Comment(
+                id=cid,
+                match_id=match_id,
+                event_id=event_id,
+                user_id=user_id,
+                username=username,
+                text=text,
+                created_at=datetime.now().isoformat(),
+            )
             self._comments.append(comment)
             self._save_comment_to_db(comment)
-            self._add_activity(user_id, username, "comment", f"Commented on match {match_id}", match_id)
+            self._add_activity(
+                user_id, username, "comment", f"Commented on match {match_id}", match_id
+            )
             mentioned = self._detect_mentions(text)
             for m_username in mentioned:
                 if m_username != username:
                     mid = self._next_mention_id
                     self._next_mention_id += 1
-                    mention = Mention(id=mid, username=m_username, from_user=username, text=text, match_id=match_id, event_id=event_id, read=0, created_at=datetime.now().isoformat())
+                    mention = Mention(
+                        id=mid,
+                        username=m_username,
+                        from_user=username,
+                        text=text,
+                        match_id=match_id,
+                        event_id=event_id,
+                        read=0,
+                        created_at=datetime.now().isoformat(),
+                    )
                     self._mentions.append(mention)
                     self._save_mention_to_db(mention)
             return json.dumps({"comment": comment.to_dict(), "ok": True})
@@ -220,7 +338,11 @@ class CollaborationService:
 
     def get_comments(self, match_id: int, event_id: int = 0) -> str:
         try:
-            results = [c for c in self._comments if c.match_id == match_id and (event_id == 0 or c.event_id == event_id)]
+            results = [
+                c
+                for c in self._comments
+                if c.match_id == match_id and (event_id == 0 or c.event_id == event_id)
+            ]
             return json.dumps({"comments": [c.to_dict() for c in results], "total": len(results)})
         except Exception as e:
             logger.error(f"get_comments failed: {e}")
@@ -228,7 +350,9 @@ class CollaborationService:
 
     def get_event_comments(self, match_id: int, event_id: int) -> str:
         try:
-            results = [c for c in self._comments if c.match_id == match_id and c.event_id == event_id]
+            results = [
+                c for c in self._comments if c.match_id == match_id and c.event_id == event_id
+            ]
             return json.dumps({"comments": [c.to_dict() for c in results], "total": len(results)})
         except Exception as e:
             logger.error(f"get_event_comments failed: {e}")
@@ -237,7 +361,13 @@ class CollaborationService:
     def get_mentions(self, username: str) -> str:
         try:
             results = [m for m in self._mentions if m.username == username]
-            return json.dumps({"mentions": [m.to_dict() for m in results], "total": len(results), "unread": sum(1 for m in results if m.read == 0)})
+            return json.dumps(
+                {
+                    "mentions": [m.to_dict() for m in results],
+                    "total": len(results),
+                    "unread": sum(1 for m in results if m.read == 0),
+                }
+            )
         except Exception as e:
             logger.error(f"get_mentions failed: {e}")
             return json.dumps({"error": str(e)})
@@ -251,7 +381,9 @@ class CollaborationService:
                     if svc is not None and svc._conn is not None:
                         try:
                             cursor = svc._conn.cursor()
-                            cursor.execute("UPDATE collab_mentions SET read = 1 WHERE id = ?", (mention_id,))
+                            cursor.execute(
+                                "UPDATE collab_mentions SET read = 1 WHERE id = ?", (mention_id,)
+                            )
                             svc._conn.commit()
                         except Exception as e:
                             logger.warning(f"Could not update mention in DB: {e}")
@@ -276,7 +408,9 @@ class CollaborationService:
                 "type": "kawkab_project",
                 "exported_at": datetime.now().isoformat(),
                 "match": match_data,
-                "comments": [c.to_dict() for c in self._comments if c.match_id == match_data.get("id")],
+                "comments": [
+                    c.to_dict() for c in self._comments if c.match_id == match_data.get("id")
+                ],
             }
             return json.dumps({"project": project, "ok": True})
         except Exception as e:
@@ -291,15 +425,26 @@ class CollaborationService:
             match = data.get("match", {})
             for c_data in data.get("comments", []):
                 comment = Comment(
-                    id=self._next_comment_id, match_id=match.get("id", 0),
-                    event_id=c_data.get("event_id", 0), user_id=0,
-                    username=c_data.get("username", "imported"), text=c_data.get("text", ""),
+                    id=self._next_comment_id,
+                    match_id=match.get("id", 0),
+                    event_id=c_data.get("event_id", 0),
+                    user_id=0,
+                    username=c_data.get("username", "imported"),
+                    text=c_data.get("text", ""),
                     created_at=c_data.get("created_at", datetime.now().isoformat()),
                 )
                 self._next_comment_id += 1
                 self._comments.append(comment)
-            self._add_activity(0, "system", "import", f"Imported project for match {match.get('id', '?')}", match.get("id", 0))
-            return json.dumps({"match": match, "comments_imported": len(data.get("comments", [])), "ok": True})
+            self._add_activity(
+                0,
+                "system",
+                "import",
+                f"Imported project for match {match.get('id', '?')}",
+                match.get("id", 0),
+            )
+            return json.dumps(
+                {"match": match, "comments_imported": len(data.get("comments", [])), "ok": True}
+            )
         except Exception as e:
             logger.error(f"import_project failed: {e}")
             return json.dumps({"error": str(e)})
@@ -312,8 +457,18 @@ class CollaborationService:
             logger.error(f"get_activity_feed failed: {e}")
             return json.dumps({"error": str(e)})
 
-    def _add_activity(self, user_id: int, username: str, action: str, description: str, match_id: int = 0):
+    def _add_activity(
+        self, user_id: int, username: str, action: str, description: str, match_id: int = 0
+    ):
         aid = self._next_activity_id
         self._next_activity_id += 1
-        entry = ActivityEntry(id=aid, user_id=user_id, username=username, action=action, description=description, match_id=match_id, created_at=datetime.now().isoformat())
+        entry = ActivityEntry(
+            id=aid,
+            user_id=user_id,
+            username=username,
+            action=action,
+            description=description,
+            match_id=match_id,
+            created_at=datetime.now().isoformat(),
+        )
         self._activities.append(entry)

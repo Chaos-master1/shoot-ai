@@ -78,19 +78,17 @@ class TestHungarianMatch:
     def test_matching_with_max_cost_filter(self):
         preds = np.array([[0, 0], [100, 100]], dtype=float)
         dets = np.array([[1, 1], [200, 200]], dtype=float)
-        matches = hungarian_match(preds, dets, cost_fn=lambda p, d: np.linalg.norm(p - d), max_cost=5)
+        matches = hungarian_match(
+            preds, dets, cost_fn=lambda p, d: np.linalg.norm(p - d), max_cost=5
+        )
         assert len(matches) == 1
 
     def test_empty_predictions(self):
-        matches = hungarian_match(
-            np.empty((0, 2)), np.array([[0, 0]]), cost_fn=lambda p, d: 0.0
-        )
+        matches = hungarian_match(np.empty((0, 2)), np.array([[0, 0]]), cost_fn=lambda p, d: 0.0)
         assert matches == []
 
     def test_empty_detections(self):
-        matches = hungarian_match(
-            np.array([[0, 0]]), np.empty((0, 2)), cost_fn=lambda p, d: 0.0
-        )
+        matches = hungarian_match(np.array([[0, 0]]), np.empty((0, 2)), cost_fn=lambda p, d: 0.0)
         assert matches == []
 
     def test_euclidean_distance_cost(self):
@@ -103,5 +101,7 @@ class TestHungarianMatch:
     def test_large_cost_rejected(self):
         preds = np.array([[0, 0]], dtype=float)
         dets = np.array([[100, 100]], dtype=float)
-        matches = hungarian_match(preds, dets, cost_fn=lambda p, d: np.linalg.norm(p - d), max_cost=5)
+        matches = hungarian_match(
+            preds, dets, cost_fn=lambda p, d: np.linalg.norm(p - d), max_cost=5
+        )
         assert matches == []

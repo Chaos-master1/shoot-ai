@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -118,13 +117,21 @@ def search_players(
         age = player.get("age", 25)
         if age < criteria.age_min or age > criteria.age_max:
             continue
-        if criteria.positions and not _matches_position(player.get("position", ""), criteria.positions):
+        if criteria.positions and not _matches_position(
+            player.get("position", ""), criteria.positions
+        ):
             continue
         if criteria.leagues and player.get("league", "") not in criteria.leagues:
             continue
-        if criteria.nationality and player.get("nationality", "").lower() != criteria.nationality.lower():
+        if (
+            criteria.nationality
+            and player.get("nationality", "").lower() != criteria.nationality.lower()
+        ):
             continue
-        if criteria.preferred_foot and player.get("preferred_foot", "").lower() != criteria.preferred_foot.lower():
+        if (
+            criteria.preferred_foot
+            and player.get("preferred_foot", "").lower() != criteria.preferred_foot.lower()
+        ):
             continue
         if criteria.height_min_cm is not None:
             h = player.get("height_cm")
@@ -173,7 +180,9 @@ def search_players(
     elif criteria.sort_by == "player_name":
         results.sort(key=lambda r: r.player_name, reverse=sort_desc)
     else:
+
         def _sort_key(r: SearchResult) -> float:
             return r.stats.get(criteria.sort_by, 0.0)
+
         results.sort(key=_sort_key, reverse=sort_desc)
-    return results[criteria.offset:criteria.offset + criteria.limit]
+    return results[criteria.offset : criteria.offset + criteria.limit]

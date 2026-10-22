@@ -77,9 +77,12 @@ cd "$SCRIPT_DIR/k8s"
 kubectl -n "$NAMESPACE" apply -k .
 
 # Ensure secrets exist with real values
+# (KAWKAB_DB_URL uses plain postgresql:// -- cloud/database.py passes it
+# straight to asyncpg.connect(), which rejects the SQLAlchemy
+# "postgresql+asyncpg://" dialect suffix this used to have.)
 kubectl -n "$NAMESPACE" create secret generic kawkab-secrets \
   --from-literal=KAWKAB_JWT_SECRET="$KAWKAB_JWT_SECRET" \
-  --from-literal=KAWKAB_DB_URL="postgresql+asyncpg://kawkab:${KAWKAB_DB_PASSWORD}@postgres:5432/kawkab" \
+  --from-literal=KAWKAB_DB_URL="postgresql://kawkab:${KAWKAB_DB_PASSWORD}@postgres:5432/kawkab" \
   --from-literal=KAWKAB_DB_PASSWORD="$KAWKAB_DB_PASSWORD" \
   --dry-run=client -o yaml | kubectl -n "$NAMESPACE" apply -f -
 ok "Manifests applied."

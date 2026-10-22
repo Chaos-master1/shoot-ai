@@ -2,11 +2,8 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Optional
 
 
 @dataclass
@@ -92,12 +89,14 @@ def compute_tag_analytics(
         analytics.by_player[str(player)] += 1
         period = t.get("period", "unknown")
         analytics.by_period[str(period)] += 1
-        analytics.timeline.append({
-            "timestamp": t.get("timestamp", 0),
-            "type": t.get("type", ""),
-            "category": t.get("category", ""),
-            "player": str(player),
-        })
+        analytics.timeline.append(
+            {
+                "timestamp": t.get("timestamp", 0),
+                "type": t.get("type", ""),
+                "category": t.get("category", ""),
+                "player": str(player),
+            }
+        )
 
     # co-occurrence within time window
     for i, a in enumerate(sorted_tags):
@@ -127,7 +126,7 @@ def compute_tag_analytics(
                 break
             type_j = sorted_tags[j].get("type", "unknown")
             count = 0
-            for k in range(j + 1, min(j + 6, len(sorted_tags))):
+            for k, _ in enumerate(range(j + 1, min(j + 6, len(sorted_tags))), start=1):
                 ts_k = sorted_tags[k].get("timestamp", 0)
                 if ts_k - ts_j > window_size_seconds:
                     break
@@ -137,12 +136,13 @@ def compute_tag_analytics(
                 if idx >= 0:
                     analytics.patterns[idx]["count"] += 1
                 else:
-                    analytics.patterns.append({
-                        "pattern": pattern_str,
-                        "count": 1,
-                        "tags": [type_i, type_j, type_k],
-                    })
-                count += 1
+                    analytics.patterns.append(
+                        {
+                            "pattern": pattern_str,
+                            "count": 1,
+                            "tags": [type_i, type_j, type_k],
+                        }
+                    )
                 if count >= min_pattern_support:
                     break
 
@@ -163,14 +163,16 @@ def tags_to_csv(tags: list[dict]) -> str:
     writer = csv.writer(output)
     writer.writerow(["timestamp", "type", "category", "player", "period", "notes"])
     for t in sorted(tags, key=lambda x: x.get("timestamp", 0)):
-        writer.writerow([
-            t.get("timestamp", ""),
-            t.get("type", ""),
-            t.get("category", ""),
-            t.get("player_name", t.get("track_id", "")),
-            t.get("period", ""),
-            t.get("notes", ""),
-        ])
+        writer.writerow(
+            [
+                t.get("timestamp", ""),
+                t.get("type", ""),
+                t.get("category", ""),
+                t.get("player_name", t.get("track_id", "")),
+                t.get("period", ""),
+                t.get("notes", ""),
+            ]
+        )
     return output.getvalue()
 
 
@@ -178,14 +180,16 @@ def tags_from_csv(csv_text: str) -> list[dict]:
     reader = csv.DictReader(io.StringIO(csv_text))
     tags = []
     for row in reader:
-        tags.append({
-            "timestamp": float(row.get("timestamp", 0)),
-            "type": row.get("type", ""),
-            "category": row.get("category", ""),
-            "player_name": row.get("player", ""),
-            "period": row.get("period", ""),
-            "notes": row.get("notes", ""),
-        })
+        tags.append(
+            {
+                "timestamp": float(row.get("timestamp", 0)),
+                "type": row.get("type", ""),
+                "category": row.get("category", ""),
+                "player_name": row.get("player", ""),
+                "period": row.get("period", ""),
+                "notes": row.get("notes", ""),
+            }
+        )
     return tags
 
 
@@ -195,12 +199,14 @@ def export_tags_sportscode(tags: list[dict]) -> str:
     writer = csv.writer(output)
     writer.writerow(["Code", "Time", "Notes", "Period"])
     for t in sorted(tags, key=lambda x: x.get("timestamp", 0)):
-        writer.writerow([
-            t.get("type", ""),
-            _format_timecode(t.get("timestamp", 0)),
-            t.get("notes", ""),
-            t.get("period", ""),
-        ])
+        writer.writerow(
+            [
+                t.get("type", ""),
+                _format_timecode(t.get("timestamp", 0)),
+                t.get("notes", ""),
+                t.get("period", ""),
+            ]
+        )
     return output.getvalue()
 
 
@@ -210,13 +216,15 @@ def import_tags_sportscode(csv_text: str) -> list[dict]:
     tags = []
     for row in reader:
         tc = row.get("Time", "00:00:00.000")
-        tags.append({
-            "timestamp": _parse_timecode(tc),
-            "type": row.get("Code", ""),
-            "notes": row.get("Notes", ""),
-            "period": row.get("Period", ""),
-            "category": _guess_category(row.get("Code", "")),
-        })
+        tags.append(
+            {
+                "timestamp": _parse_timecode(tc),
+                "type": row.get("Code", ""),
+                "notes": row.get("Notes", ""),
+                "period": row.get("Period", ""),
+                "category": _guess_category(row.get("Code", "")),
+            }
+        )
     return tags
 
 

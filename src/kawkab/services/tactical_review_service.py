@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -83,9 +83,7 @@ class TacticalReviewService:
             A :class:`TacticalReview` with per-section analysis.
         """
         if self._llm is None:
-            return TacticalReview(
-                summary="LLM service not available", language=language
-            )
+            return TacticalReview(summary="LLM service not available", language=language)
 
         prompt = self._build_prompt(match_stats, language)
         system = _AR_SYSTEM_PROMPT if language == "ar" else _TACTICAL_SYSTEM_PROMPT
@@ -95,9 +93,7 @@ class TacticalReviewService:
             return self._parse_response(raw, language)
         except Exception as e:
             logger.error("Tactical review generation failed: %s", e)
-            return TacticalReview(
-                summary=f"Failed to generate review: {e}", language=language
-            )
+            return TacticalReview(summary=f"Failed to generate review: {e}", language=language)
 
     async def review_formation(
         self,
@@ -124,9 +120,7 @@ class TacticalReviewService:
 
     # ── Internals ──────────────────────────────────────────────────
 
-    def _build_prompt(
-        self, stats: dict[str, Any], language: str
-    ) -> str:
+    def _build_prompt(self, stats: dict[str, Any], language: str) -> str:
         sections: list[str] = []
         lang_tag = " (Arabic)" if language == "ar" else ""
 
@@ -140,9 +134,7 @@ class TacticalReviewService:
         )
         return "\n".join(sections)
 
-    def _parse_response(
-        self, raw: str, language: str
-    ) -> TacticalReview:
+    def _parse_response(self, raw: str, language: str) -> TacticalReview:
         review = TacticalReview(language=language)
 
         sections = {
@@ -172,7 +164,8 @@ class TacticalReviewService:
                     if keyword in line_lower:
                         if current_field and current_lines:
                             setattr(
-                                review, current_field,
+                                review,
+                                current_field,
                                 " ".join(current_lines).strip(),
                             )
                         current_field = field

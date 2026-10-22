@@ -22,14 +22,20 @@ def svc() -> SetPieceService:
     return SetPieceService()
 
 
-def make_corner(team: str = "home", outcome: str = "shot", x: float = 99, y: float = 5) -> SetPieceEvent:
+def make_corner(
+    team: str = "home", outcome: str = "shot", x: float = 99, y: float = 5
+) -> SetPieceEvent:
     return SetPieceEvent(
         set_piece_type="corner",
-        minute=12, second=0, team=team,
-        delivery_x=100, delivery_y=0 if team == "home" else 68,
+        minute=12,
+        second=0,
+        team=team,
+        delivery_x=100,
+        delivery_y=0 if team == "home" else 68,
         delivery_style="inswinging",
         delivery_height="medium",
-        first_contact_x=x, first_contact_y=y,
+        first_contact_x=x,
+        first_contact_y=y,
         outcome=outcome,
     )
 
@@ -101,10 +107,17 @@ class TestRoutineDetection:
 
     def test_fk_routine(self, svc: SetPieceService) -> None:
         ev = SetPieceEvent(
-            set_piece_type="free_kick", minute=50, second=0, team="home",
-            delivery_x=88, delivery_y=34, delivery_style="lofted",
+            set_piece_type="free_kick",
+            minute=50,
+            second=0,
+            team="home",
+            delivery_x=88,
+            delivery_y=34,
+            delivery_style="lofted",
             delivery_height="high",
-            first_contact_x=99, first_contact_y=5, outcome="shot",
+            first_contact_x=99,
+            first_contact_y=5,
+            outcome="shot",
         )
         assert "fk" in svc.detect_routine(ev)
 
@@ -161,11 +174,20 @@ class TestNotesGeneration:
         assert any("Home took 3 corners" in n for n in report.notes)
 
     def test_short_corner_note(self, svc: SetPieceService) -> None:
-        events = [SetPieceEvent(
-            set_piece_type="corner", minute=10, second=0, team="home",
-            delivery_x=100, delivery_y=0, delivery_style="short",
-            delivery_height="low",
-            first_contact_x=88, first_contact_y=10, outcome="retention_midfield",
-        )]
+        events = [
+            SetPieceEvent(
+                set_piece_type="corner",
+                minute=10,
+                second=0,
+                team="home",
+                delivery_x=100,
+                delivery_y=0,
+                delivery_style="short",
+                delivery_height="low",
+                first_contact_x=88,
+                first_contact_y=10,
+                outcome="retention_midfield",
+            )
+        ]
         report = svc.analyze(events)
         assert any("short corners" in n for n in report.notes)

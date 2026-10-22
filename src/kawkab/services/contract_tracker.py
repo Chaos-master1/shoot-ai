@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 
 class ContractTracker:
-    def __init__(self, db_path: str | Path | None = None, conn: sqlite3.Connection | None = None) -> None:
+    _CONTRACT_COLUMNS = (
+        "id, player_profile_id, player_name, contract_type, start_date, end_date, "
+        "club_option_years, player_option_years, release_clause_millions, "
+        "wage_weekly_pounds, agent_name, notes, last_updated"
+    )
+
+    def __init__(
+        self, db_path: str | Path | None = None, conn: sqlite3.Connection | None = None
+    ) -> None:
         self._db_path = Path(db_path) if db_path else None
         self._conn: sqlite3.Connection | None = conn
 
@@ -24,6 +32,8 @@ class ContractTracker:
 
     def set_connection(self, conn: sqlite3.Connection) -> None:
         self._conn = conn
+
+    def add_contract(
         self,
         player_profile_id: int,
         player_name: str,
@@ -48,9 +58,19 @@ class ContractTracker:
                  wage_weekly_pounds, agent_name, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (player_profile_id, player_name, contract_type, start_date, end_date,
-             club_option_years, player_option_years, release_clause_millions,
-             wage_weekly_pounds, agent_name, notes),
+            (
+                player_profile_id,
+                player_name,
+                contract_type,
+                start_date,
+                end_date,
+                club_option_years,
+                player_option_years,
+                release_clause_millions,
+                wage_weekly_pounds,
+                agent_name,
+                notes,
+            ),
         )
         self.conn.commit()
         return cursor.lastrowid or 0
@@ -58,9 +78,17 @@ class ContractTracker:
     def update_contract(self, contract_id: int, **updates: Any) -> bool:
         if self.conn is None:
             return False
-        allowed = {"contract_type", "start_date", "end_date", "club_option_years",
-                    "player_option_years", "release_clause_millions", "wage_weekly_pounds",
-                    "agent_name", "notes"}
+        allowed = {
+            "contract_type",
+            "start_date",
+            "end_date",
+            "club_option_years",
+            "player_option_years",
+            "release_clause_millions",
+            "wage_weekly_pounds",
+            "agent_name",
+            "notes",
+        }
         sets = []
         vals: list[Any] = []
         for key, val in updates.items():
@@ -72,9 +100,7 @@ class ContractTracker:
         sets.append("last_updated = datetime('now')")
         vals.append(contract_id)
         cursor = self.conn.cursor()
-        cursor.execute(
-            f"UPDATE player_contracts SET {', '.join(sets)} WHERE id = ?", vals
-        )
+        cursor.execute(f"UPDATE player_contracts SET {', '.join(sets)} WHERE id = ?", vals)
         self.conn.commit()
         return cursor.rowcount > 0
 
@@ -83,8 +109,8 @@ class ContractTracker:
             return []
         cursor = self.conn.cursor()
         cursor.execute(
-            """
-            SELECT * FROM player_contracts
+            f"""
+            SELECT {self._CONTRACT_COLUMNS} FROM player_contracts
             WHERE end_date BETWEEN date('now') AND date('now', '+' || ? || ' months')
             ORDER BY end_date ASC
             """,
@@ -97,7 +123,7 @@ class ContractTracker:
             return []
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT * FROM player_contracts WHERE end_date < date('now') ORDER BY end_date DESC"
+            f"SELECT {self._CONTRACT_COLUMNS} FROM player_contracts WHERE end_date < date('now') ORDER BY end_date DESC"
         )
         return [dict(row) for row in cursor.fetchall()]
 
@@ -106,14 +132,11 @@ class ContractTracker:
             return []
         now = datetime.now()
         year = now.year
-        if now.month >= 7:
-            season_end = f"{year + 1}-06-30"
-        else:
-            season_end = f"{year}-06-30"
+        season_end = f"{year + 1}-06-30" if now.month >= 7 else f"{year}-06-30"
         cursor = self.conn.cursor()
         cursor.execute(
-            """
-            SELECT * FROM player_contracts
+            f"""
+            SELECT {self._CONTRACT_COLUMNS} FROM player_contracts
             WHERE end_date BETWEEN date('now') AND date(?)
             ORDER BY end_date ASC
             """,
@@ -123,19 +146,33 @@ class ContractTracker:
 
     def get_squad_contract_summary(self) -> dict:
         if self.conn is None:
-            return {"total_contracts": 0, "expiring_this_season": 0, "by_type": {},
-                    "avg_wage": 0.0, "total_wage_bill": 0.0, "release_clause_total": 0.0}
+            return {
+                "total_contracts": 0,
+                "expiring_this_season": 0,
+                "by_type": {},
+                "avg_wage": 0.0,
+                "total_wage_bill": 0.0,
+                "release_clause_total": 0.0,
+            }
         cursor = self.conn.cursor()
         cursor.execute("SELECT COUNT(*) as c FROM player_contracts")
         total = cursor.fetchone()["c"]
-        cursor.execute("SELECT contract_type, COUNT(*) as c FROM player_contracts GROUP BY contract_type")
+        cursor.execute(
+            "SELECT contract_type, COUNT(*) as c FROM player_contracts GROUP BY contract_type"
+        )
         by_type = {row["contract_type"]: row["c"] for row in cursor.fetchall()}
-        cursor.execute("SELECT AVG(wage_weekly_pounds) as a FROM player_contracts WHERE wage_weekly_pounds IS NOT NULL")
+        cursor.execute(
+            "SELECT AVG(wage_weekly_pounds) as a FROM player_contracts WHERE wage_weekly_pounds IS NOT NULL"
+        )
         row = cursor.fetchone()
         avg_wage = round(float(row["a"]), 2) if row and row["a"] else 0.0
-        cursor.execute("SELECT COALESCE(SUM(wage_weekly_pounds), 0) as s FROM player_contracts WHERE wage_weekly_pounds IS NOT NULL")
+        cursor.execute(
+            "SELECT COALESCE(SUM(wage_weekly_pounds), 0) as s FROM player_contracts WHERE wage_weekly_pounds IS NOT NULL"
+        )
         total_wage = round(float(cursor.fetchone()["s"]), 2)
-        cursor.execute("SELECT COALESCE(SUM(release_clause_millions), 0) as s FROM player_contracts WHERE release_clause_millions IS NOT NULL")
+        cursor.execute(
+            "SELECT COALESCE(SUM(release_clause_millions), 0) as s FROM player_contracts WHERE release_clause_millions IS NOT NULL"
+        )
         release_total = round(float(cursor.fetchone()["s"]), 2)
         expiring = len(self.get_contracts_ending_this_season())
         return {
@@ -153,31 +190,35 @@ class ContractTracker:
         alerts: list[dict] = []
         cursor = self.conn.cursor()
         cursor.execute(
-            """
-            SELECT * FROM player_contracts
+            f"""
+            SELECT {self._CONTRACT_COLUMNS} FROM player_contracts
             WHERE end_date BETWEEN date('now') AND date('now', '+3 months')
             ORDER BY end_date ASC
             """
         )
         for row in cursor.fetchall():
-            alerts.append({
-                "type": "expiring_soon",
-                "message": f"{row['player_name']} contract expires in less than 3 months ({row['end_date']})",
-                "contract_id": row["id"],
-                "player_name": row["player_name"],
-                "end_date": row["end_date"],
-            })
+            alerts.append(
+                {
+                    "type": "expiring_soon",
+                    "message": f"{row['player_name']} contract expires in less than 3 months ({row['end_date']})",
+                    "contract_id": row["id"],
+                    "player_name": row["player_name"],
+                    "end_date": row["end_date"],
+                }
+            )
         cursor.execute(
-            """
-            SELECT * FROM player_contracts WHERE player_option_years > 0
+            f"""
+            SELECT {self._CONTRACT_COLUMNS} FROM player_contracts WHERE player_option_years > 0
             """
         )
         for row in cursor.fetchall():
-            alerts.append({
-                "type": "player_option",
-                "message": f"{row['player_name']} can trigger {row['player_option_years']}-year extension",
-                "contract_id": row["id"],
-                "player_name": row["player_name"],
-                "option_years": row["player_option_years"],
-            })
+            alerts.append(
+                {
+                    "type": "player_option",
+                    "message": f"{row['player_name']} can trigger {row['player_option_years']}-year extension",
+                    "contract_id": row["id"],
+                    "player_name": row["player_name"],
+                    "option_years": row["player_option_years"],
+                }
+            )
         return alerts

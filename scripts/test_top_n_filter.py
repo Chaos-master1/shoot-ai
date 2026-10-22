@@ -1,6 +1,8 @@
 """Test tracking with max_keep_top_n filter."""
+
 import asyncio
 import os
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 from pathlib import Path
 
@@ -23,4 +25,5 @@ async def main() -> int:
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(asyncio.run(main()))

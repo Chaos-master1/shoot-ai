@@ -12,6 +12,7 @@ closer to professional tools like Tractable and Second Spectrum.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -19,9 +20,14 @@ import numpy as np
 
 
 def _rk4_ball_trajectory(
-    x0: float, y0: float, z0: float,
-    vx0: float, vy0: float, vz0: float,
-    dt: float = 0.01, max_t: float = 5.0,
+    x0: float,
+    y0: float,
+    z0: float,
+    vx0: float,
+    vy0: float,
+    vz0: float,
+    dt: float = 0.01,
+    max_t: float = 5.0,
     rho: float = 1.225,
     Cd: float = 0.47,
     A: float = 0.038,
@@ -43,8 +49,9 @@ def _rk4_ball_trajectory(
     zs = [z0]
     t = 0.0
     while t < max_t and pos[2] > 0:
+
         def derivatives(state):
-            p, v = state[:3], state[3:]
+            _, v = state[:3], state[3:]
             speed = np.linalg.norm(v)
             drag = -0.5 * rho * Cd * A * speed * v / m if speed > 0 else np.zeros(3)
             S = 4.1e-4
@@ -180,23 +187,25 @@ class BallPhysicsPitchControl:
         dy = ty - py
 
         vel_toward = np.divide(
-            (vx * dx + vy * dy), distance,
-            out=np.zeros_like(distance), where=distance > 0,
+            (vx * dx + vy * dy),
+            distance,
+            out=np.zeros_like(distance),
+            where=distance > 0,
         )
         v0 = np.maximum(vel_toward, 0.0)
 
         t_acc = np.divide(
-            max_speed - v0, max_accel,
-            out=np.zeros_like(v0), where=v0 < max_speed,
+            max_speed - v0,
+            max_accel,
+            out=np.zeros_like(v0),
+            where=v0 < max_speed,
         )
         t_acc = np.maximum(t_acc, 0.0)
 
-        d_acc = v0 * t_acc + 0.5 * max_accel * t_acc ** 2
+        d_acc = v0 * t_acc + 0.5 * max_accel * t_acc**2
 
         travel_time_cruise = t_acc + (distance - d_acc) / max_speed
-        travel_time_quad = (
-            -v0 + np.sqrt(v0 ** 2 + 2 * max_accel * distance)
-        ) / max_accel
+        travel_time_quad = (-v0 + np.sqrt(v0**2 + 2 * max_accel * distance)) / max_accel
         where_cruise = (distance > d_acc) & (distance > 0)
         travel_time = np.where(where_cruise, travel_time_cruise, travel_time_quad)
         travel_time = np.where(distance > 0, travel_time, 0.0)
@@ -205,7 +214,8 @@ class BallPhysicsPitchControl:
 
     def _ball_arrival_time(
         self,
-        bx: float, by: float,
+        bx: float,
+        by: float,
         tx: np.ndarray | float,
         ty: np.ndarray | float,
         is_kicked: bool = False,
@@ -235,7 +245,7 @@ class BallPhysicsPitchControl:
             tx_arr = np.asarray(tx, dtype=np.float64)
             ty_arr = np.asarray(ty, dtype=np.float64)
 
-        distance = np.sqrt((tx_arr - bx) ** 2 + (ty_arr - by) ** 2)
+        distance = np.asarray(np.sqrt((tx_arr - bx) ** 2 + (ty_arr - by) ** 2))
 
         if not is_kicked:
             result = distance / max(self.ball_speed_roll, 1.0)
@@ -269,7 +279,7 @@ class BallPhysicsPitchControl:
             magnus = S * np.cross(omega, v) if speed > 0 else np.zeros(3)
             return np.concatenate([v, drag + magnus + np.array([0.0, 0.0, -g])])
 
-        rk_times = [0.0]
+        rk_times: list[float] = [0.0]
         rk_xs = [0.0]
         rk_zs = [z_init]
         t = 0.0
@@ -288,15 +298,19 @@ class BallPhysicsPitchControl:
                 rk_xs.append(float(pos[0]))
                 rk_zs.append(float(pos[2]))
 
-        rk_times = np.array(rk_times)
-        horiz_dists = np.abs(np.array(rk_xs))
+        rk_arr = np.asarray(rk_times if rk_times else [np.inf], dtype=np.float64)
+        horiz_dists = np.abs(np.asarray(rk_xs, dtype=np.float64))
 
         sort_idx = np.argsort(horiz_dists)
         sd = horiz_dists[sort_idx]
-        st = rk_times[sort_idx]
+        st = rk_arr[sort_idx]
 
-        result = np.interp(distance, sd, st, left=0.0, right=float(st[-1]))
-        result[distance > sd[-1]] = np.inf
+        if sd.size == 0:
+            # Simulation never crossed the sampling threshold (e.g. an
+            # immediate grounding); there is no curve to interpolate.
+            return math.inf if is_scalar else np.array([])
+        result = np.interp(distance, sd, st, left=0.0, right=float(np.max(st)))
+        result = np.asarray(np.where(distance > np.max(sd), math.inf, result))
 
         return result.item() if is_scalar else result
 
@@ -355,28 +369,30 @@ class BallPhysicsPitchControl:
 
         dx = tx_grid - px
         dy = ty_grid - py
-        dist = np.sqrt(dx ** 2 + dy ** 2)
+        dist = np.sqrt(dx**2 + dy**2)
 
         dot = vx * dx + vy * dy
         vel_toward = np.divide(
-            dot, dist,
-            out=np.zeros_like(dist), where=dist > 0,
+            dot,
+            dist,
+            out=np.zeros_like(dist),
+            where=dist > 0,
         )
         v0 = np.maximum(vel_toward, 0.0)
 
         max_accel = max(self.max_player_accel, 0.01)
         t_acc = np.divide(
-            self.max_player_speed - v0, max_accel,
-            out=np.zeros_like(v0), where=v0 < self.max_player_speed,
+            self.max_player_speed - v0,
+            max_accel,
+            out=np.zeros_like(v0),
+            where=v0 < self.max_player_speed,
         )
         t_acc = np.maximum(t_acc, 0.0)
 
-        d_acc = v0 * t_acc + 0.5 * max_accel * t_acc ** 2
+        d_acc = v0 * t_acc + 0.5 * max_accel * t_acc**2
 
         travel_cruise = t_acc + (dist - d_acc) / self.max_player_speed
-        travel_quad = (
-            -v0 + np.sqrt(v0 ** 2 + 2 * max_accel * dist)
-        ) / max_accel
+        travel_quad = (-v0 + np.sqrt(v0**2 + 2 * max_accel * dist)) / max_accel
         where_cruise = (dist > d_acc) & (dist > 0)
         travel_time = np.where(where_cruise, travel_cruise, travel_quad)
         travel_time = np.where(dist > 0, travel_time, 0.0)
@@ -425,9 +441,12 @@ class BallPhysicsPitchControl:
         if ball_pos is not None and all_players:
             bx, by = ball_pos
             player_times = self._player_arrival_time(
-                all_pos[:, 0], all_pos[:, 1],
-                all_vel[:, 0], all_vel[:, 1],
-                bx, by,
+                all_pos[:, 0],
+                all_pos[:, 1],
+                all_vel[:, 0],
+                all_vel[:, 1],
+                bx,
+                by,
             )
             best_idx = np.argmin(player_times)
             ball_zone_team = "home" if best_idx < n_home else "away"

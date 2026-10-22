@@ -6,14 +6,19 @@ formations and computes tactical flexibility scores. All numpy-only.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any
 
 
 class FormationEffectivenessAnalyzer:
-    def analyze_vs_formation(self, formations_data: dict[str, Any], opponent_formation: str) -> dict[str, Any]:
+    def analyze_vs_formation(
+        self, formations_data: dict[str, Any], opponent_formation: str
+    ) -> dict[str, Any]:
         matches = formations_data.get("matches", [])
-        relevant = [m for m in matches if m.get("opponent_formation", "").strip() == opponent_formation.strip()]
+        relevant = [
+            m
+            for m in matches
+            if m.get("opponent_formation", "").strip() == opponent_formation.strip()
+        ]
         n = len(relevant)
         if n == 0:
             return {
@@ -29,8 +34,16 @@ class FormationEffectivenessAnalyzer:
                 "avg_pressing_intensity": 0.0,
                 "win_rate": 0.0,
             }
-        totals: dict[str, float] = {"goals_scored": 0, "goals_conceded": 0, "xg_for": 0, "xg_against": 0,
-                                     "possession": 0, "pass_completion": 0, "chances_created": 0, "pressing_intensity": 0}
+        totals: dict[str, float] = {
+            "goals_scored": 0,
+            "goals_conceded": 0,
+            "xg_for": 0,
+            "xg_against": 0,
+            "possession": 0,
+            "pass_completion": 0,
+            "chances_created": 0,
+            "pressing_intensity": 0,
+        }
         wins = 0
         for m in relevant:
             totals["goals_scored"] += m.get("goals_scored", 0)
@@ -57,18 +70,32 @@ class FormationEffectivenessAnalyzer:
             "win_rate": round(wins / n * 100, 1) if n else 0.0,
         }
 
-    def compare_formation_performances(self, formation_history: list[dict[str, Any]]) -> dict[str, Any]:
+    def compare_formation_performances(
+        self, formation_history: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         if not formation_history:
-            return {"best_formation": "", "worst_formation": "", "formation_stats": {}, "best_vs_opponent": {}}
+            return {
+                "best_formation": "",
+                "worst_formation": "",
+                "formation_stats": {},
+                "best_vs_opponent": {},
+            }
         formation_stats: dict[str, dict[str, float]] = {}
         for m in formation_history:
             fm = m.get("formation", "")
             if not fm:
                 continue
             if fm not in formation_stats:
-                formation_stats[fm] = {"matches": 0, "goals_scored": 0, "goals_conceded": 0,
-                                       "xg_for": 0.0, "xg_against": 0.0, "possession": 0.0, "pass_completion": 0.0,
-                                       "wins": 0}
+                formation_stats[fm] = {
+                    "matches": 0,
+                    "goals_scored": 0,
+                    "goals_conceded": 0,
+                    "xg_for": 0.0,
+                    "xg_against": 0.0,
+                    "possession": 0.0,
+                    "pass_completion": 0.0,
+                    "wins": 0,
+                }
             formation_stats[fm]["matches"] += 1
             formation_stats[fm]["goals_scored"] += m.get("goals_scored", 0)
             formation_stats[fm]["goals_conceded"] += m.get("goals_conceded", 0)
@@ -102,15 +129,27 @@ class FormationEffectivenessAnalyzer:
             "best_vs_opponent": {},
         }
 
-    def compute_formation_flexibility_score(self, formation_history: list[dict[str, Any]]) -> dict[str, Any]:
+    def compute_formation_flexibility_score(
+        self, formation_history: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         if not formation_history:
-            return {"flexibility_score": 0.0, "formations_used": 0, "total_matches": 0, "verdict": "No data"}
-        formations = set(m.get("formation", "") for m in formation_history if m.get("formation"))
+            return {
+                "flexibility_score": 0.0,
+                "formations_used": 0,
+                "total_matches": 0,
+                "verdict": "No data",
+            }
+        formations = {m.get("formation", "") for m in formation_history if m.get("formation")}
         n_formations = len(formations)
         n_matches = len(formation_history)
         if n_formations == 0:
-            return {"flexibility_score": 0.0, "formations_used": 0, "total_matches": 0, "verdict": "No formations recorded"}
-        max_expected = min(n_formations, 5)
+            return {
+                "flexibility_score": 0.0,
+                "formations_used": 0,
+                "total_matches": 0,
+                "verdict": "No formations recorded",
+            }
+        _ = min(n_formations, 5)
         formation_ratio = n_formations / 5.0
         success_sum = 0.0
         n_success = 0
@@ -118,7 +157,9 @@ class FormationEffectivenessAnalyzer:
             fm_matches = [m for m in formation_history if m.get("formation") == fm]
             if not fm_matches:
                 continue
-            wins = sum(1 for m in fm_matches if m.get("goals_scored", 0) > m.get("goals_conceded", 0))
+            wins = sum(
+                1 for m in fm_matches if m.get("goals_scored", 0) > m.get("goals_conceded", 0)
+            )
             win_rate = wins / len(fm_matches)
             success_sum += win_rate
             n_success += 1

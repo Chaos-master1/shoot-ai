@@ -34,7 +34,9 @@ class CoordinateValidator:
             warnings.append(f"x={val} clamped to 0 (below pitch boundary)")
             clamped = True
         elif val > CoordinateValidator.PITCH_LENGTH:
-            warnings.append(f"x={val} clamped to {CoordinateValidator.PITCH_LENGTH} (exceeds pitch length)")
+            warnings.append(
+                f"x={val} clamped to {CoordinateValidator.PITCH_LENGTH} (exceeds pitch length)"
+            )
             clamped = True
         return ValidationResult(valid=True, errors=[], warnings=warnings, clamped=clamped)
 
@@ -52,7 +54,9 @@ class CoordinateValidator:
             warnings.append(f"y={val} clamped to 0 (below pitch boundary)")
             clamped = True
         elif val > CoordinateValidator.PITCH_WIDTH:
-            warnings.append(f"y={val} clamped to {CoordinateValidator.PITCH_WIDTH} (exceeds pitch width)")
+            warnings.append(
+                f"y={val} clamped to {CoordinateValidator.PITCH_WIDTH} (exceeds pitch width)"
+            )
             clamped = True
         return ValidationResult(valid=True, errors=[], warnings=warnings, clamped=clamped)
 
@@ -69,7 +73,9 @@ class CoordinateValidator:
         errors.extend(ry.errors)
         warnings.extend(ry.warnings)
         clamped = clamped or ry.clamped
-        return ValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings, clamped=clamped)
+        return ValidationResult(
+            valid=len(errors) == 0, errors=errors, warnings=warnings, clamped=clamped
+        )
 
     @staticmethod
     def validate_event_spatial(event: dict[str, Any]) -> ValidationResult:
@@ -80,25 +86,27 @@ class CoordinateValidator:
         present = [f for f in spatial_fields if f in event and event[f] is not None]
         if not present:
             return ValidationResult(valid=True)
-        for field in present:
-            val = event[field]
+        for spatial_field in present:
+            val = event[spatial_field]
             try:
                 fval = float(val)
             except (TypeError, ValueError):
-                errors.append(f"field '{field}' is not numeric: {val!r}")
+                errors.append(f"field '{spatial_field}' is not numeric: {val!r}")
                 continue
-            if field in ("x", "end_x", "start_x"):
+            if spatial_field in ("x", "end_x", "start_x"):
                 r = CoordinateValidator.validate_x(fval)
                 if r.clamped:
-                    event[field] = CoordinateValidator.clamp_x(fval)
+                    event[spatial_field] = CoordinateValidator.clamp_x(fval)
                     clamped = True
             else:
                 r = CoordinateValidator.validate_y(fval)
                 if r.clamped:
-                    event[field] = CoordinateValidator.clamp_y(fval)
+                    event[spatial_field] = CoordinateValidator.clamp_y(fval)
                     clamped = True
             warnings.extend(r.warnings)
-        return ValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings, clamped=clamped)
+        return ValidationResult(
+            valid=len(errors) == 0, errors=errors, warnings=warnings, clamped=clamped
+        )
 
     @staticmethod
     def clamp_x(x: float) -> float:

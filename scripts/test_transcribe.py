@@ -1,4 +1,5 @@
 """Test faster-whisper transcription on match segment."""
+
 from __future__ import annotations
 
 import sys
@@ -30,4 +31,5 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

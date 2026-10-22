@@ -15,6 +15,8 @@ PoseAnalysisService = _svc.PoseAnalysisService
 COCO_KEYPOINTS = _svc.COCO_KEYPOINTS
 POSE_CONNECTIONS = _svc.POSE_CONNECTIONS
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
@@ -32,8 +34,8 @@ class TestPoseBasics:
         assert len(POSE_CONNECTIONS) > 0
 
     def test_default_not_available(self, pose_svc: PoseAnalysisService) -> None:
-        # Without ultralytics installed, pose is not available
-        assert not pose_svc.available
+        with patch.object(pose_svc, "_ensure_model", return_value=False):
+            assert not pose_svc.available
 
 
 class TestActivityClassification:

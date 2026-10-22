@@ -20,5 +20,3 @@ CREATE INDEX IF NOT EXISTS idx_matches_deleted ON matches(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_events_deleted ON events(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_players_deleted ON players(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_coding_tags_deleted ON coding_tags(is_deleted);
-
-UPDATE schema_version SET version = 24;

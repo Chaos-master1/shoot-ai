@@ -11,10 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-import numpy as np
-
 from kawkab.core.xg_model import EnhancedXgModel
-
 
 SET_PIECE_TYPES = {"corner_kick", "free_kick", "throw_in", "goal_kick", "penalty"}
 
@@ -162,7 +159,8 @@ def _delivery_zone_label(x: float, y: float) -> str:
 
 
 def _compute_delivery_quality(
-    end_x: float, end_y: float,
+    end_x: float,
+    end_y: float,
     sp_type: str,
     has_shot: bool = False,
     xg_value: float = 0.0,
@@ -209,7 +207,8 @@ def _compute_delivery_quality(
 
 
 def _estimate_set_piece_xg(
-    end_x: float, end_y: float,
+    end_x: float,
+    end_y: float,
     sp_type: str,
     xg_model: EnhancedXgModel | None = None,
 ) -> float:
@@ -382,27 +381,31 @@ def analyze_set_pieces(
         avg_quality = sum(q_list) / len(q_list) if q_list else 0.0
         xe_list = type_xg_estimate.get(sp_type, [])
         avg_xe = sum(xe_list) / len(xe_list) if xe_list else 0.0
-        summaries.append(SetPieceSummary(
-            type=sp_type,
-            count=c,
-            shots=s,
-            goals=g,
-            total_xg=txg,
-            avg_xg_per_set_piece=avg_xg,
-            conversion_rate=conv,
-            threat_rating=threat,
-            delivery_quality=avg_quality,
-            expected_xg_from_delivery=avg_xe,
-        ))
+        summaries.append(
+            SetPieceSummary(
+                type=sp_type,
+                count=int(c),
+                shots=int(s),
+                goals=int(g),
+                total_xg=txg,
+                avg_xg_per_set_piece=avg_xg,
+                conversion_rate=conv,
+                threat_rating=threat,
+                delivery_quality=avg_quality,
+                expected_xg_from_delivery=avg_xe,
+            )
+        )
 
     overall_quality = sum(all_qualities) / len(all_qualities) if all_qualities else 0.0
 
     return SetPieceReport(
-        total_set_pieces=sum(td["count"] for td in type_data.values()),
+        total_set_pieces=sum(int(td["count"]) for td in type_data.values()),
         home_set_pieces=home_sp_count,
         away_set_pieces=away_sp_count,
         summaries=[s.to_dict() for s in summaries],
-        delivery_zones=[z.to_dict() for z in sorted(zone_data.values(), key=lambda z: z.count, reverse=True)],
+        delivery_zones=[
+            z.to_dict() for z in sorted(zone_data.values(), key=lambda z: z.count, reverse=True)
+        ],
         home_total_xg=home_total_xg,
         away_total_xg=away_total_xg,
         home_goals=home_goals,

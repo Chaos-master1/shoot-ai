@@ -1,11 +1,9 @@
 """Tests for Scout Report Generation."""
 
 from kawkab.core.scout_reports import (
-    SCOUT_METRICS,
     SCOUT_METRIC_MEANS,
-    SCOUT_METRIC_STDS,
+    SCOUT_METRICS,
     STAT_MEANS,
-    ScoutReport,
     _z_to_percentile,
     generate_scout_report,
 )
@@ -146,9 +144,27 @@ class TestGenerateScoutReport:
 
     def test_similar_players_included_in_report(self):
         sims = [
-            {"name": "P1", "similarity_score": 0.95, "club": "C1", "league": "L1", "key_comparison_metrics": {}},
-            {"name": "P2", "similarity_score": 0.88, "club": "C2", "league": "L2", "key_comparison_metrics": {}},
-            {"name": "P3", "similarity_score": 0.82, "club": "C3", "league": "L3", "key_comparison_metrics": {}},
+            {
+                "name": "P1",
+                "similarity_score": 0.95,
+                "club": "C1",
+                "league": "L1",
+                "key_comparison_metrics": {},
+            },
+            {
+                "name": "P2",
+                "similarity_score": 0.88,
+                "club": "C2",
+                "league": "L2",
+                "key_comparison_metrics": {},
+            },
+            {
+                "name": "P3",
+                "similarity_score": 0.82,
+                "club": "C3",
+                "league": "L3",
+                "key_comparison_metrics": {},
+            },
         ]
         report = generate_scout_report(
             player_id="1",
@@ -233,7 +249,12 @@ class TestGenerateScoutReport:
     def test_league_stats_override_defaults(self):
         league = {"xG_per_90": 0.5, "xA_per_90": 0.3}
         report = generate_scout_report(
-            "1", "Test", STAR_STATS, {}, league, [],
+            "1",
+            "Test",
+            STAR_STATS,
+            {},
+            league,
+            [],
         )
         assert report.comparison_table["xG_per_90"]["league_average"] == 0.5
         assert report.comparison_table["xA_per_90"]["league_average"] == 0.3

@@ -6,7 +6,6 @@ flank effectiveness, and switch-of-play detection. All numpy-only.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any
 
 from kawkab.core.game_constants import GAME
@@ -29,23 +28,39 @@ class FlankAnalyzer:
     def analyze_build_up_side(self, events: list[dict[str, Any]], team: str) -> dict[str, Any]:
         team_passes = [e for e in events if e.get("team") == team and e.get("type") == "pass"]
         build_up_passes = [
-            e for e in team_passes
+            e
+            for e in team_passes
             if float(e.get("start_x", PITCH_LENGTH / 2)) < PITCH_LENGTH * 0.33
         ]
         if not build_up_passes:
-            return {"left_pct": 0, "center_pct": 0, "right_pct": 0, "dominant_side": "center", "total_actions": 0}
+            return {
+                "left_pct": 0,
+                "center_pct": 0,
+                "right_pct": 0,
+                "dominant_side": "center",
+                "total_actions": 0,
+            }
         sides: list[str] = []
         for e in build_up_passes:
             ex = float(e.get("end_x", PITCH_LENGTH / 2))
             if ex > float(e.get("start_x", 0)):
                 sides.append(classify_zone(ex))
         if not sides:
-            return {"left_pct": 0, "center_pct": 0, "right_pct": 0, "dominant_side": "center", "total_actions": 0}
+            return {
+                "left_pct": 0,
+                "center_pct": 0,
+                "right_pct": 0,
+                "dominant_side": "center",
+                "total_actions": 0,
+            }
         total = len(sides)
         left_c = sum(1 for s in sides if s == "left")
         center_c = sum(1 for s in sides if s == "center")
         right_c = sum(1 for s in sides if s == "right")
-        dominant = max({"left": left_c, "center": center_c, "right": right_c}, key=lambda k: {"left": left_c, "center": center_c, "right": right_c}[k])
+        dominant = max(
+            {"left": left_c, "center": center_c, "right": right_c},
+            key=lambda k: {"left": left_c, "center": center_c, "right": right_c}[k],
+        )
         return {
             "left_pct": round(left_c / total * 100, 1),
             "center_pct": round(center_c / total * 100, 1),
@@ -56,18 +71,26 @@ class FlankAnalyzer:
 
     def analyze_attack_side(self, events: list[dict[str, Any]], team: str) -> dict[str, Any]:
         team_passes = [e for e in events if e.get("team") == team and e.get("type") == "pass"]
-        attack_passes = [
-            e for e in team_passes
-            if float(e.get("start_x", 0)) > PITCH_LENGTH * 0.66
-        ]
+        attack_passes = [e for e in team_passes if float(e.get("start_x", 0)) > PITCH_LENGTH * 0.66]
         if not attack_passes:
-            return {"left_pct": 0, "center_pct": 0, "right_pct": 0, "dominant_side": "center", "total_actions": 0}
-        sides = [classify_zone(float(e.get("end_y", GOAL_CENTER_Y)), PITCH_WIDTH) for e in attack_passes]
+            return {
+                "left_pct": 0,
+                "center_pct": 0,
+                "right_pct": 0,
+                "dominant_side": "center",
+                "total_actions": 0,
+            }
+        sides = [
+            classify_zone(float(e.get("end_y", GOAL_CENTER_Y)), PITCH_WIDTH) for e in attack_passes
+        ]
         total = len(sides)
         left_c = sum(1 for s in sides if s == "left")
         center_c = sum(1 for s in sides if s == "center")
         right_c = sum(1 for s in sides if s == "right")
-        dominant = max({"left": left_c, "center": center_c, "right": right_c}, key=lambda k: {"left": left_c, "center": center_c, "right": right_c}[k])
+        dominant = max(
+            {"left": left_c, "center": center_c, "right": right_c},
+            key=lambda k: {"left": left_c, "center": center_c, "right": right_c}[k],
+        )
         return {
             "left_pct": round(left_c / total * 100, 1),
             "center_pct": round(center_c / total * 100, 1),
@@ -76,12 +99,35 @@ class FlankAnalyzer:
             "total_actions": total,
         }
 
-    def compute_flank_effectiveness(self, events: list[dict[str, Any]], team: str) -> dict[str, Any]:
+    def compute_flank_effectiveness(
+        self, events: list[dict[str, Any]], team: str
+    ) -> dict[str, Any]:
         team_events = [e for e in events if e.get("team") == team]
         flanks: dict[str, dict[str, Any]] = {
-            "left": {"passes": 0, "crosses": 0, "crosses_completed": 0, "shots": 0, "xg": 0.0, "goals": 0},
-            "center": {"passes": 0, "crosses": 0, "crosses_completed": 0, "shots": 0, "xg": 0.0, "goals": 0},
-            "right": {"passes": 0, "crosses": 0, "crosses_completed": 0, "shots": 0, "xg": 0.0, "goals": 0},
+            "left": {
+                "passes": 0,
+                "crosses": 0,
+                "crosses_completed": 0,
+                "shots": 0,
+                "xg": 0.0,
+                "goals": 0,
+            },
+            "center": {
+                "passes": 0,
+                "crosses": 0,
+                "crosses_completed": 0,
+                "shots": 0,
+                "xg": 0.0,
+                "goals": 0,
+            },
+            "right": {
+                "passes": 0,
+                "crosses": 0,
+                "crosses_completed": 0,
+                "shots": 0,
+                "xg": 0.0,
+                "goals": 0,
+            },
         }
         for ev in team_events:
             sx = float(ev.get("start_x", PITCH_LENGTH / 2))
@@ -107,7 +153,9 @@ class FlankAnalyzer:
                     flanks[flank]["goals"] += 1
         output: dict[str, Any] = {}
         for fname, fdata in flanks.items():
-            cross_completion = (fdata["crosses_completed"] / fdata["crosses"] * 100) if fdata["crosses"] else 0.0
+            cross_completion = (
+                (fdata["crosses_completed"] / fdata["crosses"] * 100) if fdata["crosses"] else 0.0
+            )
             output[fname] = {
                 "passes": fdata["passes"],
                 "shots_created": fdata["shots"],
@@ -123,9 +171,9 @@ class FlankAnalyzer:
         team_passes = [e for e in events if e.get("team") == team and e.get("type") == "pass"]
         switches: list[dict[str, Any]] = []
         for e in team_passes:
-            sx = float(e.get("start_x", 0))
+            _ = float(e.get("start_x", 0))
             sy = float(e.get("start_y", GOAL_CENTER_Y))
-            ex = float(e.get("end_x", 0))
+            _ = float(e.get("end_x", 0))
             ey = float(e.get("end_y", GOAL_CENTER_Y))
             start_flank = classify_zone(sy, PITCH_WIDTH)
             end_flank = classify_zone(ey, PITCH_WIDTH)
@@ -137,7 +185,7 @@ class FlankAnalyzer:
         leading_to_chances = 0
         for sw in switches:
             idx = team_passes.index(sw)
-            for candidate in team_passes[idx + 1: idx + 4]:
+            for candidate in team_passes[idx + 1 : idx + 4]:
                 if candidate.get("type") == "shot" and candidate.get("team") == team:
                     leading_to_chances += 1
                     break
@@ -150,7 +198,7 @@ class FlankAnalyzer:
 
     def generate_flank_report(self, events: list[dict[str, Any]]) -> dict[str, Any]:
         output: dict[str, Any] = {}
-        for team in set(e.get("team", "") for e in events if e.get("team")):
+        for team in {e.get("team", "") for e in events if e.get("team")}:
             output[team] = {
                 "build_up": self.analyze_build_up_side(events, team),
                 "attack_side": self.analyze_attack_side(events, team),
@@ -160,9 +208,26 @@ class FlankAnalyzer:
         for side in ("home", "away"):
             if side not in output:
                 output[side] = {
-                    "build_up": {"left_pct": 0, "center_pct": 0, "right_pct": 0, "dominant_side": "center", "total_actions": 0},
-                    "attack_side": {"left_pct": 0, "center_pct": 0, "right_pct": 0, "dominant_side": "center", "total_actions": 0},
+                    "build_up": {
+                        "left_pct": 0,
+                        "center_pct": 0,
+                        "right_pct": 0,
+                        "dominant_side": "center",
+                        "total_actions": 0,
+                    },
+                    "attack_side": {
+                        "left_pct": 0,
+                        "center_pct": 0,
+                        "right_pct": 0,
+                        "dominant_side": "center",
+                        "total_actions": 0,
+                    },
                     "flank_effectiveness": {"team": side},
-                    "flank_switches": {"team": side, "switch_count": 0, "completion_rate_pct": 0.0, "pct_leading_to_chances": 0.0},
+                    "flank_switches": {
+                        "team": side,
+                        "switch_count": 0,
+                        "completion_rate_pct": 0.0,
+                        "pct_leading_to_chances": 0.0,
+                    },
                 }
         return output

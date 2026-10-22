@@ -3,10 +3,8 @@ from __future__ import annotations
 import pytest
 
 from kawkab.services.data_provider_base import (
-    BaseDataProvider,
     DataProviderRegistry,
     ProviderEvent,
-    ProviderLineup,
     ProviderMatch,
 )
 from kawkab.services.opta_importer import OptaF7Importer
@@ -47,12 +45,28 @@ class TestDataProviderRegistry:
 
 class TestProviderMatch:
     def test_default_values(self):
-        m = ProviderMatch(match_id="1", home_team="A", away_team="B", competition="C", season="S", date=__import__("datetime").datetime.now())
+        m = ProviderMatch(
+            match_id="1",
+            home_team="A",
+            away_team="B",
+            competition="C",
+            season="S",
+            date=__import__("datetime").datetime.now(),
+        )
         assert m.home_score is None
         assert m.status == "scheduled"
 
     def test_with_score(self):
-        m = ProviderMatch(match_id="1", home_team="A", away_team="B", competition="C", season="S", date=__import__("datetime").datetime.now(), home_score=2, away_score=1)
+        m = ProviderMatch(
+            match_id="1",
+            home_team="A",
+            away_team="B",
+            competition="C",
+            season="S",
+            date=__import__("datetime").datetime.now(),
+            home_score=2,
+            away_score=1,
+        )
         assert m.home_score == 2
         assert m.away_score == 1
 

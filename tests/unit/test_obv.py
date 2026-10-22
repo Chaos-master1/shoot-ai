@@ -1,7 +1,8 @@
 """Tests for Off-Ball Value (OBV) — space creation, defense, support, decoy."""
+
 import pytest
 
-from kawkab.core.obv import OffBallValuator, OBVPlayerResult, OBVMatchReport
+from kawkab.core.obv import OBVMatchReport, OBVPlayerResult, OffBallValuator
 
 
 def _simple_frame(t, possession, ball, home_positions, away_positions):
@@ -57,13 +58,15 @@ class TestOffBallValuator:
         frames = []
         for i in range(6):
             x = 40.0 + i * 5.0  # 5 m/s >= SPACE_CREATION_SPEED_MS (4.0)
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=True,
-                ball=(20.0, 34.0),
-                home_positions=[(x, 34.0, 1)],
-                away_positions=[],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=True,
+                    ball=(20.0, 34.0),
+                    home_positions=[(x, 34.0, 1)],
+                    away_positions=[],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
         assert report.players[1].space_creation_value > 0.0
         assert report.players[1].total_obv > 0.0
@@ -72,13 +75,15 @@ class TestOffBallValuator:
         obv = OffBallValuator()
         frames = []
         for i in range(4):
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=False,
-                ball=(60.0, 34.0),
-                home_positions=[(50.0, 34.0, 1)],
-                away_positions=[(70.0, 34.0, 10)],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=False,
+                    ball=(60.0, 34.0),
+                    home_positions=[(50.0, 34.0, 1)],
+                    away_positions=[(70.0, 34.0, 10)],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
         assert report.players[1].def_positioning_value > 0.0
 
@@ -87,13 +92,15 @@ class TestOffBallValuator:
         frames = []
         for i in range(4):
             x = 80.0  # ahead of ball, good passing angle
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=True,
-                ball=(50.0, 34.0),
-                home_positions=[(x, 34.0, 1)],
-                away_positions=[],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=True,
+                    ball=(50.0, 34.0),
+                    home_positions=[(x, 34.0, 1)],
+                    away_positions=[],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
         assert report.players[1].support_value > 0.0
 
@@ -102,13 +109,15 @@ class TestOffBallValuator:
         frames = []
         for i in range(5):
             x = 30.0 + i * 4.0
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=False,
-                ball=(50.0, 34.0),
-                home_positions=[(x, 34.0, 1)],
-                away_positions=[(x + 2.0, 34.0, 10)],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=False,
+                    ball=(50.0, 34.0),
+                    home_positions=[(x, 34.0, 1)],
+                    away_positions=[(x + 2.0, 34.0, 10)],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
         assert report.players[1].decoy_run_value >= 0.0
 
@@ -116,13 +125,15 @@ class TestOffBallValuator:
         obv = OffBallValuator()
         frames = []
         for i in range(4):
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=True,
-                ball=(20.0, 34.0),
-                home_positions=[(40.0 + i * 3.0, 34.0, 1), (35.0 + i * 2.0, 40.0, 2)],
-                away_positions=[],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=True,
+                    ball=(20.0, 34.0),
+                    home_positions=[(40.0 + i * 3.0, 34.0, 1), (35.0 + i * 2.0, 40.0, 2)],
+                    away_positions=[],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
         expected_sum = sum(r.total_obv for r in report.players.values())
         assert report.team_obv == pytest.approx(expected_sum, abs=1e-9)
@@ -149,15 +160,17 @@ class TestOffBallValuator:
         obv = OffBallValuator()
         frames = []
         for i in range(4):
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=True,
-                ball=(50.0, 34.0),
-                home_positions=[(40.0, 34.0, 1)],
-                away_positions=[],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=True,
+                    ball=(50.0, 34.0),
+                    home_positions=[(40.0, 34.0, 1)],
+                    away_positions=[],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
-        for pid, pr in report.players.items():
+        for _pid, pr in report.players.items():
             assert pr.space_creation_value >= 0.0
             assert pr.def_positioning_value >= 0.0
             assert pr.support_value >= 0.0
@@ -169,34 +182,46 @@ class TestOffBallValuator:
         frames = []
         for i in range(4):
             x = 40.0 + i * 0.5  # 0.5 m/s
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=True,
-                ball=(20.0, 34.0),
-                home_positions=[(x, 34.0, 1)],
-                away_positions=[],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=True,
+                    ball=(20.0, 34.0),
+                    home_positions=[(x, 34.0, 1)],
+                    away_positions=[],
+                )
+            )
         report = obv.compute_obv(frames, team="home")
         assert report.players[1].space_creation_value == 0.0
 
     def test_compute_passing_lane_out_of_range(self):
         obv = OffBallValuator()
         val = obv._compute_passing_lane_value(
-            (10.0, 34.0), (50.0, 34.0), {}, 1, 0,
+            (10.0, 34.0),
+            (50.0, 34.0),
+            {},
+            1,
+            0,
         )
         assert 0.0 <= val <= 1.0
 
     def test_compute_defensive_value_out_of_range(self):
         obv = OffBallValuator()
         val = obv._compute_defensive_value(
-            (10.0, 34.0), (50.0, 34.0), {}, 0,
+            (10.0, 34.0),
+            (50.0, 34.0),
+            {},
+            0,
         )
         assert 0.0 <= val <= 1.0
 
     def test_compute_decoy_value_zero_when_no_opponents(self):
         obv = OffBallValuator()
         val = obv._compute_decoy_value(
-            (50.0, 34.0), (30.0, 34.0), {}, 0,
+            (50.0, 34.0),
+            (30.0, 34.0),
+            {},
+            0,
         )
         assert val == 0.0
 
@@ -207,7 +232,10 @@ class TestOffBallValuator:
             20: [(0.0, 60.0, 34.0), (1.0, 58.0, 34.0), (2.0, 56.0, 34.0)],
         }
         val = obv._compute_decoy_value(
-            (52.0, 34.0), (30.0, 34.0), opp_trajs, 1,
+            (52.0, 34.0),
+            (30.0, 34.0),
+            opp_trajs,
+            1,
         )
         assert val > 0.0
 
@@ -215,13 +243,15 @@ class TestOffBallValuator:
         obv = OffBallValuator()
         frames = []
         for i in range(4):
-            frames.append(_simple_frame(
-                t=float(i),
-                possession=False,
-                ball=(50.0, 34.0),
-                home_positions=[(40.0, 34.0, 1)],
-                away_positions=[(60.0, 34.0, 10)],
-            ))
+            frames.append(
+                _simple_frame(
+                    t=float(i),
+                    possession=False,
+                    ball=(50.0, 34.0),
+                    home_positions=[(40.0, 34.0, 1)],
+                    away_positions=[(60.0, 34.0, 10)],
+                )
+            )
         report = obv.compute_obv(frames, team="away")
         assert report.team == "away"
         assert len(report.players) > 0

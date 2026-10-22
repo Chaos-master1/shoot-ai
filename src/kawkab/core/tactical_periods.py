@@ -70,7 +70,14 @@ def detect_tactical_periods(
 
     phases: list[tuple[float, str]] = []  # (timestamp, phase_label)
 
-    window_size = max(1, int(30.0 / max(1.0, frame_data[-1]["timestamp"] - frame_data[0]["timestamp"]) * len(frame_data)))
+    window_size = max(
+        1,
+        int(
+            30.0
+            / max(1.0, frame_data[-1]["timestamp"] - frame_data[0]["timestamp"])
+            * len(frame_data)
+        ),
+    )
     window_size = min(window_size, len(frame_data))
 
     for i, fdata in enumerate(frame_data):
@@ -81,10 +88,8 @@ def detect_tactical_periods(
         away_pos = fdata.get("away_positions", [])
 
         # Compute defensive line height (avg x of defensive half)
-        if possession:
-            def_team_pos = away_pos  # Away defending
-        else:
-            def_team_pos = home_pos  # Home defending
+        # When in possession, the AWAY team is defending (and vice versa)
+        def_team_pos = away_pos if possession else home_pos
 
         def_line_x = 0.0
         if def_team_pos:
@@ -112,10 +117,7 @@ def detect_tactical_periods(
             else:
                 phase = "settled_possession"
         else:
-            if ball_speed > 15.0:
-                phase = "transition"
-            else:
-                phase = "settled_possession"
+            phase = "transition" if ball_speed > 15.0 else "settled_possession"
 
         phases.append((ts, phase))
 
@@ -129,12 +131,14 @@ def detect_tactical_periods(
             continue
         duration = ts - current_start
         if duration >= min_phase_duration:
-            merged.append(TacticalPhase(
-                start_time=current_start,
-                end_time=ts,
-                label=current_label,
-                duration_s=duration,
-            ))
+            merged.append(
+                TacticalPhase(
+                    start_time=current_start,
+                    end_time=ts,
+                    label=current_label,
+                    duration_s=duration,
+                )
+            )
         current_label = label
         current_start = ts
 
@@ -142,12 +146,14 @@ def detect_tactical_periods(
     last_ts = frame_data[-1]["timestamp"]
     duration = last_ts - current_start
     if duration >= min_phase_duration:
-        merged.append(TacticalPhase(
-            start_time=current_start,
-            end_time=last_ts,
-            label=current_label,
-            duration_s=duration,
-        ))
+        merged.append(
+            TacticalPhase(
+                start_time=current_start,
+                end_time=last_ts,
+                label=current_label,
+                duration_s=duration,
+            )
+        )
 
     total_time = last_ts - frame_data[0]["timestamp"]
     if total_time <= 0:

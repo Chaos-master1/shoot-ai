@@ -1,18 +1,17 @@
-"""Tests for BenchmarkService - performance measurement and system detection.
-"""
+"""Tests for BenchmarkService - performance measurement and system detection."""
 
 from __future__ import annotations
 
-import pytest
+import tempfile
 import time
 from pathlib import Path
-import tempfile
 
+import pytest
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
 
-from kawkab.services.benchmark_service import BenchmarkService, BenchmarkResult
+from kawkab.services.benchmark_service import BenchmarkService
 from kawkab.services.storage_service import StorageService
 
 
@@ -88,7 +87,6 @@ class TestBenchmarkService:
         assert unknown["model_size"] == "n"
         assert unknown["frame_skip"] == 5
 
-
     @pytest.mark.asyncio
     async def test_save_benchmark_to_database(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -97,6 +95,15 @@ class TestBenchmarkService:
             # Override default path
             storage._db_path = db_path
             await storage.initialize()
+
+            cursor = storage._conn.cursor()
+            cursor.execute(
+                "INSERT INTO teams (id, name, short_name) VALUES (1, 'Test Team', 'TST')"
+            )
+            cursor.execute(
+                "INSERT INTO matches (id, name, video_path) VALUES (1, 'Test Match', '/test.mp4')"
+            )
+            storage._conn.commit()
 
             svc = BenchmarkService()
             svc._stage_times = {"enhancement": 1.0, "detection": 2.0}

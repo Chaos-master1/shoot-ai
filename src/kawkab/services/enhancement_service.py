@@ -38,9 +38,7 @@ class EnhancementService:
             f"upscale={enable_upscaling}, interp={enable_interpolation}"
         )
 
-    async def preprocess_video(
-        self, input_path: Path, output_path: Path
-    ) -> Path:
+    async def preprocess_video(self, input_path: Path, output_path: Path) -> Path:
         """Apply free FFmpeg filters to improve amateur footage.
 
         Filters applied (in order):
@@ -64,17 +62,13 @@ class EnhancementService:
 
         if self.enable_stabilization:
             stream = stream.filter("vidstabdetect", shakiness=8, accuracy=15)
-            stream = stream.filter(
-                "vidstabtransform", input=str(input_path), smoothing=20
-            )
+            stream = stream.filter("vidstabtransform", input=str(input_path), smoothing=20)
 
         if self.enable_denoising:
             stream = stream.filter("hqdn3d", luma_spatial=4, chroma_spatial=3)
 
         if self.enable_sharpening:
-            stream = stream.filter(
-                "unsharp", luma_msize_x=5, luma_msize_y=5, luma_amount=1.0
-            )
+            stream = stream.filter("unsharp", luma_msize_x=5, luma_msize_y=5, luma_amount=1.0)
 
         stream = stream.filter("scale", 1280, 720)
         stream = stream.output(
@@ -85,9 +79,7 @@ class EnhancementService:
         logger.info(f"Preprocessed video saved: {output_path.name}")
         return output_path
 
-    async def upscale_video(
-        self, input_path: Path, output_path: Path, scale: int = 2
-    ) -> Path:
+    async def upscale_video(self, input_path: Path, output_path: Path, scale: int = 2) -> Path:
         """Upscale video using Real-ESRGAN (optional, GPU-intensive).
 
         Args:
@@ -102,18 +94,13 @@ class EnhancementService:
             logger.info("Upscaling disabled, skipping")
             return input_path
 
-        logger.info(
-            f"Upscaling video: {input_path.name} (scale={scale}x) "
-            "via Real-ESRGAN"
-        )
+        logger.info(f"Upscaling video: {input_path.name} (scale={scale}x) via Real-ESRGAN")
 
         try:
             from basicsr.archs.rrdbnet_arch import RRDBNet
             from realesrgan import RealESRGANer
         except ImportError:
-            logger.error(
-                "Real-ESRGAN not installed. Run: pip install realesrgan basicsr"
-            )
+            logger.error("Real-ESRGAN not installed. Run: pip install realesrgan basicsr")
             return input_path
 
         import cv2
@@ -144,10 +131,8 @@ class EnhancementService:
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(
-            str(output_path), fourcc, fps, (w * scale, h * scale)
-        )
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]  # cv2 runtime attr absent from stale stubs
+        out = cv2.VideoWriter(str(output_path), fourcc, fps, (w * scale, h * scale))
 
         frame_num = 0
         try:
@@ -186,9 +171,7 @@ class EnhancementService:
             logger.info("Interpolation disabled, skipping")
             return input_path
 
-        logger.info(
-            f"Interpolating video: {input_path.name} → {target_fps} FPS via RIFE"
-        )
+        logger.info(f"Interpolating video: {input_path.name} → {target_fps} FPS via RIFE")
 
         try:
             from rife.RIFE_HDv3 import Model
@@ -199,8 +182,8 @@ class EnhancementService:
             return input_path
 
         import cv2
-        import torch
         import numpy as np
+        import torch
 
         model = Model()
         model.load_model("rife")
@@ -213,7 +196,7 @@ class EnhancementService:
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         ratio = target_fps / fps
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore[attr-defined]  # cv2 runtime attr absent from stale stubs
         out = cv2.VideoWriter(str(output_path), fourcc, target_fps, (w, h))
 
         ret, prev_frame = cap.read()

@@ -6,7 +6,6 @@ shot-quality-weighted xA using EnhancedXgModel.
 
 from __future__ import annotations
 
-import functools
 import math
 from dataclasses import dataclass, field
 from typing import Any
@@ -14,7 +13,6 @@ from typing import Any
 import numpy as np
 
 from kawkab.core.xg_model import EnhancedXgModel
-
 
 # Poisson rate parameters by destination zone (5×6 grid, attacking half)
 # λ = expected number of shots generated per pass arriving in this zone
@@ -58,6 +56,7 @@ _SHOT_XG_BY_ZONE: list[list[float]] = [
 @dataclass
 class XAResult:
     """xA value for a single pass."""
+
     xa: float = 0.0
     base_prob: float = 0.0
     pass_type_mult: float = 1.0
@@ -83,6 +82,7 @@ class XAResult:
 @dataclass
 class XAMatchReport:
     """Aggregate xA for a match."""
+
     home_xa: float = 0.0
     away_xa: float = 0.0
     home_sequence_xa: float = 0.0
@@ -123,6 +123,7 @@ class ExpectedAssistModel:
         self.pitch_width = pitch_width
         self.xg_model = xg_model or EnhancedXgModel()
         self.attacking_direction = attacking_direction
+        self._xa_cache: dict[tuple, XAResult] = {}
 
         # Shot arrival probability grid
         self._arrival_grid = np.array(_SHOT_ARRIVAL_RATES[:rows], dtype=np.float64)
@@ -148,7 +149,6 @@ class ExpectedAssistModel:
         row = min(self.rows - 1, max(0, int((self.pitch_width - y) / self.pitch_width * self.rows)))
         return (row, col)
 
-    @functools.lru_cache(maxsize=128)
     def compute_xa(
         self,
         end_x: float,
@@ -175,6 +175,19 @@ class ExpectedAssistModel:
         Returns:
             XAResult with xA value and breakdown.
         """
+        cache_key = (
+            end_x,
+            end_y,
+            pass_type,
+            distance_m,
+            is_progressive,
+            under_pressure,
+            use_sequence_model,
+            cross_subtype,
+        )
+        cached_result = self._xa_cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
         row, col = self._zone_from_position(end_x, end_y)
         base_prob = float(self._arrival_grid[row, col])
 
@@ -203,12 +216,16 @@ class ExpectedAssistModel:
         sequence_xa = shot_arrival_prob * expected_shot_xg
 
         # Legacy zone-based xA (for backward compat)
-        legacy_prob = _SHOT_ARRIVAL_RATES[row][col] if row < len(_SHOT_ARRIVAL_RATES) and col < len(_SHOT_ARRIVAL_RATES[0]) else 0.01
+        legacy_prob = (
+            _SHOT_ARRIVAL_RATES[row][col]
+            if row < len(_SHOT_ARRIVAL_RATES) and col < len(_SHOT_ARRIVAL_RATES[0])
+            else 0.01
+        )
         legacy_xa = legacy_prob * pass_mult * dist_factor * prog_bonus * pressure_penalty
 
         xa = sequence_xa if use_sequence_model else legacy_xa
 
-        return XAResult(
+        result = XAResult(
             xa=xa,
             base_prob=base_prob,
             pass_type_mult=pass_mult,
@@ -218,26 +235,45 @@ class ExpectedAssistModel:
             expected_shot_xg=expected_shot_xg,
             sequence_xa=sequence_xa,
         )
+        self._xa_cache[cache_key] = result
+        return result
 
-    def compute_pass_xa(self, event: dict[str, Any],
-                        use_sequence_model: bool = True) -> XAResult:
-        end_x = event.get("end_x", self.pitch_length / 2)
-        end_y = event.get("end_y", self.pitch_width / 2)
+    def compute_pass_xa(self, event: dict[str, Any], use_sequence_model: bool = True) -> XAResult:
+        # json_extract emits None (not a missing key) for storage rows whose
+        # metadata lacks coordinates, so .get(key, default) returned None and
+        # the distance arithmetic raised TypeError. None falls back to the
+        # same pitch-center default a missing key always used.
+        end_x = event.get("end_x")
+        if end_x is None:
+            end_x = self.pitch_length / 2
+        end_y = event.get("end_y")
+        if end_y is None:
+            end_y = self.pitch_width / 2
         pass_type = event.get("pass_type", "standard")
-        sx = event.get("start_x", self.pitch_length / 2)
-        sy = event.get("start_y", self.pitch_width / 2)
+        sx = event.get("start_x")
+        if sx is None:
+            sx = self.pitch_length / 2
+        sy = event.get("start_y")
+        if sy is None:
+            sy = self.pitch_width / 2
         distance_m = math.sqrt((end_x - sx) ** 2 + (end_y - sy) ** 2)
         is_progressive = event.get("is_progressive", False)
         under_pressure = event.get("under_pressure", False)
-        cross_subtype = event.get("cross_subtype", None)
+        cross_subtype = event.get("cross_subtype")
         return self.compute_xa(
-            end_x, end_y, pass_type, distance_m,
-            is_progressive, under_pressure, use_sequence_model,
+            end_x,
+            end_y,
+            pass_type,
+            distance_m,
+            is_progressive,
+            under_pressure,
+            use_sequence_model,
             cross_subtype,
         )
 
-    def compute_match_xa(self, events: list[dict[str, Any]],
-                         use_sequence_model: bool = True) -> XAMatchReport:
+    def compute_match_xa(
+        self, events: list[dict[str, Any]], use_sequence_model: bool = True
+    ) -> XAMatchReport:
         home_xa = 0.0
         away_xa = 0.0
         home_seq_xa = 0.0
@@ -255,13 +291,15 @@ class ExpectedAssistModel:
             else:
                 away_xa += result.xa
                 away_seq_xa += result.sequence_xa
-            details.append({
-                "timestamp": ev.get("timestamp", 0),
-                "team": team,
-                "xa": round(result.xa, 4),
-                "sequence_xa": round(result.sequence_xa, 4),
-                "pass_type": ev.get("pass_type", "standard"),
-            })
+            details.append(
+                {
+                    "timestamp": ev.get("timestamp", 0),
+                    "team": team,
+                    "xa": round(result.xa, 4),
+                    "sequence_xa": round(result.sequence_xa, 4),
+                    "pass_type": ev.get("pass_type", "standard"),
+                }
+            )
 
         return XAMatchReport(
             home_xa=home_xa,
@@ -295,8 +333,12 @@ class ExpectedAssistModel:
             if ev.get("type") != "pass":
                 continue
             n_passes += 1
-            end_x = ev.get("end_x", self.pitch_length / 2)
-            end_y = ev.get("end_y", self.pitch_width / 2)
+            end_x = ev.get("end_x")
+            if end_x is None:
+                end_x = self.pitch_length / 2
+            end_y = ev.get("end_y")
+            if end_y is None:
+                end_y = self.pitch_width / 2
             team = ev.get("team", "home")
 
             row, col = self._zone_from_position(end_x, end_y)

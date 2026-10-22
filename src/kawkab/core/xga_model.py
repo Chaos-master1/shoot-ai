@@ -87,9 +87,7 @@ class ExpectedGoalsAgainstModel:
         shots = [e for e in events if e.get("type") == "shot" and e.get("team", "") != team]
         return float(np.sum([_extract_xg(s) for s in shots]))
 
-    def compute_xga_by_zone(
-        self, events: list[dict[str, Any]], team: str
-    ) -> dict[str, float]:
+    def compute_xga_by_zone(self, events: list[dict[str, Any]], team: str) -> dict[str, float]:
         nx, ny = self.zone_grid
         zone_totals: dict[str, float] = defaultdict(float)
         for e in events:
@@ -117,9 +115,7 @@ class ExpectedGoalsAgainstModel:
             sit_totals[sit] += xg
         return dict(type_totals), dict(sit_totals)
 
-    def compute_xga_save_pct(
-        self, events: list[dict[str, Any]], team: str
-    ) -> float:
+    def compute_xga_save_pct(self, events: list[dict[str, Any]], team: str) -> float:
         shots = [e for e in events if e.get("type") == "shot" and e.get("team", "") != team]
         total_xga = float(np.sum([_extract_xg(s) for s in shots]))
         goals_conceded = sum(1 for s in shots if s.get("is_goal"))
@@ -127,9 +123,7 @@ class ExpectedGoalsAgainstModel:
             return 0.0
         return max(0.0, 1.0 - (goals_conceded / total_xga))
 
-    def compute_full_report(
-        self, events: list[dict[str, Any]], team: str
-    ) -> XGAReport:
+    def compute_full_report(self, events: list[dict[str, Any]], team: str) -> XGAReport:
         shots = [e for e in events if e.get("type") == "shot" and e.get("team", "") != team]
         total_xga = float(np.sum([_extract_xg(s) for s in shots]))
         goals_conceded = sum(1 for s in shots if s.get("is_goal"))

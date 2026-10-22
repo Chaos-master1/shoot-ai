@@ -56,16 +56,18 @@ def compute_xg_timeline(
 
     points: list[dict[str, Any]] = []
     # Start at 0
-    points.append({
-        "minute": 0,
-        "home_xg": 0.0,
-        "away_xg": 0.0,
-        "home_cumulative": 0.0,
-        "away_cumulative": 0.0,
-        "event_type": None,
-        "team": None,
-        "description": "Kick-off",
-    })
+    points.append(
+        {
+            "minute": 0,
+            "home_xg": 0.0,
+            "away_xg": 0.0,
+            "home_cumulative": 0.0,
+            "away_cumulative": 0.0,
+            "event_type": None,
+            "team": None,
+            "description": "Kick-off",
+        }
+    )
 
     # Sort shots by timestamp and interleave
     shot_events = [e for e in events if e.get("type") == "shot"]
@@ -87,28 +89,32 @@ def compute_xg_timeline(
                 away_goals += 1
 
         desc = "⚽ GOAL!" if is_goal else f"Shot ({xg:.2f} xG)"
-        points.append({
-            "minute": round(minute, 1),
-            "home_xg": round(xg if team == "home" else 0, 3),
-            "away_xg": round(xg if team == "away" else 0, 3),
-            "home_cumulative": round(home_cum, 3),
-            "away_cumulative": round(away_cum, 3),
-            "event_type": "goal" if is_goal else "shot",
-            "team": team,
-            "description": desc,
-        })
+        points.append(
+            {
+                "minute": round(minute, 1),
+                "home_xg": round(xg if team == "home" else 0, 3),
+                "away_xg": round(xg if team == "away" else 0, 3),
+                "home_cumulative": round(home_cum, 3),
+                "away_cumulative": round(away_cum, 3),
+                "event_type": "goal" if is_goal else "shot",
+                "team": team,
+                "description": desc,
+            }
+        )
 
     # End point
-    points.append({
-        "minute": match_duration_minutes,
-        "home_xg": 0.0,
-        "away_xg": 0.0,
-        "home_cumulative": round(home_cum, 3),
-        "away_cumulative": round(away_cum, 3),
-        "event_type": None,
-        "team": None,
-        "description": "Full-time",
-    })
+    points.append(
+        {
+            "minute": match_duration_minutes,
+            "home_xg": 0.0,
+            "away_xg": 0.0,
+            "home_cumulative": round(home_cum, 3),
+            "away_cumulative": round(away_cum, 3),
+            "event_type": None,
+            "team": None,
+            "description": "Full-time",
+        }
+    )
 
     return XGFlowReport(
         points=points,

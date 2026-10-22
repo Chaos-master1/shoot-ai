@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+
 import pytest
+
 from kawkab.services.webhook_service import WebhookService
 
 
@@ -59,5 +61,5 @@ class TestWebhookService:
         wh = svc.register("https://inactive.com")
         wh["is_active"] = False
         all_wh = svc.list_all()
-        vals = [w for w in all_wh if w["id"] == wh["id"]]
+        _ = [w for w in all_wh if w["id"] == wh["id"]]
         svc.deliver("test.event", {})

@@ -3,7 +3,6 @@
 import math
 
 import numpy as np
-import pytest
 
 from kawkab.core.expected_pass import (
     EP_COEFFICIENTS,
@@ -14,7 +13,6 @@ from kawkab.core.expected_pass import (
     compute_ep,
     compute_ep_batch,
 )
-
 
 # ── Difficulty classification ─────────────────────────────────────────────────
 
@@ -130,13 +128,15 @@ class TestComputeEP:
                 for through in [False, True]:
                     for cross in [False, True]:
                         for pressured in [False, True]:
-                            r = compute_ep({
-                                "distance_m": dist,
-                                "angle_deg": angle,
-                                "is_through_ball": through,
-                                "is_cross": cross,
-                                "is_pressured": pressured,
-                            })
+                            r = compute_ep(
+                                {
+                                    "distance_m": dist,
+                                    "angle_deg": angle,
+                                    "is_through_ball": through,
+                                    "is_cross": cross,
+                                    "is_pressured": pressured,
+                                }
+                            )
                             assert 0.0 <= r.ep <= 1.0, f"EP {r.ep} out of range"
 
     def test_zero_distance_pass(self):
@@ -151,43 +151,51 @@ class TestComputeEP:
         assert result.difficulty in ("difficult", "very_difficult")
 
     def test_negative_coordinates(self):
-        result = compute_ep({
-            "distance_m": 10.0,
-            "start_x": -10.0,
-            "end_x": 5.0,
-        })
+        result = compute_ep(
+            {
+                "distance_m": 10.0,
+                "start_x": -10.0,
+                "end_x": 5.0,
+            }
+        )
         assert 0.0 <= result.ep <= 1.0
         # start_x clamped to 0, so still valid
 
     def test_very_difficult_all_negatives(self):
-        result = compute_ep({
-            "distance_m": 40.0,
-            "is_through_ball": True,
-            "is_cross": True,
-            "is_long_ball": True,
-            "is_pressured": True,
-            "is_headed": True,
-            "receiver_pressured": True,
-            "angle_deg": 90.0,
-        })
+        result = compute_ep(
+            {
+                "distance_m": 40.0,
+                "is_through_ball": True,
+                "is_cross": True,
+                "is_long_ball": True,
+                "is_pressured": True,
+                "is_headed": True,
+                "receiver_pressured": True,
+                "angle_deg": 90.0,
+            }
+        )
         assert result.ep < 0.40
         assert result.difficulty == "very_difficult"
 
     def test_progressive_flag_set_correctly(self):
-        prog = compute_ep({
-            "distance_m": 30.0,
-            "start_x": 40.0,
-            "end_x": 75.0,
-            "attacking_direction": 1,
-        })
+        prog = compute_ep(
+            {
+                "distance_m": 30.0,
+                "start_x": 40.0,
+                "end_x": 75.0,
+                "attacking_direction": 1,
+            }
+        )
         assert prog.is_progressive is True
 
-        non_prog = compute_ep({
-            "distance_m": 5.0,
-            "start_x": 50.0,
-            "end_x": 52.0,
-            "attacking_direction": 1,
-        })
+        non_prog = compute_ep(
+            {
+                "distance_m": 5.0,
+                "start_x": 50.0,
+                "end_x": 52.0,
+                "attacking_direction": 1,
+            }
+        )
         assert non_prog.is_progressive is False
 
     def test_factor_contributions_present(self):
@@ -207,21 +215,25 @@ class TestComputeEP:
         assert abs(result.ep - expected_ep) < 1e-4
 
     def test_attacking_direction_negative_progressive(self):
-        result = compute_ep({
-            "distance_m": 30.0,
-            "start_x": 70.0,
-            "end_x": 35.0,
-            "attacking_direction": -1,
-        })
+        result = compute_ep(
+            {
+                "distance_m": 30.0,
+                "start_x": 70.0,
+                "end_x": 35.0,
+                "attacking_direction": -1,
+            }
+        )
         assert result.is_progressive is True
 
     def test_progressive_false_for_backward_pass(self):
-        result = compute_ep({
-            "distance_m": 30.0,
-            "start_x": 70.0,
-            "end_x": 35.0,
-            "attacking_direction": 1,
-        })
+        result = compute_ep(
+            {
+                "distance_m": 30.0,
+                "start_x": 70.0,
+                "end_x": 35.0,
+                "attacking_direction": 1,
+            }
+        )
         assert result.is_progressive is False
 
     def test_classify_difficulty_from_ep(self):
@@ -314,14 +326,16 @@ class TestFeatureVector:
         assert fv[10] == 0.0  # angle_deg
 
     def test_feature_vector_flags(self):
-        fv = _feature_vector({
-            "is_through_ball": True,
-            "is_cross": True,
-            "is_long_ball": True,
-            "is_pressured": True,
-            "is_headed": True,
-            "receiver_pressured": True,
-        })
+        fv = _feature_vector(
+            {
+                "is_through_ball": True,
+                "is_cross": True,
+                "is_long_ball": True,
+                "is_pressured": True,
+                "is_headed": True,
+                "receiver_pressured": True,
+            }
+        )
         assert fv[3] == 1.0
         assert fv[4] == 1.0
         assert fv[5] == 1.0
@@ -343,6 +357,7 @@ class TestFeatureVector:
 class TestCoefficients:
     def test_all_coefficients_have_matching_feature(self):
         from kawkab.core.expected_pass import _FEATURE_NAMES
+
         for name in _FEATURE_NAMES:
             assert name in EP_COEFFICIENTS, f"{name} missing from EP_COEFFICIENTS"
 
@@ -350,7 +365,15 @@ class TestCoefficients:
         assert EP_COEFFICIENTS["intercept"] > 0
 
     def test_penalty_coefficients_negative(self):
-        for key in ["is_through_ball", "is_cross", "is_long_ball",
-                     "is_pressured", "is_headed", "receiver_pressured",
-                     "distance_m", "distance_m_sq", "angle_deg"]:
+        for key in [
+            "is_through_ball",
+            "is_cross",
+            "is_long_ball",
+            "is_pressured",
+            "is_headed",
+            "receiver_pressured",
+            "distance_m",
+            "distance_m_sq",
+            "angle_deg",
+        ]:
             assert EP_COEFFICIENTS[key] < 0, f"{key} should be negative"

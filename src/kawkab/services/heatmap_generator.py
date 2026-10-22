@@ -9,10 +9,10 @@ Usage:
     heatmap_img = generate_heatmap(positions, img_w=1920, img_h=1080)
     cv2.imwrite("heatmap.png", heatmap_img)
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import numpy as np
 
@@ -40,17 +40,17 @@ def generate_heatmap(
     if not positions:
         return np.zeros((img_h, img_w), dtype=np.uint8)
 
-    positions = np.array(positions, dtype=np.float32)
+    pts = np.array(positions, dtype=np.float32)
     grid_x, grid_y = np.meshgrid(np.arange(img_w), np.arange(img_h))
 
     # Vectorized Gaussian KDE
-    sigma2 = sigma_px ** 2
+    sigma2 = sigma_px**2
     density = np.zeros((img_h, img_w), dtype=np.float32)
 
     # Process in batches to avoid OOM
-    batch_size = max(1, len(positions) // 10)
-    for i in range(0, len(positions), batch_size):
-        batch = positions[i:i + batch_size]
+    batch_size = max(1, len(pts) // 10)
+    for i in range(0, len(pts), batch_size):
+        batch = pts[i : i + batch_size]
         for p in batch:
             dx = grid_x - p[0]
             dy = grid_y - p[1]
@@ -82,7 +82,9 @@ def generate_team_heatmaps(
         {"home": heatmap, "away": heatmap, "all": heatmap}
     """
     team_positions: dict[str, list[tuple[float, float]]] = {
-        "home": [], "away": [], "referee": [],
+        "home": [],
+        "away": [],
+        "referee": [],
     }
     for tid, positions in player_positions.items():
         team = team_assignment.get(tid, "referee")

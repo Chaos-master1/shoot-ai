@@ -100,7 +100,7 @@ class TestClassify:
     def test_classify_blue_sky(self, svc: WeatherImageClassifier) -> None:
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
         frame[:, :, 0] = 180  # blue channel high
-        frame[:, :, 2] = 80   # red channel low
+        frame[:, :, 2] = 80  # red channel low
         result = svc.classify(frame)
         assert result.blue_dominance > 0
 
@@ -161,13 +161,13 @@ class TestComputeFeatures:
     def test_blue_dominance_positive(self) -> None:
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
         frame[:, :, 0] = 200  # blue
-        frame[:, :, 2] = 50   # red
+        frame[:, :, 2] = 50  # red
         _, _, blue = compute_features(frame)
         assert blue > 0
 
     def test_red_dominance_negative_blue(self) -> None:
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        frame[:, :, 0] = 50   # blue
+        frame[:, :, 0] = 50  # blue
         frame[:, :, 2] = 200  # red
         _, _, blue = compute_features(frame)
         assert blue < 0

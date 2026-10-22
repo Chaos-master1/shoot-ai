@@ -1,6 +1,6 @@
 site_name: Kawkab AI
 site_description: Professional football analytics platform
-repo_url: https://github.com/yourusername/kawkab-ai
+repo_url: https://github.com/wizard404error/shoot-ai
 theme: material
 nav:
   - Home: index.md

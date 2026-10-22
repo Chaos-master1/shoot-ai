@@ -6,8 +6,6 @@ statistical percentiles, video evidence links, and similar players.
 
 from __future__ import annotations
 
-import math
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -109,10 +107,7 @@ def _compute_stats(
 
     shot_xg = sum(e.get("xG", 0.0) for e in shots)
 
-    progressive_passes = sum(
-        1 for p in passes
-        if p.get("end_x", 0) - p.get("start_x", 0) > 10
-    )
+    progressive_passes = sum(1 for p in passes if p.get("end_x", 0) - p.get("start_x", 0) > 10)
 
     return {
         "passes": float(total_passes),
@@ -143,46 +138,82 @@ def _estimate_percentile(
     Returns:
         Estimated percentile (0-100).
     """
-    BENCHMARKS: dict[str, dict[str, tuple[float, float]]] = {
+    benchmarks: dict[str, dict[str, tuple[float, float]]] = {
         "pass_accuracy": {
-            "CB": (75, 92), "FB": (72, 90), "DM": (73, 91),
-            "MF": (70, 90), "AM": (68, 88), "W": (65, 85), "FW": (62, 82),
+            "CB": (75, 92),
+            "FB": (72, 90),
+            "DM": (73, 91),
+            "MF": (70, 90),
+            "AM": (68, 88),
+            "W": (65, 85),
+            "FW": (62, 82),
         },
         "tackles": {
-            "CB": (1.0, 4.0), "FB": (1.0, 3.5), "DM": (1.5, 4.5),
-            "MF": (0.5, 2.5), "AM": (0.2, 1.5), "W": (0.3, 1.5), "FW": (0.1, 1.0),
+            "CB": (1.0, 4.0),
+            "FB": (1.0, 3.5),
+            "DM": (1.5, 4.5),
+            "MF": (0.5, 2.5),
+            "AM": (0.2, 1.5),
+            "W": (0.3, 1.5),
+            "FW": (0.1, 1.0),
         },
         "interceptions": {
-            "CB": (0.5, 3.0), "FB": (0.5, 2.5), "DM": (1.0, 3.5),
-            "MF": (0.3, 2.0), "AM": (0.1, 1.2), "W": (0.2, 1.0), "FW": (0.1, 0.8),
+            "CB": (0.5, 3.0),
+            "FB": (0.5, 2.5),
+            "DM": (1.0, 3.5),
+            "MF": (0.3, 2.0),
+            "AM": (0.1, 1.2),
+            "W": (0.2, 1.0),
+            "FW": (0.1, 0.8),
         },
         "crosses": {
-            "FB": (0.5, 4.0), "W": (1.0, 6.0),
-            "MF": (0.2, 2.0), "AM": (0.1, 1.5), "FW": (0.1, 1.0),
+            "FB": (0.5, 4.0),
+            "W": (1.0, 6.0),
+            "MF": (0.2, 2.0),
+            "AM": (0.1, 1.5),
+            "FW": (0.1, 1.0),
         },
         "progressive_passes": {
-            "CB": (1.0, 6.0), "FB": (2.0, 8.0), "DM": (3.0, 10.0),
-            "MF": (4.0, 12.0), "AM": (3.0, 10.0), "W": (2.0, 8.0), "FW": (1.0, 5.0),
+            "CB": (1.0, 6.0),
+            "FB": (2.0, 8.0),
+            "DM": (3.0, 10.0),
+            "MF": (4.0, 12.0),
+            "AM": (3.0, 10.0),
+            "W": (2.0, 8.0),
+            "FW": (1.0, 5.0),
         },
         "shots": {
-            "CB": (0.0, 0.5), "FB": (0.0, 1.0), "DM": (0.1, 1.5),
-            "MF": (0.5, 3.0), "AM": (1.0, 5.0), "W": (0.5, 3.0), "FW": (1.0, 6.0),
+            "CB": (0.0, 0.5),
+            "FB": (0.0, 1.0),
+            "DM": (0.1, 1.5),
+            "MF": (0.5, 3.0),
+            "AM": (1.0, 5.0),
+            "W": (0.5, 3.0),
+            "FW": (1.0, 6.0),
         },
     }
 
-    if stat_name not in BENCHMARKS:
+    if stat_name not in benchmarks:
         return 50.0
 
     pos_map: dict[str, str] = {
-        "centre_back": "CB", "full_back": "FB", "inverted_fullback": "FB",
-        "defensive_midfielder": "DM", "box_to_box_midfielder": "MF",
-        "wide_midfielder": "MF", "attacking_midfielder": "AM",
-        "winger": "W", "inside_forward": "W", "target_forward": "FW",
-        "false_nine": "FW", "poacher": "FW", "wide_playmaker": "W",
+        "centre_back": "CB",
+        "full_back": "FB",
+        "inverted_fullback": "FB",
+        "defensive_midfielder": "DM",
+        "box_to_box_midfielder": "MF",
+        "wide_midfielder": "MF",
+        "attacking_midfielder": "AM",
+        "winger": "W",
+        "inside_forward": "W",
+        "target_forward": "FW",
+        "false_nine": "FW",
+        "poacher": "FW",
+        "wide_playmaker": "W",
         "utility_player": "MF",
     }
     pos_key = pos_map.get(position, "MF")
-    pos_benchmarks = BENCHMARKS.get(stat_name, {})
+    pos_benchmarks = benchmarks.get(stat_name, {})
 
     if pos_key not in pos_benchmarks:
         avg_keys = [k for k in pos_benchmarks if k != "FW"]
@@ -223,7 +254,14 @@ def generate_scout_report(
 
     # percentiles
     percentiles: list[ScoutStatPercentile] = []
-    for stat_name in ("pass_accuracy", "tackles", "interceptions", "crosses", "progressive_passes", "shots"):
+    for stat_name in (
+        "pass_accuracy",
+        "tackles",
+        "interceptions",
+        "crosses",
+        "progressive_passes",
+        "shots",
+    ):
         if stat_name not in stats:
             continue
         pct = _estimate_percentile(stats[stat_name], stat_name, position)
@@ -235,50 +273,60 @@ def generate_scout_report(
             "progressive_passes": "Progressive passes per match",
             "shots": "Shots per match",
         }
-        percentiles.append(ScoutStatPercentile(
-            stat_name=stat_name,
-            value=stats[stat_name],
-            percentile=round(pct, 1),
-            description=desc_map.get(stat_name, stat_name),
-        ))
+        percentiles.append(
+            ScoutStatPercentile(
+                stat_name=stat_name,
+                value=stats[stat_name],
+                percentile=round(pct, 1),
+                description=desc_map.get(stat_name, stat_name),
+            )
+        )
 
     # strengths (top 3 percentiles)
     sorted_pcts = sorted(percentiles, key=lambda p: p.percentile, reverse=True)
     strengths: list[ScoutStrengthWeakness] = []
     for p in sorted_pcts[:3]:
-        strengths.append(ScoutStrengthWeakness(
-            category="Strength",
-            detail=f"Exceptional {p.description.lower()} ({p.percentile:.0f}th percentile)",
-            evidence_stat=p.stat_name,
-            evidence_value=p.value,
-        ))
+        strengths.append(
+            ScoutStrengthWeakness(
+                category="Strength",
+                detail=f"Exceptional {p.description.lower()} ({p.percentile:.0f}th percentile)",
+                evidence_stat=p.stat_name,
+                evidence_value=p.value,
+            )
+        )
 
     # weaknesses (bottom 3 percentiles)
     weaknesses: list[ScoutStrengthWeakness] = []
     for p in sorted_pcts[-3:]:
         if p.percentile < 50:
-            weaknesses.append(ScoutStrengthWeakness(
-                category="Weakness",
-                detail=f"Below-average {p.description.lower()} ({p.percentile:.0f}th percentile)",
-                evidence_stat=p.stat_name,
-                evidence_value=p.value,
-            ))
+            weaknesses.append(
+                ScoutStrengthWeakness(
+                    category="Weakness",
+                    detail=f"Below-average {p.description.lower()} ({p.percentile:.0f}th percentile)",
+                    evidence_stat=p.stat_name,
+                    evidence_value=p.value,
+                )
+            )
 
     # video clips
     clips: list[ScoutVideoClip] = []
     if video_clips:
         for clip in video_clips:
-            clips.append(ScoutVideoClip(
-                clip_id=clip.get("id", ""),
-                timestamp=clip.get("timestamp", 0.0),
-                duration_s=clip.get("duration_s", 5.0),
-                label=clip.get("label", ""),
-                tags=clip.get("tags", []),
-            ))
+            clips.append(
+                ScoutVideoClip(
+                    clip_id=clip.get("id", ""),
+                    timestamp=clip.get("timestamp", 0.0),
+                    duration_s=clip.get("duration_s", 5.0),
+                    label=clip.get("label", ""),
+                    tags=clip.get("tags", []),
+                )
+            )
 
     # similar players (heuristic based on stat profile)
     similar_players: list[dict[str, Any]] = []
-    profile_vec = [stats.get(s, 0.0) for s in ("pass_accuracy", "tackles", "shots", "progressive_passes")]
+    profile_vec = [
+        stats.get(s, 0.0) for s in ("pass_accuracy", "tackles", "shots", "progressive_passes")
+    ]
     bench_players = [
         ("Kevin De Bruyne", "AM", 92, "creative playmaker"),
         ("Rodri", "DM", 90, "defensive controller"),
@@ -297,15 +345,21 @@ def generate_scout_report(
             "FW": (75, 0.5, 4.0, 2.0),
         }
         bv = bvec.get(bpos, (80, 1.0, 1.0, 4.0))
-        sim = 1.0 - sum(abs(a - b) / max(abs(b), 1.0) for a, b in zip(profile_vec, bv)) / 4.0
+        sim = (
+            1.0
+            - sum(abs(a - b) / max(abs(b), 1.0) for a, b in zip(profile_vec, bv, strict=False))
+            / 4.0
+        )
         if sim > 0.3:
-            similar_players.append({
-                "name": bname,
-                "position": bpos,
-                "rating": brating,
-                "description": bdesc,
-                "similarity": round(max(0.0, sim * 100), 1),
-            })
+            similar_players.append(
+                {
+                    "name": bname,
+                    "position": bpos,
+                    "rating": brating,
+                    "description": bdesc,
+                    "similarity": round(max(0.0, sim * 100), 1),
+                }
+            )
 
     similar_players.sort(key=lambda x: x["similarity"], reverse=True)
 

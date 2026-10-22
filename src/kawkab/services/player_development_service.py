@@ -18,16 +18,14 @@ Detects:
 from __future__ import annotations
 
 import logging
-import math
 import statistics
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from dataclasses import dataclass
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class TrendDirection(str, Enum):
+class TrendDirection(StrEnum):
     """Direction of a player's trend over a rolling window."""
 
     IMPROVING = "improving"
@@ -128,9 +126,7 @@ class PlayerDevelopmentService:
                 overall_trend=TrendDirection.INSUFFICIENT_DATA,
                 strengths=[],
                 areas_to_improve=[],
-                notes=[
-                    f"Need at least {self.min_matches_for_trend} matches, got {len(history)}."
-                ],
+                notes=[f"Need at least {self.min_matches_for_trend} matches, got {len(history)}."],
             )
         history_sorted = sorted(history, key=lambda h: h.match_date)
         metrics = [
@@ -170,11 +166,7 @@ class PlayerDevelopmentService:
 
     def _extract_metric(self, m: PlayerMatchStat, metric: str) -> float:
         if metric == "pass_completion":
-            return (
-                m.passes_completed / m.passes_attempted
-                if m.passes_attempted > 0
-                else 0.0
-            )
+            return m.passes_completed / m.passes_attempted if m.passes_attempted > 0 else 0.0
         if metric == "distance_per_90":
             return self._per_90(m.distance_m, m.minutes_played)
         if metric == "sprints_per_90":
@@ -187,9 +179,7 @@ class PlayerDevelopmentService:
             return self._per_90(m.pressure_actions, m.minutes_played)
         return 0.0
 
-    def _compute_trend(
-        self, metric: str, values: list[float]
-    ) -> PlayerTrend:
+    def _compute_trend(self, metric: str, values: list[float]) -> PlayerTrend:
         n = len(values)
         if n < self.min_matches_for_trend:
             return PlayerTrend(
@@ -207,14 +197,12 @@ class PlayerDevelopmentService:
         y = values
         mean_x = sum(x) / n
         mean_y = sum(y) / n
-        num = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y))
+        num = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, y, strict=False))
         den = sum((xi - mean_x) ** 2 for xi in x)
         slope = num / den if den > 0 else 0.0
-        window = values[-self.rolling_window:]
+        window = values[-self.rolling_window :]
         rolling_avg = sum(window) / len(window)
-        rolling_std = (
-            statistics.pstdev(window) if len(window) > 1 else 0.0
-        )
+        rolling_std = statistics.pstdev(window) if len(window) > 1 else 0.0
         cv = rolling_std / abs(rolling_avg) if rolling_avg != 0 else 0.0
         if cv > 0.3 and n >= self.rolling_window:
             direction = TrendDirection.VOLATILE
@@ -261,11 +249,13 @@ class PlayerDevelopmentService:
     ) -> list[str]:
         strengths: list[str] = []
         for t in trends:
-            if t.direction in (TrendDirection.IMPROVING, TrendDirection.STABLE):
-                if t.rolling_avg > 0:
-                    strengths.append(
-                        f"{t.metric}: avg {t.rolling_avg:.2f} (last {t.n_matches} matches)"
-                    )
+            if (
+                t.direction in (TrendDirection.IMPROVING, TrendDirection.STABLE)
+                and t.rolling_avg > 0
+            ):
+                strengths.append(
+                    f"{t.metric}: avg {t.rolling_avg:.2f} (last {t.n_matches} matches)"
+                )
         return strengths[:5]
 
     def _identify_improvements(
@@ -278,9 +268,7 @@ class PlayerDevelopmentService:
                     f"{t.metric}: declining slope {t.slope_per_match:.3f} per match"
                 )
             elif t.direction == TrendDirection.VOLATILE:
-                improvements.append(
-                    f"{t.metric}: high variance (std={t.rolling_std:.2f})"
-                )
+                improvements.append(f"{t.metric}: high variance (std={t.rolling_std:.2f})")
         return improvements[:5]
 
     def _generate_notes(

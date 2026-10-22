@@ -1,7 +1,5 @@
 """Tests for Expected Possession Value (EPV) module."""
 
-import pytest
-
 from kawkab.core.epv import (
     EPVModel,
     EPVReport,
@@ -79,8 +77,28 @@ class TestEPVModel:
 
     def test_progressive_possession_higher(self):
         model = EPVModel()
-        deep = [{"type": "pass", "timestamp": 1.0, "team": "home", "x": 30, "y": 34, "end_x": 90, "end_y": 34}]
-        shallow = [{"type": "pass", "timestamp": 1.0, "team": "home", "x": 30, "y": 34, "end_x": 35, "end_y": 34}]
+        deep = [
+            {
+                "type": "pass",
+                "timestamp": 1.0,
+                "team": "home",
+                "x": 30,
+                "y": 34,
+                "end_x": 90,
+                "end_y": 34,
+            }
+        ]
+        shallow = [
+            {
+                "type": "pass",
+                "timestamp": 1.0,
+                "team": "home",
+                "x": 30,
+                "y": 34,
+                "end_x": 35,
+                "end_y": 34,
+            }
+        ]
         d = model.compute_possession_epv(deep)
         s = model.compute_possession_epv(shallow)
         assert d.value >= s.value

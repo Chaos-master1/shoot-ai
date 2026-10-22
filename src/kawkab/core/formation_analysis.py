@@ -7,7 +7,6 @@ Uses k-means clustering on player x-coordinates to detect formation lines.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -174,7 +173,7 @@ class FormationAnalyzer:
         if best_formation != "unknown":
             return best_formation
 
-        sorted_by_x = sorted(positions, key=lambda p: p[0])
+        _ = sorted(positions, key=lambda p: p[0])
         n_def = max(2, min(5, round(n * 0.4)))
         n_att = max(1, min(4, round(n * 0.3)))
         n_mid = n - n_def - n_att
@@ -191,7 +190,7 @@ class FormationAnalyzer:
         n = min(len(positions), 11)
         arr = np.array(positions[:n], dtype=np.float64)
         diff = arr[:, np.newaxis, :] - arr[np.newaxis, :, :]
-        dist = np.sqrt(np.sum(diff ** 2, axis=2))
+        dist = np.sqrt(np.sum(diff**2, axis=2))
         mask = np.triu(np.ones((n, n), dtype=bool), k=1)
         return float(np.mean(dist[mask])) if np.any(mask) else 0.0
 
@@ -269,11 +268,13 @@ class FormationAnalyzer:
                 continue
 
             xs = np.array([p[0] for p in positions[:11]])
+            centroids3: np.ndarray | None
+            labels3: np.ndarray | None
+            centroids4: np.ndarray | None
+            labels4: np.ndarray | None
             if len(xs) >= 3 and xs.max() - xs.min() >= 15.0:
                 centroids3, labels3 = self._kmeans_1d(xs, 3)
-                centroids4, labels4 = (
-                    self._kmeans_1d(xs, 4) if len(xs) >= 4 else (None, None)
-                )
+                centroids4, labels4 = self._kmeans_1d(xs, 4) if len(xs) >= 4 else (None, None)
             else:
                 centroids3 = labels3 = centroids4 = labels4 = None
 
@@ -309,17 +310,21 @@ class FormationAnalyzer:
 
         in_form = ""
         out_form = ""
+        in_form_freq: dict[str, int] = {}
+        out_form_freq: dict[str, int] = {}
         if in_pos_snapshots:
-            in_form_freq: dict[str, int] = {}
             for s in in_pos_snapshots:
                 in_form_freq[s.formation] = in_form_freq.get(s.formation, 0) + 1
-            in_form = max(in_form_freq, key=in_form_freq.get) if in_form_freq else "unknown"
+            in_form = (
+                max(in_form_freq, key=lambda k: in_form_freq[k]) if in_form_freq else "unknown"
+            )
 
         if out_pos_snapshots:
-            out_form_freq = {}
             for s in out_pos_snapshots:
                 out_form_freq[s.formation] = out_form_freq.get(s.formation, 0) + 1
-            out_form = max(out_form_freq, key=out_form_freq.get) if out_form_freq else "unknown"
+            out_form = (
+                max(out_form_freq, key=lambda k: out_form_freq[k]) if out_form_freq else "unknown"
+            )
 
         timeline = sorted(
             in_pos_snapshots + out_pos_snapshots,

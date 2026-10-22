@@ -7,7 +7,6 @@ checkpoint is not available.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -19,7 +18,7 @@ logger = get_logger(__name__)
 
 _SOCCERNET_REID_AVAILABLE = False
 try:
-    import torch
+    import torch  # noqa: F401  (availability probe: sets _SOCCERNET_REID_AVAILABLE)
     import torch.nn as nn
     import torchvision.models as models
 
@@ -59,8 +58,7 @@ class SoccerNetReIDExtractor:
                 elif "state_dict" in state:
                     model.load_state_dict(state["state_dict"])
                 elif isinstance(state, dict) and any(
-                    k.startswith("layer") or k.startswith("conv")
-                    for k in state.keys()
+                    k.startswith("layer") or k.startswith("conv") for k in state
                 ):
                     model.load_state_dict(state)
                 else:
@@ -70,9 +68,7 @@ class SoccerNetReIDExtractor:
                         "using untrained ResNet-50 baseline"
                     )
             else:
-                logger.info(
-                    "soccernet_reid.pt not cached; using untrained ResNet-50 baseline"
-                )
+                logger.info("soccernet_reid.pt not cached; using untrained ResNet-50 baseline")
             model.eval()
             model.to(self.device)
             self._model = model
@@ -102,18 +98,17 @@ class SoccerNetReIDExtractor:
         try:
             import cv2
             import torch
-            import torchvision.transforms as T
+            import torchvision.transforms as transforms
 
-            if crop.shape[2] == 3:
-                rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
-            else:
-                rgb = crop
-            transform = T.Compose([
-                T.ToPILImage(),
-                T.Resize(self._input_size),
-                T.ToTensor(),
-                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
+            rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB) if crop.shape[2] == 3 else crop
+            transform = transforms.Compose(
+                [
+                    transforms.ToPILImage(),
+                    transforms.Resize(self._input_size),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ]
+            )
             tensor = transform(rgb).unsqueeze(0).to(self.device)
             with torch.no_grad():
                 emb = self._model(tensor).cpu().numpy().flatten().astype(np.float32)

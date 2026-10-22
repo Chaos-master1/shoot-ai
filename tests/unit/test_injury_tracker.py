@@ -5,15 +5,16 @@ from datetime import datetime
 
 import pytest
 
-from kawkab.services.injury_tracker import (
-    InjuryTrackerService, InjuryRecord, InjurySeverity,
-    BodyPart, InjuryStatus,
-)
-from kawkab.services.rehab_service import RehabService, RehabPhase, REHAB_MILESTONES
 from kawkab.services.concussion_protocol import (
-    ConcussionProtocolService, SCAT5Assessment,
-    ConcussionClearance, STAGE_DESCRIPTIONS,
+    STAGE_DESCRIPTIONS,
+    ConcussionProtocolService,
+    SCAT5Assessment,
 )
+from kawkab.services.injury_tracker import (
+    InjuryRecord,
+    InjuryTrackerService,
+)
+from kawkab.services.rehab_service import RehabService
 
 
 @pytest.fixture
@@ -72,14 +73,22 @@ def db():
 class TestInjuryTracker:
     def test_record_injury(self, db):
         svc = InjuryTrackerService(db)
-        rec = InjuryRecord(player_id=1, injury_type="Hamstring Strain", body_part="thigh", severity="moderate")
+        rec = InjuryRecord(
+            player_id=1, injury_type="Hamstring Strain", body_part="thigh", severity="moderate"
+        )
         injury_id = svc.record_injury(rec)
         assert injury_id > 0
 
     def test_get_player_injuries(self, db):
         svc = InjuryTrackerService(db)
-        svc.record_injury(InjuryRecord(player_id=1, injury_type="ACL", body_part="knee", severity="severe"))
-        svc.record_injury(InjuryRecord(player_id=1, injury_type="Ankle Sprain", body_part="ankle", severity="moderate"))
+        svc.record_injury(
+            InjuryRecord(player_id=1, injury_type="ACL", body_part="knee", severity="severe")
+        )
+        svc.record_injury(
+            InjuryRecord(
+                player_id=1, injury_type="Ankle Sprain", body_part="ankle", severity="moderate"
+            )
+        )
         injuries = svc.get_player_injuries(1)
         assert len(injuries) == 2
 
@@ -89,8 +98,12 @@ class TestInjuryTracker:
 
     def test_get_active_injuries(self, db):
         svc = InjuryTrackerService(db)
-        svc.record_injury(InjuryRecord(player_id=1, injury_type="A", body_part="knee", status="active"))
-        svc.record_injury(InjuryRecord(player_id=2, injury_type="B", body_part="thigh", status="recovered"))
+        svc.record_injury(
+            InjuryRecord(player_id=1, injury_type="A", body_part="knee", status="active")
+        )
+        svc.record_injury(
+            InjuryRecord(player_id=2, injury_type="B", body_part="thigh", status="recovered")
+        )
         active = svc.get_active_injuries([1, 2])
         assert len(active) == 1
         assert active[0]["injury_type"] == "A"
@@ -105,8 +118,12 @@ class TestInjuryTracker:
 
     def test_squad_injury_report(self, db):
         svc = InjuryTrackerService(db)
-        svc.record_injury(InjuryRecord(player_id=1, injury_type="A", body_part="knee", severity="severe"))
-        svc.record_injury(InjuryRecord(player_id=2, injury_type="B", body_part="thigh", severity="moderate"))
+        svc.record_injury(
+            InjuryRecord(player_id=1, injury_type="A", body_part="knee", severity="severe")
+        )
+        svc.record_injury(
+            InjuryRecord(player_id=2, injury_type="B", body_part="thigh", severity="moderate")
+        )
         report = svc.get_squad_injury_report([1, 2])
         assert report["total_active"] == 2
         assert report["by_severity"]["severe"] == 1
@@ -122,8 +139,12 @@ class TestInjuryTracker:
         assert stats["by_type"]["Hamstring"] == 2
 
     def test_injury_record_days_since_injury(self):
-        rec = InjuryRecord(player_id=1, injury_type="Test", body_part="knee",
-                           date_injured=datetime.now().isoformat())
+        rec = InjuryRecord(
+            player_id=1,
+            injury_type="Test",
+            body_part="knee",
+            date_injured=datetime.now().isoformat(),
+        )
         assert rec.days_since_injury() == 0
 
     def test_injury_record_estimated_recovery_days(self):
@@ -213,7 +234,9 @@ class TestRehabService:
 class TestConcussionProtocol:
     def test_record_assessment(self, db):
         svc = ConcussionProtocolService(db)
-        assessment = SCAT5Assessment(player_id=1, symptoms_score=5, cognitive_score=2, balance_score=1)
+        assessment = SCAT5Assessment(
+            player_id=1, symptoms_score=5, cognitive_score=2, balance_score=1
+        )
         aid = svc.record_assessment(assessment)
         assert aid > 0
 

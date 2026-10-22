@@ -42,7 +42,6 @@ def _install_cv_stub() -> None:
 
 _install_cv_stub()
 
-import asyncio
 
 # Load all pro analytics services
 _sp = load_service_module("sp_test", "setpiece_service.py")
@@ -56,39 +55,118 @@ SubstitutionService = _sub.SubstitutionService
 PossessionService = _pos.PossessionService
 
 import json
-import pytest
-
 
 SAMPLE_MATCH = {
     "home": "Kawkab FC",
     "away": "Raja Casablanca",
     "events": [
-        {"type": "shot", "team": "home", "timestamp_s": 120, "player_track_id": 9, "xg": 0.35, "outcome": "shot"},
-        {"type": "shot", "team": "home", "timestamp_s": 300, "player_track_id": 11, "xg": 0.55, "outcome": "goal"},
-        {"type": "shot", "team": "away", "timestamp_s": 600, "player_track_id": 7, "xg": 0.20, "outcome": "save"},
-        {"type": "shot", "team": "home", "timestamp_s": 1800, "player_track_id": 10, "xg": 0.15, "outcome": "shot"},
-        {"type": "shot", "team": "away", "timestamp_s": 2400, "player_track_id": 8, "xg": 0.40, "outcome": "goal"},
+        {
+            "type": "shot",
+            "team": "home",
+            "timestamp_s": 120,
+            "player_track_id": 9,
+            "xg": 0.35,
+            "outcome": "shot",
+        },
+        {
+            "type": "shot",
+            "team": "home",
+            "timestamp_s": 300,
+            "player_track_id": 11,
+            "xg": 0.55,
+            "outcome": "goal",
+        },
+        {
+            "type": "shot",
+            "team": "away",
+            "timestamp_s": 600,
+            "player_track_id": 7,
+            "xg": 0.20,
+            "outcome": "save",
+        },
+        {
+            "type": "shot",
+            "team": "home",
+            "timestamp_s": 1800,
+            "player_track_id": 10,
+            "xg": 0.15,
+            "outcome": "shot",
+        },
+        {
+            "type": "shot",
+            "team": "away",
+            "timestamp_s": 2400,
+            "player_track_id": 8,
+            "xg": 0.40,
+            "outcome": "goal",
+        },
     ],
     "set_pieces": [
-        {"set_piece_type": "corner", "minute": 15, "second": 0, "team": "home",
-         "delivery_x": 100, "delivery_y": 0, "delivery_style": "inswinging",
-         "delivery_height": "medium", "first_contact_x": 96, "first_contact_y": 30, "outcome": "shot"},
-        {"set_piece_type": "corner", "minute": 35, "second": 0, "team": "home",
-         "delivery_x": 100, "delivery_y": 68, "delivery_style": "outswinging",
-         "delivery_height": "high", "first_contact_x": 97, "first_contact_y": 40, "outcome": "clearance"},
-        {"set_piece_type": "free_kick", "minute": 70, "second": 0, "team": "away",
-         "delivery_x": 88, "delivery_y": 34, "delivery_style": "lofted",
-         "delivery_height": "high", "first_contact_x": 99, "first_contact_y": 5, "outcome": "shot"},
+        {
+            "set_piece_type": "corner",
+            "minute": 15,
+            "second": 0,
+            "team": "home",
+            "delivery_x": 100,
+            "delivery_y": 0,
+            "delivery_style": "inswinging",
+            "delivery_height": "medium",
+            "first_contact_x": 96,
+            "first_contact_y": 30,
+            "outcome": "shot",
+        },
+        {
+            "set_piece_type": "corner",
+            "minute": 35,
+            "second": 0,
+            "team": "home",
+            "delivery_x": 100,
+            "delivery_y": 68,
+            "delivery_style": "outswinging",
+            "delivery_height": "high",
+            "first_contact_x": 97,
+            "first_contact_y": 40,
+            "outcome": "clearance",
+        },
+        {
+            "set_piece_type": "free_kick",
+            "minute": 70,
+            "second": 0,
+            "team": "away",
+            "delivery_x": 88,
+            "delivery_y": 34,
+            "delivery_style": "lofted",
+            "delivery_height": "high",
+            "first_contact_x": 99,
+            "first_contact_y": 5,
+            "outcome": "shot",
+        },
     ],
     "subs": [
-        {"minute": 60, "second": 0, "team": "home", "player_off_track_id": 7,
-         "player_on_track_id": 14},
+        {
+            "minute": 60,
+            "second": 0,
+            "team": "home",
+            "player_off_track_id": 7,
+            "player_on_track_id": 14,
+        },
     ],
     "gk_actions": [
-        {"action_type": "save", "team": "home", "timestamp_s": 600, "outcome": "complete",
-         "x": 99, "y": 34},
-        {"action_type": "short_dist", "team": "home", "timestamp_s": 700, "outcome": "complete",
-         "x": 30},
+        {
+            "action_type": "save",
+            "team": "home",
+            "timestamp_s": 600,
+            "outcome": "complete",
+            "x": 99,
+            "y": 34,
+        },
+        {
+            "action_type": "short_dist",
+            "team": "home",
+            "timestamp_s": 700,
+            "outcome": "complete",
+            "x": 30,
+        },
     ],
     "shots_faced": [
         {"x": 99, "y": 34, "body_part": "foot", "one_on_one": False, "outcome": "save"},
@@ -121,16 +199,20 @@ class TestEndToEnd:
             ts = d.get("timestamp_s", 0)
             minute = int(ts // 60)
             second = int(ts % 60)
-            actions.append(GoalkeeperAction(
-                action_type=d["action_type"],
-                minute=minute,
-                second=second,
-                team=d["team"],
-                outcome=d.get("outcome", "complete"),
-                x=d.get("x"),
-                y=d.get("y"),
-            ))
-        stats = svc.compute_stats("home", actions, SAMPLE_MATCH["shots_faced"], clean_sheet=SAMPLE_MATCH["clean_sheet"])
+            actions.append(
+                GoalkeeperAction(
+                    action_type=d["action_type"],
+                    minute=minute,
+                    second=second,
+                    team=d["team"],
+                    outcome=d.get("outcome", "complete"),
+                    x=d.get("x"),
+                    y=d.get("y"),
+                )
+            )
+        stats = svc.compute_stats(
+            "home", actions, SAMPLE_MATCH["shots_faced"], clean_sheet=SAMPLE_MATCH["clean_sheet"]
+        )
         result = {
             "saves": stats.saves,
             "save_rate": stats.save_rate,
@@ -154,11 +236,41 @@ class TestEndToEnd:
     def test_possession_analyze(self) -> None:
         svc = PossessionService()
         events_with_passes = SAMPLE_MATCH["events"] + [
-            {"type": "pass", "team": "home", "timestamp_s": 10, "player_track_id": 7, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 20, "player_track_id": 8, "completed": True},
-            {"type": "pass", "team": "home", "timestamp_s": 30, "player_track_id": 9, "completed": False},
-            {"type": "pass", "team": "away", "timestamp_s": 40, "player_track_id": 5, "completed": True},
-            {"type": "pass", "team": "away", "timestamp_s": 50, "player_track_id": 6, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 10,
+                "player_track_id": 7,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 20,
+                "player_track_id": 8,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 30,
+                "player_track_id": 9,
+                "completed": False,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "timestamp_s": 40,
+                "player_track_id": 5,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "timestamp_s": 50,
+                "player_track_id": 6,
+                "completed": True,
+            },
         ]
         report = svc.analyze("home", "away", events_with_passes)
         result = {
@@ -184,24 +296,30 @@ class TestEndToEnd:
             ts = d.get("timestamp_s", 0)
             minute = int(ts // 60)
             second = int(ts % 60)
-            gk_actions.append(GoalkeeperAction(
-                action_type=d["action_type"],
-                minute=minute,
-                second=second,
-                team=d["team"],
-                outcome=d.get("outcome", "complete"),
-                x=d.get("x"),
-                y=d.get("y"),
-            ))
+            gk_actions.append(
+                GoalkeeperAction(
+                    action_type=d["action_type"],
+                    minute=minute,
+                    second=second,
+                    team=d["team"],
+                    outcome=d.get("outcome", "complete"),
+                    x=d.get("x"),
+                    y=d.get("y"),
+                )
+            )
         sub_events = [SubstitutionEvent(**d) for d in SAMPLE_MATCH["subs"]]
         sp_report = sp_svc.analyze(sp_events, "home", "away")
-        gk_stats = gk_svc.compute_stats("home", gk_actions, SAMPLE_MATCH["shots_faced"], clean_sheet=SAMPLE_MATCH["clean_sheet"])
+        gk_stats = gk_svc.compute_stats(
+            "home", gk_actions, SAMPLE_MATCH["shots_faced"], clean_sheet=SAMPLE_MATCH["clean_sheet"]
+        )
         sub_report = sub_svc.analyze("home", sub_events, SAMPLE_MATCH["events"])
         pos_report = pos_svc.analyze("home", "away", SAMPLE_MATCH["events"])
         bundle = {
             "setpiece": {
-                "home_n": sp_report.home_stats.total_corners + sp_report.home_stats.total_free_kicks,
-                "away_n": sp_report.away_stats.total_corners + sp_report.away_stats.total_free_kicks,
+                "home_n": sp_report.home_stats.total_corners
+                + sp_report.home_stats.total_free_kicks,
+                "away_n": sp_report.away_stats.total_corners
+                + sp_report.away_stats.total_free_kicks,
                 "home_threat": sp_report.home_stats.threat_per_set_piece,
                 "notes": sp_report.notes,
             },

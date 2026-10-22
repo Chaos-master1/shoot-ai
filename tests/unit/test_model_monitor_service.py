@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import numpy as np
-import pytest
 import tempfile
-from pathlib import Path
+
+import numpy as np
 
 from kawkab.services.model_monitor_service import ModelMonitor, ModelMonitoringService
 
@@ -70,7 +69,7 @@ class TestModelMonitor:
 
     def test_get_trend(self):
         monitor = ModelMonitor()
-        for i in range(3):
+        for _i in range(3):
             preds = np.array([0.2, 0.8])
             labels = np.array([0.0, 1.0])
             monitor.record_snapshot("trend2", preds, labels)

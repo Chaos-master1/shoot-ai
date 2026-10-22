@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import sys
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
@@ -28,12 +26,16 @@ def _make_embedding(dim: int = 512, seed: int = 0) -> np.ndarray:
 class FakeRow:
     def __init__(self, data: dict):
         self._data = data
+
     def __getitem__(self, key):
         return self._data[key]
+
     def __iter__(self):
         return iter(self._data.items())
+
     def keys(self):
         return self._data.keys()
+
     def get(self, key, default=None):
         return self._data.get(key, default)
 
@@ -76,9 +78,15 @@ class TestCrossMatchLinkingService:
         emb = _make_embedding(seed=42)
         emb_b64 = json.dumps(emb.tolist())
         mock_storage.get_match_players.return_value = [
-            {"track_id": 101, "name": "Player A", "team": "home",
-             "face_embedding": emb_b64, "reid_embedding": None,
-             "jersey_number": 10, "track_data": None}
+            {
+                "track_id": 101,
+                "name": "Player A",
+                "team": "home",
+                "face_embedding": emb_b64,
+                "reid_embedding": None,
+                "jersey_number": 10,
+                "track_data": None,
+            }
         ]
         mock_storage.get_all_player_profiles.return_value = []
         svc = CrossMatchLinkingService(mock_storage, profile_service=mock_profile_svc)
@@ -97,14 +105,25 @@ class TestCrossMatchLinkingService:
         match_emb_b64 = json.dumps(match_emb.tolist())
 
         mock_storage.get_match_players.return_value = [
-            {"track_id": 101, "name": "Player A", "team": "home",
-             "face_embedding": emb_b64, "reid_embedding": None,
-             "jersey_number": 10, "track_data": None}
+            {
+                "track_id": 101,
+                "name": "Player A",
+                "team": "home",
+                "face_embedding": emb_b64,
+                "reid_embedding": None,
+                "jersey_number": 10,
+                "track_data": None,
+            }
         ]
         mock_storage.get_all_player_profiles.return_value = [
-            {"id": 1, "display_name": "Existing Player",
-             "jersey_number": 10, "team": "home",
-             "face_embedding": match_emb_b64, "reid_embedding": None}
+            {
+                "id": 1,
+                "display_name": "Existing Player",
+                "jersey_number": 10,
+                "team": "home",
+                "face_embedding": match_emb_b64,
+                "reid_embedding": None,
+            }
         ]
 
         svc = CrossMatchLinkingService(mock_storage, profile_service=mock_profile_svc)
@@ -122,14 +141,25 @@ class TestCrossMatchLinkingService:
         diff_emb_b64 = json.dumps(diff_emb.tolist())
 
         mock_storage.get_match_players.return_value = [
-            {"track_id": 201, "name": "Player B", "team": "away",
-             "face_embedding": emb_b64, "reid_embedding": None,
-             "jersey_number": 7, "track_data": None}
+            {
+                "track_id": 201,
+                "name": "Player B",
+                "team": "away",
+                "face_embedding": emb_b64,
+                "reid_embedding": None,
+                "jersey_number": 7,
+                "track_data": None,
+            }
         ]
         mock_storage.get_all_player_profiles.return_value = [
-            {"id": 2, "display_name": "Different Player",
-             "jersey_number": 7, "team": "away",
-             "face_embedding": diff_emb_b64, "reid_embedding": None}
+            {
+                "id": 2,
+                "display_name": "Different Player",
+                "jersey_number": 7,
+                "team": "away",
+                "face_embedding": diff_emb_b64,
+                "reid_embedding": None,
+            }
         ]
 
         svc = CrossMatchLinkingService(mock_storage, profile_service=mock_profile_svc)
@@ -170,15 +200,28 @@ class TestCrossMatchLinkingService:
         def get_players_side_effect(match_id):
             if match_id == 1:
                 return [
-                    {"track_id": 301, "name": "P1", "team": "home",
-                     "face_embedding": emb1_b64, "reid_embedding": None,
-                     "jersey_number": 5, "track_data": None}
+                    {
+                        "track_id": 301,
+                        "name": "P1",
+                        "team": "home",
+                        "face_embedding": emb1_b64,
+                        "reid_embedding": None,
+                        "jersey_number": 5,
+                        "track_data": None,
+                    }
                 ]
             return [
-                {"track_id": 401, "name": "P2", "team": "away",
-                 "face_embedding": emb2_b64, "reid_embedding": None,
-                 "jersey_number": 9, "track_data": None}
+                {
+                    "track_id": 401,
+                    "name": "P2",
+                    "team": "away",
+                    "face_embedding": emb2_b64,
+                    "reid_embedding": None,
+                    "jersey_number": 9,
+                    "track_data": None,
+                }
             ]
+
         mock_storage.get_match_players = AsyncMock(side_effect=get_players_side_effect)
         mock_storage.get_all_player_profiles.return_value = []
 
@@ -209,17 +252,34 @@ class TestCrossMatchLinkingService:
         far_b64 = json.dumps(far_emb.tolist())
 
         mock_storage.get_match_players.return_value = [
-            {"track_id": 501, "name": "Close", "team": "home",
-             "face_embedding": emb_b64, "reid_embedding": None,
-             "jersey_number": 1, "track_data": None},
-            {"track_id": 502, "name": "Far", "team": "home",
-             "face_embedding": far_b64, "reid_embedding": None,
-             "jersey_number": 2, "track_data": None},
+            {
+                "track_id": 501,
+                "name": "Close",
+                "team": "home",
+                "face_embedding": emb_b64,
+                "reid_embedding": None,
+                "jersey_number": 1,
+                "track_data": None,
+            },
+            {
+                "track_id": 502,
+                "name": "Far",
+                "team": "home",
+                "face_embedding": far_b64,
+                "reid_embedding": None,
+                "jersey_number": 2,
+                "track_data": None,
+            },
         ]
         mock_storage.get_all_player_profiles.return_value = [
-            {"id": 10, "display_name": "Profile A",
-             "jersey_number": 1, "team": "home",
-             "face_embedding": close_b64, "reid_embedding": None},
+            {
+                "id": 10,
+                "display_name": "Profile A",
+                "jersey_number": 1,
+                "team": "home",
+                "face_embedding": close_b64,
+                "reid_embedding": None,
+            },
         ]
 
         svc = CrossMatchLinkingService(mock_storage, profile_service=mock_profile_svc)
@@ -253,10 +313,22 @@ class TestCrossMatchLinkingService:
         emb = _make_embedding(seed=9)
         emb_b64 = json.dumps(emb.tolist())
         profiles = [
-            {"id": 100, "display_name": "P1", "jersey_number": 3,
-             "team": "home", "face_embedding": emb_b64, "reid_embedding": None},
-            {"id": 101, "display_name": "P2", "jersey_number": 4,
-             "team": "away", "face_embedding": None, "reid_embedding": None},
+            {
+                "id": 100,
+                "display_name": "P1",
+                "jersey_number": 3,
+                "team": "home",
+                "face_embedding": emb_b64,
+                "reid_embedding": None,
+            },
+            {
+                "id": 101,
+                "display_name": "P2",
+                "jersey_number": 4,
+                "team": "away",
+                "face_embedding": None,
+                "reid_embedding": None,
+            },
         ]
         storage = MagicMock()
         svc = CrossMatchLinkingService(storage)
@@ -269,10 +341,12 @@ class TestCrossMatchLinkingService:
         close_emb = emb + 0.01 * np.random.RandomState(111).randn(512).astype(np.float32)
         close_emb = close_emb / max(np.linalg.norm(close_emb), 1e-8)
         profile_embs = [
-            {"profile_id": 200, "display_name": "Target",
-             "embedding": close_emb},
-            {"profile_id": 201, "display_name": "Far",
-             "embedding": np.random.RandomState(222).randn(512).astype(np.float32)},
+            {"profile_id": 200, "display_name": "Target", "embedding": close_emb},
+            {
+                "profile_id": 201,
+                "display_name": "Far",
+                "embedding": np.random.RandomState(222).randn(512).astype(np.float32),
+            },
         ]
         storage = MagicMock()
         svc = CrossMatchLinkingService(storage)

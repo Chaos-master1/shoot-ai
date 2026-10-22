@@ -1,14 +1,27 @@
 """Tests for Box Touches / Penalty Area Entries module."""
 
-from kawkab.core.box_entries import BoxEntryAnalyzer, PENALTY_AREA_START_X, PENALTY_AREA_END_X, PENALTY_AREA_START_Y, PENALTY_AREA_END_Y
+from kawkab.core.box_entries import (
+    BoxEntryAnalyzer,
+)
 
 
-def _make_event(team: str, type: str, start_x: float, start_y: float, end_x: float, end_y: float,
-                from_track_id: int = 1, track_id: int = None) -> dict:
+def _make_event(
+    team: str,
+    type: str,
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+    from_track_id: int = 1,
+    track_id: int = None,
+) -> dict:
     return {
-        "type": type, "team": team,
-        "start_x": start_x, "start_y": start_y,
-        "end_x": end_x, "end_y": end_y,
+        "type": type,
+        "team": team,
+        "start_x": start_x,
+        "start_y": start_y,
+        "end_x": end_x,
+        "end_y": end_y,
         "from_track_id": from_track_id,
         "track_id": track_id,
     }
@@ -105,7 +118,16 @@ class TestAnalyzeBoxEntries:
         bea = BoxEntryAnalyzer()
         events = [
             _make_event("home", "pass", 90, 34, 103, 34, 1),
-            {"type": "shot", "team": "home", "start_x": 103, "start_y": 34, "end_x": 105, "end_y": 34, "is_goal": True, "xg": 0.3},
+            {
+                "type": "shot",
+                "team": "home",
+                "start_x": 103,
+                "start_y": 34,
+                "end_x": 105,
+                "end_y": 34,
+                "is_goal": True,
+                "xg": 0.3,
+            },
         ]
         result = bea.analyze_box_entries(events)
         assert result["home"]["entries_leading_to_shots"] >= 1
@@ -117,7 +139,16 @@ class TestComputeEffectiveness:
         bea = BoxEntryAnalyzer()
         events = [
             _make_event("home", "shot", 90, 34, 103, 34, 1),
-            {"type": "shot", "team": "home", "start_x": 103, "start_y": 34, "end_x": 105, "end_y": 34, "is_goal": True, "xg": 0.3},
+            {
+                "type": "shot",
+                "team": "home",
+                "start_x": 103,
+                "start_y": 34,
+                "end_x": 105,
+                "end_y": 34,
+                "is_goal": True,
+                "xg": 0.3,
+            },
         ]
         result = bea.compute_effectiveness(events)
         assert "home" in result

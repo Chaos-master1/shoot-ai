@@ -9,8 +9,9 @@ from __future__ import annotations
 import functools
 import time
 import warnings
+from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -28,6 +29,7 @@ def timed(log_level: str = "DEBUG") -> Callable[[F], F]:
     Returns:
         Decorated function with timing instrumentation.
     """
+
     def decorator(func: F) -> F:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -48,4 +50,5 @@ def timed(log_level: str = "DEBUG") -> Callable[[F], F]:
                 _depth.reset(token)
 
         return wrapper  # type: ignore[return-value]
+
     return decorator

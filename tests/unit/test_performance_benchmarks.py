@@ -10,7 +10,6 @@ Each benchmark:
 
 from __future__ import annotations
 
-import math
 import random
 import statistics
 import time
@@ -18,8 +17,8 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ── Benchmark result dataclass ──────────────────────────────────────
+
 
 @dataclass
 class BenchmarkResult:
@@ -65,6 +64,7 @@ class BenchmarkResult:
 
 # ── Benchmark data generators ──────────────────────────────────────
 
+
 def _generate_xg_events(n: int) -> list[dict]:
     return [
         {
@@ -104,27 +104,48 @@ def _generate_vaep_events(n: int) -> list[dict]:
         ts = float(i)
         team = "home" if i % 2 == 0 else "away"
         if i % 5 == 0:
-            events.append({
-                "type": "shot", "team": team, "timestamp": ts,
-                "x": random.uniform(50, 105), "y": random.uniform(10, 60),
-                "is_goal": i % 20 == 0, "xg": random.uniform(0.01, 0.5),
-            })
+            events.append(
+                {
+                    "type": "shot",
+                    "team": team,
+                    "timestamp": ts,
+                    "x": random.uniform(50, 105),
+                    "y": random.uniform(10, 60),
+                    "is_goal": i % 20 == 0,
+                    "xg": random.uniform(0.01, 0.5),
+                }
+            )
         elif i % 5 == 1:
-            events.append({
-                "type": "pass", "team": team, "timestamp": ts,
-                "x": random.uniform(0, 105), "y": random.uniform(0, 68),
-                "completed": True,
-            })
+            events.append(
+                {
+                    "type": "pass",
+                    "team": team,
+                    "timestamp": ts,
+                    "x": random.uniform(0, 105),
+                    "y": random.uniform(0, 68),
+                    "completed": True,
+                }
+            )
         elif i % 5 == 2:
-            events.append({
-                "type": "tackle", "team": team, "timestamp": ts,
-                "x": random.uniform(0, 105), "y": random.uniform(0, 68),
-            })
+            events.append(
+                {
+                    "type": "tackle",
+                    "team": team,
+                    "timestamp": ts,
+                    "x": random.uniform(0, 105),
+                    "y": random.uniform(0, 68),
+                }
+            )
         else:
-            events.append({
-                "type": "carry", "team": team, "timestamp": ts,
-                "x": random.uniform(0, 105), "y": random.uniform(0, 68),
-            })
+            events.append(
+                {
+                    "type": "carry",
+                    "team": team,
+                    "timestamp": ts,
+                    "x": random.uniform(0, 105),
+                    "y": random.uniform(0, 68),
+                }
+            )
     return events
 
 
@@ -162,6 +183,7 @@ def _generate_benchmark_data(module: str, n_events: int) -> Any:
 
 
 # ── Benchmark runner ───────────────────────────────────────────────
+
 
 class BenchmarkRunner:
     """Runs benchmarks and collects results."""
@@ -214,6 +236,7 @@ class BenchmarkRunner:
 
     def _run_xg(self, events: list[dict]) -> None:
         from kawkab.core.xg_model import compute_xg
+
         for ev in events:
             meta = ev.get("metadata", {})
             dist = meta.get("distance_to_goal_m", 18.0)
@@ -222,30 +245,36 @@ class BenchmarkRunner:
 
     def _run_xt(self, events: list[dict]) -> None:
         from kawkab.core.xt_model import ExpectedThreatModel
+
         model = ExpectedThreatModel()
         model.build_transition_matrix(events)
 
     def _run_vaep(self, events: list[dict]) -> None:
         from kawkab.core.vaep import compute_vaep
+
         compute_vaep(events)
 
     def _run_pitch_control(self, data: tuple) -> None:
         from kawkab.core.pitch_control import VoronoiPitchControl
+
         home, away, ball = data
         pc = VoronoiPitchControl()
         pc.compute_frame_control(home, away, ball)
 
     def _run_formation(self, positions: list) -> None:
         from kawkab.core.formation_analysis import FormationAnalyzer
+
         fa = FormationAnalyzer()
         fa._classify_formation(positions)
 
     def _run_win_probability(self, events: list[dict]) -> None:
         from kawkab.core.win_probability import compute_win_probability
+
         compute_win_probability(events)
 
     def _run_space_control(self, data: tuple) -> None:
         from kawkab.core.space_control import compute_pitch_control_grid
+
         home, away, _ = data
         all_positions = [(x, y, i) for i, (x, y) in enumerate(home + away)]
         team_ids = [0] * len(home) + [1] * len(away)
@@ -253,12 +282,16 @@ class BenchmarkRunner:
 
     def _run_through_ball(self, events: list[dict]) -> None:
         from kawkab.core.through_ball import detect_through_balls
+
         detect_through_balls(events, [])
 
     def _run_role_classifier(self, events: list[dict]) -> None:
         from kawkab.core.role_classifier import classify_player_role
+
         # Filter events for a single player if track_id exists, else pass as-is
-        player_events = [e for e in events if e.get("player_track_id") == 1 or e.get("from_track_id") == 1]
+        player_events = [
+            e for e in events if e.get("player_track_id") == 1 or e.get("from_track_id") == 1
+        ]
         if not player_events:
             player_events = events[:10] if len(events) >= 10 else events
         classify_player_role(player_events)
@@ -274,7 +307,10 @@ class BenchmarkRunner:
             mean = result.mean_ms
             status = "PASS" if mean < threshold else "WARN"
             if mean >= threshold:
-                warnings.warn(f"{module}: mean {mean:.1f}ms >= threshold {threshold}ms")
+                warnings.warn(
+                    f"{module}: mean {mean:.1f}ms >= threshold {threshold}ms",
+                    stacklevel=2,
+                )
             checks.append((module, mean, threshold, status))
         return checks
 
@@ -403,7 +439,7 @@ class TestPerformanceBenchmarks:
             runner.run_benchmark(module, n_events)
         checks = runner.check_thresholds()
         assert len(checks) == len(MODULES_TO_BENCHMARK)
-        for module, mean, threshold, status in checks:
+        for _module, _mean, _threshold, status in checks:
             assert status in ("PASS", "WARN")
 
     def test_empty_data_all_modules(self):
@@ -432,9 +468,11 @@ class TestPerformanceBenchmarks:
 
 # ── Module-specific benchmark tests ────────────────────────────────
 
+
 class TestXgModelBenchmark:
     def test_compute_xg_throughput(self):
         from kawkab.core.xg_model import compute_xg
+
         n = 10000
         start = time.perf_counter()
         for i in range(n):
@@ -447,6 +485,7 @@ class TestXgModelBenchmark:
 class TestPitchControlBenchmark:
     def test_pitch_control_throughput(self):
         from kawkab.core.pitch_control import VoronoiPitchControl
+
         n_players = 22
         home_pos = [(float(20 + (i % 80)), float(10 + (i % 50))) for i in range(n_players // 2)]
         away_pos = [(float(50 + (i % 50)), float(10 + (i % 50))) for i in range(n_players // 2)]
@@ -462,19 +501,22 @@ class TestPitchControlBenchmark:
 class TestMomentumBenchmark:
     def test_momentum_throughput(self):
         from kawkab.core.momentum import compute_momentum_index
+
         n = 1000
         events = []
         for i in range(n):
-            events.append({
-                "timestamp": float(i),
-                "type": "shot" if i % 5 == 0 else "pass",
-                "team": "home" if i % 2 == 0 else "away",
-                "x": float(50 + (i % 50)),
-                "y": float(34 + (i % 30)),
-                "xg": 0.1 * (i % 10) / 10,
-                "is_goal": i % 20 == 0,
-                "completed": True,
-            })
+            events.append(
+                {
+                    "timestamp": float(i),
+                    "type": "shot" if i % 5 == 0 else "pass",
+                    "team": "home" if i % 2 == 0 else "away",
+                    "x": float(50 + (i % 50)),
+                    "y": float(34 + (i % 30)),
+                    "xg": 0.1 * (i % 10) / 10,
+                    "is_goal": i % 20 == 0,
+                    "completed": True,
+                }
+            )
         start = time.perf_counter()
         result = compute_momentum_index(events, window_minutes=5)
         elapsed = time.perf_counter() - start
@@ -485,19 +527,23 @@ class TestMomentumBenchmark:
 class TestXTBuildBenchmark:
     def test_xt_build_transition_matrix(self):
         from kawkab.core.xt_model import ExpectedThreatModel
+
         n_events = 5000
         events = []
         for i in range(n_events):
             team = "home" if i % 2 == 0 else "away"
-            events.append({
-                "type": "pass", "team": team,
-                "start_x": float(10 + (i % 90)),
-                "start_y": float(10 + (i % 50)),
-                "end_x": float(20 + (i % 80)),
-                "end_y": float(10 + (i % 50)),
-                "completed": bool(i % 3),
-                "timestamp": float(i),
-            })
+            events.append(
+                {
+                    "type": "pass",
+                    "team": team,
+                    "start_x": float(10 + (i % 90)),
+                    "start_y": float(10 + (i % 50)),
+                    "end_x": float(20 + (i % 80)),
+                    "end_y": float(10 + (i % 50)),
+                    "completed": bool(i % 3),
+                    "timestamp": float(i),
+                }
+            )
         model = ExpectedThreatModel()
         start = time.perf_counter()
         model.build_transition_matrix(events)

@@ -7,7 +7,7 @@ based on the Impect packing metric methodology.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from kawkab.core.game_constants import GAME
@@ -55,9 +55,12 @@ class PackingReport:
 
 
 def _is_behind_line(
-    player_x: float, player_y: float,
-    line_start_x: float, line_start_y: float,
-    line_end_x: float, line_end_y: float,
+    player_x: float,
+    player_y: float,
+    line_start_x: float,
+    line_start_y: float,
+    line_end_x: float,
+    line_end_y: float,
     attacking_direction: int = 1,
 ) -> bool:
     """Check if a player is behind (on the defensive side of) the pass line.
@@ -80,7 +83,7 @@ def _is_behind_line(
     pdy = player_y - line_start_y
 
     # Project player onto pass line (0.0 = start, 1.0 = end)
-    t = (pdx * dx + pdy * dy) / (line_len ** 2)
+    t = (pdx * dx + pdy * dy) / (line_len**2)
 
     # Perpendicular distance from pass line
     perp_dist = abs(pdx * dy - pdy * dx) / line_len
@@ -127,10 +130,7 @@ def compute_packing(
     pass_length = math.hypot(ex - sx, ey - sy)
 
     # Territory penetration: how far forward the pass goes
-    if attacking_direction > 0:
-        territory = max(0.0, ex - sx)
-    else:
-        territory = max(0.0, sx - ex)
+    territory = max(0.0, ex - sx) if attacking_direction > 0 else max(0.0, sx - ex)
     territory_pct = (territory / PITCH_LENGTH) * 100.0
 
     # Count packed opponents
@@ -141,10 +141,7 @@ def compute_packing(
 
     is_progressive = territory_pct > 5.0
 
-    if attacking_direction > 0:
-        direction = "right"
-    else:
-        direction = "left"
+    direction = "right" if attacking_direction > 0 else "left"
 
     return PackingResult(
         packing_count=packing_count,
@@ -188,8 +185,8 @@ def compute_match_packing(
             continue
 
         team = ev.get("team", "home")
-        sx = ev.get("start_x", 52.5)
-        sy = ev.get("start_y", 34.0)
+        _ = ev.get("start_x", 52.5)
+        _ = ev.get("start_y", 34.0)
 
         # Estimate opponent positions from nearby events
         opp_positions: list[tuple[float, float]] = []
@@ -215,11 +212,8 @@ def compute_match_packing(
             continue
 
         # Attacking direction depends on the team
-        if team == "home":
-            team_att_dir = att_dir
-        else:
-            # Away team attacks in opposite direction
-            team_att_dir = -att_dir
+        # Away team attacks in the opposite direction
+        team_att_dir = att_dir if team == "home" else -att_dir
 
         result = compute_packing(ev, opp_positions, team_att_dir)
 

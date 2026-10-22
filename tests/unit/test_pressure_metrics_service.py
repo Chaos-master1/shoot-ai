@@ -22,6 +22,7 @@ install_kawkab_stubs()
 # cv_service stub
 # ---------------------------------------------------------------------------
 
+
 def _install_cv_stub() -> None:
     if "kawkab.services" in sys.modules:
         return
@@ -79,13 +80,17 @@ def _ns(**kwargs):
 
 
 def _det(bbox, class_name, track_id=None, confidence=0.9, class_id=1):
-    return _ns(bbox=bbox, confidence=confidence, class_id=class_id,
-               class_name=class_name, track_id=track_id)
+    return _ns(
+        bbox=bbox,
+        confidence=confidence,
+        class_id=class_id,
+        class_name=class_name,
+        track_id=track_id,
+    )
 
 
 def _frame(fn, ts, dets, iw=1920, ih=1080):
-    return _ns(frame_number=fn, timestamp=ts, detections=dets,
-               image_width=iw, image_height=ih)
+    return _ns(frame_number=fn, timestamp=ts, detections=dets, image_width=iw, image_height=ih)
 
 
 def _track_data(frames=None, duration=5400.0, player_teams=None):
@@ -103,8 +108,13 @@ def _track_data(frames=None, duration=5400.0, player_teams=None):
 
 
 def _event(type_, team, timestamp=0.0, completed=True, metadata=None, is_pressed=False):
-    ev = {"type": type_, "team": team, "timestamp": timestamp,
-          "completed": completed, "is_pressed": is_pressed}
+    ev = {
+        "type": type_,
+        "team": team,
+        "timestamp": timestamp,
+        "completed": completed,
+        "is_pressed": is_pressed,
+    }
     if metadata is not None:
         ev["metadata"] = metadata
     return ev
@@ -128,7 +138,11 @@ class TestServiceInit:
 
     def test_constants(self) -> None:
         assert PressureMetricsService.PRESSURE_DISTANCE_M == 2.0
-        assert PressureMetricsService.PPDA_ZONES == ["defensive_third", "middle_third", "final_third"]
+        assert PressureMetricsService.PPDA_ZONES == [
+            "defensive_third",
+            "middle_third",
+            "final_third",
+        ]
 
 
 class TestFullPipeline:

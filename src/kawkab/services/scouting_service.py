@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import statistics
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class ScoutingService:
             formation_counts[f] = formation_counts.get(f, 0) + 1
         preferred = max(formation_counts.items(), key=lambda kv: kv[1])[0]
         formation_changes = sum(
-            1 for a, b in zip(formations, formations[1:]) if a != b
+            1 for a, b in zip(formations, formations[1:], strict=False) if a != b
         )
         poss = [m.get("possession_pct", 50.0) for m in matches]
         ppdas = [m.get("ppda", 10.0) for m in matches]
@@ -125,8 +125,8 @@ class ScoutingService:
             set_piece_vulnerability=round(avg_sp_conc, 3),
             width_usage=round(avg_width, 3),
             build_up_style=build_style,
-            top_scorers=scorers[:5],
-            top_assisters=assisters[:5],
+            top_scorers=[(n, int(v)) for n, v in scorers[:5]],
+            top_assisters=[(n, int(v)) for n, v in assisters[:5]],
             top_xg_contributors=xg_players[:5],
             vulnerability_flags=vul_flags,
             strength_flags=str_flags,

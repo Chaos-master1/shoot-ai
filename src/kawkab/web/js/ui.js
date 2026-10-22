@@ -66,14 +66,90 @@
         stepsContainer.setAttribute("aria-valuenow", step);
     }
 
+    // ── Modal accessibility (WCAG 2.1 §2.4.3 / §2.1.2) ──
+    // Focus trap: when a modal opens, focus moves to its first focusable
+    // element, Tab cycles inside it, Escape closes it, and closing restores
+    // focus to the element that opened it. Handlers are stored per-modal so
+    // nested/stacked modals don't clobber each other.
+    var _modalTrapHandlers = {};
+    var _modalReturnFocus = {};
+
+    function _modalFocusable(modal) {
+        var sel = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
+        var els = modal.querySelectorAll(sel);
+        var out = [];
+        for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            // Skip elements hidden by the app's .hidden/[hidden] conventions
+            // (offsetParent-based checks are unusable: jsdom never
+            // implements layout, so offsetParent is always null there).
+            if (el.closest("[hidden], .hidden")) continue;
+            out.push(el);
+        }
+        return out;
+    }
+
+    function _wireModalTrap(modalId) {
+        var modal = document.getElementById(modalId);
+        if (!modal || _modalTrapHandlers[modalId]) return;
+        var handler = function (e) {
+            if (modal.classList.contains("hidden")) return;
+            if (e.key === "Escape") {
+                closeModal(modalId);
+                return;
+            }
+            if (e.key !== "Tab") return;
+            var focusable = _modalFocusable(modal);
+            if (!focusable.length) {
+                e.preventDefault();
+                return;
+            }
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        modal.addEventListener("keydown", handler);
+        _modalTrapHandlers[modalId] = handler;
+    }
+
+    function _unwireModalTrap(modalId) {
+        var modal = document.getElementById(modalId);
+        var handler = _modalTrapHandlers[modalId];
+        if (modal && handler) modal.removeEventListener("keydown", handler);
+        delete _modalTrapHandlers[modalId];
+    }
+
     function openModal(modalId) {
         var modal = document.getElementById(modalId);
-        if (modal) modal.classList.remove("hidden");
+        if (!modal) return;
+        _modalReturnFocus[modalId] = document.activeElement;
+        modal.classList.remove("hidden");
+        _wireModalTrap(modalId);
+        var focusable = _modalFocusable(modal);
+        if (focusable.length) {
+            focusable[0].focus();
+        } else if (!modal.hasAttribute("tabindex")) {
+            modal.setAttribute("tabindex", "-1");
+        }
+        if (!focusable.length) modal.focus();
     }
 
     function closeModal(modalId) {
         var modal = document.getElementById(modalId);
-        if (modal) modal.classList.add("hidden");
+        if (!modal) return;
+        modal.classList.add("hidden");
+        _unwireModalTrap(modalId);
+        var prev = _modalReturnFocus[modalId];
+        delete _modalReturnFocus[modalId];
+        if (prev && prev.focus && document.contains(prev)) {
+            prev.focus();
+        }
     }
 
     function loadMissingKeys() {

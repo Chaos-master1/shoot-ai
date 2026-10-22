@@ -12,11 +12,11 @@ makes Kawkab AI data portable.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import json
 import math
 import sqlite3
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -78,20 +78,39 @@ class DataExportService:
             raise ValueError(f"Match {match_id} not found")
 
         match_name = self._sanitize_name(match_row["name"])
-        export_dir = self._resolve_export_path(f"match_{match_id}_{match_name}_{datetime.now().strftime('%Y%m%d')}")
+        export_dir = self._resolve_export_path(
+            f"match_{match_id}_{match_name}_{datetime.now().strftime('%Y%m%d')}"
+        )
         export_dir.mkdir(parents=True, exist_ok=True)
 
         # Summary CSV
         summary_path = export_dir / "summary.csv"
         with open(summary_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["match_id", "name", "home_team", "away_team", "match_date",
-                           "duration_seconds", "fps", "total_frames"])
-            writer.writerow([
-                match_row["id"], match_row["name"], match_row["home_team"],
-                match_row["away_team"], match_row["match_date"],
-                match_row["duration_seconds"], match_row["fps"], match_row["total_frames"],
-            ])
+            writer.writerow(
+                [
+                    "match_id",
+                    "name",
+                    "home_team",
+                    "away_team",
+                    "match_date",
+                    "duration_seconds",
+                    "fps",
+                    "total_frames",
+                ]
+            )
+            writer.writerow(
+                [
+                    match_row["id"],
+                    match_row["name"],
+                    match_row["home_team"],
+                    match_row["away_team"],
+                    match_row["match_date"],
+                    match_row["duration_seconds"],
+                    match_row["fps"],
+                    match_row["total_frames"],
+                ]
+            )
 
         # Events CSV
         if include_events:
@@ -103,14 +122,33 @@ class DataExportService:
             events_path = export_dir / "events.csv"
             with open(events_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(["event_id", "event_type", "timestamp", "from_track_id",
-                               "to_track_id", "team", "completed", "confidence", "metadata"])
+                writer.writerow(
+                    [
+                        "event_id",
+                        "event_type",
+                        "timestamp",
+                        "from_track_id",
+                        "to_track_id",
+                        "team",
+                        "completed",
+                        "confidence",
+                        "metadata",
+                    ]
+                )
                 for e in events:
-                    writer.writerow([
-                        e["id"], e["event_type"], e["timestamp"], e["from_track_id"],
-                        e["to_track_id"], e["team"], e["completed"], e["confidence"],
-                        e["metadata"],
-                    ])
+                    writer.writerow(
+                        [
+                            e["id"],
+                            e["event_type"],
+                            e["timestamp"],
+                            e["from_track_id"],
+                            e["to_track_id"],
+                            e["team"],
+                            e["completed"],
+                            e["confidence"],
+                            e["metadata"],
+                        ]
+                    )
 
         # Players CSV
         if include_players:
@@ -119,16 +157,41 @@ class DataExportService:
             players_path = export_dir / "players.csv"
             with open(players_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(["player_id", "track_id", "jersey_number", "name", "team",
-                               "position", "distance_covered_m", "max_speed_kmh", "avg_speed_kmh",
-                               "passes_attempted", "passes_completed", "shots", "tackles"])
+                writer.writerow(
+                    [
+                        "player_id",
+                        "track_id",
+                        "jersey_number",
+                        "name",
+                        "team",
+                        "position",
+                        "distance_covered_m",
+                        "max_speed_kmh",
+                        "avg_speed_kmh",
+                        "passes_attempted",
+                        "passes_completed",
+                        "shots",
+                        "tackles",
+                    ]
+                )
                 for p in players:
-                    writer.writerow([
-                        p["id"], p["track_id"], p["jersey_number"], p["name"], p["team"],
-                        p["position"], p["distance_covered_m"], p["max_speed_kmh"],
-                        p["avg_speed_kmh"], p["passes_attempted"], p["passes_completed"],
-                        p["shots"], p["tackles"],
-                    ])
+                    writer.writerow(
+                        [
+                            p["id"],
+                            p["track_id"],
+                            p["jersey_number"],
+                            p["name"],
+                            p["team"],
+                            p["position"],
+                            p["distance_covered_m"],
+                            p["max_speed_kmh"],
+                            p["avg_speed_kmh"],
+                            p["passes_attempted"],
+                            p["passes_completed"],
+                            p["shots"],
+                            p["tackles"],
+                        ]
+                    )
 
         logger.info(f"Exported match {match_id} CSV to {export_dir}")
         return export_dir
@@ -148,7 +211,9 @@ class DataExportService:
             raise ValueError(f"Match {match_id} not found")
 
         match_name = self._sanitize_name(match_row["name"])
-        export_path = self._resolve_export_path(f"match_{match_id}_{match_name}_{datetime.now().strftime('%Y%m%d')}.json")
+        export_path = self._resolve_export_path(
+            f"match_{match_id}_{match_name}_{datetime.now().strftime('%Y%m%d')}.json"
+        )
 
         cursor.execute("SELECT * FROM analysis_results WHERE match_id = ?", (match_id,))
         analysis_row = cursor.fetchone()
@@ -197,7 +262,9 @@ class DataExportService:
             raise ValueError(f"Match {match_id} not found")
 
         match_name = self._sanitize_name(match_row["name"])
-        export_path = self._resolve_export_path(f"statsbomb_{match_id}_{match_name}_{datetime.now().strftime('%Y%m%d')}.json")
+        export_path = self._resolve_export_path(
+            f"statsbomb_{match_id}_{match_name}_{datetime.now().strftime('%Y%m%d')}.json"
+        )
 
         cursor.execute(
             "SELECT * FROM events WHERE match_id = ? ORDER BY timestamp",
@@ -205,7 +272,7 @@ class DataExportService:
         )
         events = cursor.fetchall()
 
-        statsbomb_events = []
+        statsbomb_events: list[dict[str, Any]] = []
         for e in events:
             event_type = e["event_type"]
 
@@ -219,12 +286,10 @@ class DataExportService:
                 meta = {}
 
             # Period detection: use explicit field or compute from timestamp
-            period = meta.get("period", None)
+            period = meta.get("period")
             if period is None:
-                try:
+                with contextlib.suppress(KeyError, IndexError, TypeError):
                     period = e["period"]
-                except (KeyError, IndexError, TypeError):
-                    pass
             if period is None:
                 ts = float(e["timestamp"])
                 period = 1 if ts < 2700 else 2
@@ -248,11 +313,16 @@ class DataExportService:
 
             if event_type == "pass":
                 # Compute pass length and angle from positions
-                start_x = meta.get("start_x", None)
-                start_y = meta.get("start_y", None)
-                end_x = meta.get("end_x", None)
-                end_y = meta.get("end_y", None)
-                if start_x is not None and start_y is not None and end_x is not None and end_y is not None:
+                start_x = meta.get("start_x")
+                start_y = meta.get("start_y")
+                end_x = meta.get("end_x")
+                end_y = meta.get("end_y")
+                if (
+                    start_x is not None
+                    and start_y is not None
+                    and end_x is not None
+                    and end_y is not None
+                ):
                     dx = float(end_x) - float(start_x)
                     dy = float(end_y) - float(start_y)
                     length = math.hypot(dx, dy)
@@ -262,7 +332,10 @@ class DataExportService:
                     angle = 0.0
                 sb_event["pass"] = {
                     "recipient": {"id": e["to_track_id"], "name": f"Player {e['to_track_id']}"},
-                    "outcome": {"id": 15 if e["completed"] else 9, "name": "Complete" if e["completed"] else "Incomplete"},
+                    "outcome": {
+                        "id": 15 if e["completed"] else 9,
+                        "name": "Complete" if e["completed"] else "Incomplete",
+                    },
                     "length": round(length, 1),
                     "angle": round(angle, 1),
                     "height": {"id": 1, "name": "Ground Pass"},
@@ -355,17 +428,39 @@ class DataExportService:
         season_row = cursor.fetchone()
         season_name = season_row["name"] if season_row else f"Season_{season_id}"
 
-        export_path = self._resolve_export_path(f"season_{season_id}_{self._sanitize_name(season_name)}_{datetime.now().strftime('%Y%m%d')}.csv")
+        export_path = self._resolve_export_path(
+            f"season_{season_id}_{self._sanitize_name(season_name)}_{datetime.now().strftime('%Y%m%d')}.csv"
+        )
 
         with open(export_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["match_id", "name", "date", "home_team", "away_team",
-                           "score_home", "score_away", "duration_seconds", "match_type"])
+            writer.writerow(
+                [
+                    "match_id",
+                    "name",
+                    "date",
+                    "home_team",
+                    "away_team",
+                    "score_home",
+                    "score_away",
+                    "duration_seconds",
+                    "match_type",
+                ]
+            )
             for m in matches:
-                writer.writerow([
-                    m["id"], m["name"], m["match_date"], m["home_team"], m["away_team"],
-                    m["score_home"], m["score_away"], m["duration_seconds"], m["match_type"],
-                ])
+                writer.writerow(
+                    [
+                        m["id"],
+                        m["name"],
+                        m["match_date"],
+                        m["home_team"],
+                        m["away_team"],
+                        m["score_home"],
+                        m["score_away"],
+                        m["duration_seconds"],
+                        m["match_type"],
+                    ]
+                )
 
         logger.info(f"Exported season {season_id} CSV to {export_path}")
         return export_path

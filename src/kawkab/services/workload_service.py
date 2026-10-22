@@ -14,16 +14,14 @@ References (open literature):
 from __future__ import annotations
 
 import logging
-import math
 import statistics
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from dataclasses import dataclass
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """Categorical injury-risk band."""
 
     LOW = "low"
@@ -33,7 +31,7 @@ class RiskLevel(str, Enum):
     INSUFFICIENT_DATA = "insufficient_data"
 
 
-class WorkloadSource(str, Enum):
+class WorkloadSource(StrEnum):
     """Type of workload record."""
 
     MATCH = "match"
@@ -128,8 +126,16 @@ class WorkloadService:
         sorted_h = sorted(history, key=lambda r: r.date)
         if reference_date is None:
             reference_date = sorted_h[-1].date
-        acute = [r for r in sorted_h if self._days_between(r.date, reference_date) <= self.acute_window_days]
-        chronic = [r for r in sorted_h if self._days_between(r.date, reference_date) <= self.chronic_window_days]
+        acute = [
+            r
+            for r in sorted_h
+            if self._days_between(r.date, reference_date) <= self.acute_window_days
+        ]
+        chronic = [
+            r
+            for r in sorted_h
+            if self._days_between(r.date, reference_date) <= self.chronic_window_days
+        ]
         acute_load = sum(self._session_load(r) for r in acute)
         chronic_raw = sum(self._session_load(r) for r in chronic)
         chronic_load = chronic_raw / 4.0 if chronic_raw > 0 else 0.0
@@ -190,6 +196,7 @@ class WorkloadService:
     def _days_between(d1: str, d2: str) -> int:
         try:
             from datetime import date
+
             a = date.fromisoformat(d1)
             b = date.fromisoformat(d2)
             return abs((b - a).days)

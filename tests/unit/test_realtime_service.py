@@ -34,7 +34,7 @@ ConsoleSubscriber = _rt.ConsoleSubscriber
 RealtimeSubscriber = _rt.RealtimeSubscriber
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import pytest
@@ -117,8 +117,10 @@ class TestSubscriber:
 
     def test_callback_subscriber_calls_async(self) -> None:
         captured: list[RealtimeEvent] = []
+
         async def cb(e: RealtimeEvent) -> None:
             captured.append(e)
+
         sub = CallbackSubscriber(cb)
         evt = RealtimeEvent(
             kind=AlertKind.SHOT,
@@ -199,6 +201,7 @@ class TestAlertRules:
     def test_custom_rule_subclass(self) -> None:
         class MyRule(AlertRule):
             kind = AlertKind.POSSESSION_CHANGE
+
             def evaluate(self, frame, prev_frame, ctx):
                 if prev_frame is None:
                     return None
@@ -209,6 +212,7 @@ class TestAlertRules:
                     frame_index=frame.frame_number,
                     message="custom",
                 )
+
         rule = MyRule()
         f1 = FakeFrame(frame_number=1, timestamp=0.0, detections=[])
         f2 = FakeFrame(frame_number=2, timestamp=1.0, detections=[])
@@ -237,11 +241,17 @@ class TestRealtimeService:
 
     @pytest.mark.asyncio
     async def test_dispatch_event_to_subscriber(self) -> None:
-        cv = FakeCVService(frames=[
-            FakeFrame(frame_number=1, timestamp=0.0, detections=[
-                FakeDetection(confidence=0.9),
-            ]),
-        ])
+        cv = FakeCVService(
+            frames=[
+                FakeFrame(
+                    frame_number=1,
+                    timestamp=0.0,
+                    detections=[
+                        FakeDetection(confidence=0.9),
+                    ],
+                ),
+            ]
+        )
         svc = RealtimeService(cv_service=cv, target_fps=0.0, stats_interval_s=100.0)
         sub = CountingSubscriber()
         svc.subscribe(sub)
@@ -260,6 +270,7 @@ class TestRealtimeService:
         class Broken(RealtimeSubscriber):
             async def on_event(self, event):
                 raise RuntimeError("boom")
+
         svc = RealtimeService(cv_service=FakeCVService())
         good = CountingSubscriber()
         svc.subscribe(Broken())

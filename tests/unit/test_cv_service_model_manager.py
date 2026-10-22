@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
-import pytest
+import contextlib
 import tempfile
 from pathlib import Path
 
-from conftest import install_kawkab_stubs
+import pytest
+from conftest import install_kawkab_stubs, load_service_module
 
 install_kawkab_stubs()
 
-from kawkab.services.cv_service import CVService
+# Some other test files replace sys.modules["kawkab.services.cv_service"]
+# with a stub CVService (no constructor override -> "takes no arguments")
+# and don't always restore it; under pytest-xdist, if one of those files
+# shares this worker process, a plain `from kawkab.services.cv_service
+# import CVService` could silently bind to that stub instead of the real
+# class. load_service_module loads a fresh copy under its own unique
+# sys.modules key, sidestepping the shared "kawkab.services.cv_service"
+# entry (and whatever another file did to it) entirely.
+_cv = load_service_module("cv_service_real_for_model_manager_test", "cv_service.py")
+CVService = _cv.CVService
 from kawkab.core.model_manager import ModelManager
 
 
@@ -42,10 +52,9 @@ class TestCVServiceModelManager:
 
             # Should not raise - uses model path from ModelManager
             # Note: YOLO will fail to load fake bytes, but we verify the path was used
-            try:
+            # Expected - fake model bytes
+            with contextlib.suppress(Exception):
                 await cv.initialize()
-            except Exception:
-                pass  # Expected - fake model bytes
 
             assert cv._model_manager is mm
             assert mm.is_model_available("yolo11n")
@@ -56,6 +65,7 @@ class TestCVServiceModelManager:
             mm = ModelManager(cache_dir=Path(tmpdir))
             # Remove the model directory to force failure
             import shutil
+
             shutil.rmtree(tmpdir)
             cv = CVService(model_size="n", model_manager=mm)
             # Should not crash on creation

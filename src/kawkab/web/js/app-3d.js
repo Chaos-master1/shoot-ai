@@ -293,7 +293,7 @@ import { OrbitControls } from './lib/OrbitControls.js';
         _pendingUpdate = true;
         _currentTime = timestamp;
         var self = this;
-        var bridge = window.bridge || window.kawkabBridge;
+        var bridge = (window.KawkabUtils && KawkabUtils.getBridge) ? KawkabUtils.getBridge() : (window.bridge || window.kawkabBridge);
         if (!bridge || !self.matchId) { _pendingUpdate = false; return; }
 
         bridge.get_overlay_data(self.matchId, timestamp).then(function (json) {
@@ -696,7 +696,7 @@ import { OrbitControls } from './lib/OrbitControls.js';
     };
 
     function loadPlayerNameMap(matchId, pitch) {
-        var bridge = window.bridge || window.kawkabBridge;
+        var bridge = (window.KawkabUtils && KawkabUtils.getBridge) ? KawkabUtils.getBridge() : (window.bridge || window.kawkabBridge);
         if (!bridge) return;
         bridge.get_match_players(matchId, function (result) {
             try {

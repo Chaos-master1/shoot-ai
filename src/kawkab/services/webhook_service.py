@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import httpx
-
 
 WEBHOOKS_DB_PATH = None
 
@@ -53,7 +52,7 @@ class WebhookService:
             "secret": secret,
             "events": events or ["*"],
             "is_active": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         webhooks.append(wh)
         self._save(webhooks)
@@ -77,17 +76,18 @@ class WebhookService:
                 continue
             if "*" not in wh.get("events", []) and event_type not in wh.get("events", []):
                 continue
-            try:
+            with contextlib.suppress(Exception):
                 self._send(wh, event_type, payload)
-            except Exception:
-                pass
 
     def _send(self, webhook: dict, event_type: str, payload: dict):
-        body = json.dumps({
-            "event": event_type,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "payload": payload,
-        }, default=str).encode("utf-8")
+        body = json.dumps(
+            {
+                "event": event_type,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "payload": payload,
+            },
+            default=str,
+        ).encode("utf-8")
 
         headers = {
             "Content-Type": "application/json",

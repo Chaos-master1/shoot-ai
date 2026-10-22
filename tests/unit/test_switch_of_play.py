@@ -1,17 +1,10 @@
 """Tests for Switch of Play + Box Entries Detection module."""
 
-import pytest
-
 from kawkab.core.switch_of_play import (
-    SwitchOfPlayDetector,
-    _classify_zone,
-    PITCH_LENGTH,
-    PITCH_WIDTH,
     SWITCH_MIN_LATERAL_M,
     SWITCH_MIN_TOTAL_M,
-    BOX_X_THRESHOLD,
-    BOX_Y_LO,
-    BOX_Y_HI,
+    SwitchOfPlayDetector,
+    _classify_zone,
 )
 
 
@@ -56,9 +49,33 @@ class TestSwitchOfPlay:
         """Full switch analysis returns counts and completion per team."""
         sod = SwitchOfPlayDetector()
         events = [
-            {"type": "pass", "team": "home", "start_x": 50.0, "start_y": 5.0, "end_x": 70.0, "end_y": 63.0, "completed": True},
-            {"type": "pass", "team": "home", "start_x": 50.0, "start_y": 5.0, "end_x": 70.0, "end_y": 63.0, "completed": False},
-            {"type": "pass", "team": "away", "start_x": 55.0, "start_y": 8.0, "end_x": 65.0, "end_y": 60.0, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 50.0,
+                "start_y": 5.0,
+                "end_x": 70.0,
+                "end_y": 63.0,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 50.0,
+                "start_y": 5.0,
+                "end_x": 70.0,
+                "end_y": 63.0,
+                "completed": False,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "start_x": 55.0,
+                "start_y": 8.0,
+                "end_x": 65.0,
+                "end_y": 60.0,
+                "completed": True,
+            },
         ]
         result = sod.analyze_switches(events)
         assert "home" in result
@@ -81,7 +98,15 @@ class TestSwitchOfPlay:
         """Events with no valid switches return zero counts."""
         sod = SwitchOfPlayDetector()
         events = [
-            {"type": "pass", "team": "home", "start_x": 50.0, "start_y": 34.0, "end_x": 55.0, "end_y": 35.0, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 50.0,
+                "start_y": 34.0,
+                "end_x": 55.0,
+                "end_y": 35.0,
+                "completed": True,
+            },
         ]
         result = sod.analyze_switches(events)
         assert result["home"]["switch_count"] == 0
@@ -140,9 +165,30 @@ class TestBoxEntries:
         """Full box entry analysis returns per-team counts."""
         sod = SwitchOfPlayDetector()
         events = [
-            {"type": "pass", "team": "home", "start_x": 90.0, "start_y": 34.0, "end_x": 103.0, "end_y": 34.0},
-            {"type": "carry", "team": "home", "start_x": 90.0, "start_y": 34.0, "end_x": 103.0, "end_y": 34.0},
-            {"type": "pass", "team": "away", "start_x": 90.0, "start_y": 34.0, "end_x": 103.0, "end_y": 34.0},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 90.0,
+                "start_y": 34.0,
+                "end_x": 103.0,
+                "end_y": 34.0,
+            },
+            {
+                "type": "carry",
+                "team": "home",
+                "start_x": 90.0,
+                "start_y": 34.0,
+                "end_x": 103.0,
+                "end_y": 34.0,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "start_x": 90.0,
+                "start_y": 34.0,
+                "end_x": 103.0,
+                "end_y": 34.0,
+            },
         ]
         result = sod.analyze_box_entries(events)
         assert "home" in result
@@ -164,7 +210,14 @@ class TestBoxEntries:
         """Events with no box entries return zero counts."""
         sod = SwitchOfPlayDetector()
         events = [
-            {"type": "pass", "team": "home", "start_x": 50.0, "start_y": 34.0, "end_x": 55.0, "end_y": 35.0},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 50.0,
+                "start_y": 34.0,
+                "end_x": 55.0,
+                "end_y": 35.0,
+            },
         ]
         result = sod.analyze_box_entries(events)
         assert result["home"]["total_entries"] == 0
@@ -173,8 +226,23 @@ class TestBoxEntries:
         """Box entries that lead to a shot are counted."""
         sod = SwitchOfPlayDetector()
         events = [
-            {"type": "pass", "team": "home", "start_x": 90.0, "start_y": 34.0, "end_x": 103.0, "end_y": 34.0},
-            {"type": "shot", "team": "home", "start_x": 103.0, "start_y": 34.0, "end_x": 105.0, "end_y": 34.0, "is_goal": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 90.0,
+                "start_y": 34.0,
+                "end_x": 103.0,
+                "end_y": 34.0,
+            },
+            {
+                "type": "shot",
+                "team": "home",
+                "start_x": 103.0,
+                "start_y": 34.0,
+                "end_x": 105.0,
+                "end_y": 34.0,
+                "is_goal": True,
+            },
         ]
         result = sod.analyze_box_entries(events)
         assert result["home"]["entries_leading_to_shots"] >= 1

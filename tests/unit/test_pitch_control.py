@@ -1,7 +1,11 @@
 """Tests for Voronoi pitch control."""
 
-import pytest
-from kawkab.core.pitch_control import VoronoiPitchControl, WeightedPitchControl, PitchControlFrame, MatchPitchControl
+from kawkab.core.pitch_control import (
+    MatchPitchControl,
+    PitchControlFrame,
+    VoronoiPitchControl,
+    WeightedPitchControl,
+)
 
 
 class TestVoronoiPitchControl:
@@ -55,8 +59,18 @@ class TestVoronoiPitchControl:
     def test_match_control_aggregates_frames(self):
         pc = VoronoiPitchControl(grid_rows=10, grid_cols=15)
         frames = [
-            {"timestamp": 0.0, "home_positions": [(26, 34)], "away_positions": [(79, 34)], "ball_pos": None},
-            {"timestamp": 10.0, "home_positions": [(26, 34)], "away_positions": [(79, 34)], "ball_pos": (30, 34)},
+            {
+                "timestamp": 0.0,
+                "home_positions": [(26, 34)],
+                "away_positions": [(79, 34)],
+                "ball_pos": None,
+            },
+            {
+                "timestamp": 10.0,
+                "home_positions": [(26, 34)],
+                "away_positions": [(79, 34)],
+                "ball_pos": (30, 34),
+            },
         ]
         result = pc.compute_match_control(frames)
         assert 30.0 < result.avg_home_control < 70.0
@@ -66,9 +80,24 @@ class TestVoronoiPitchControl:
     def test_match_control_ball_distribution(self):
         pc = VoronoiPitchControl(grid_rows=10, grid_cols=15)
         frames = [
-            {"timestamp": 0.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": (90, 34)},
-            {"timestamp": 10.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": (10, 34)},
-            {"timestamp": 20.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": (50, 34)},
+            {
+                "timestamp": 0.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (90, 34),
+            },
+            {
+                "timestamp": 10.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (10, 34),
+            },
+            {
+                "timestamp": 20.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (50, 34),
+            },
         ]
         result = pc.compute_match_control(frames)
         assert result.ball_in_away_third > 0
@@ -85,6 +114,7 @@ class TestVoronoiPitchControl:
         d = mc.to_dict()
         assert d["avg_home_control"] == 55.0
         assert d["avg_away_control"] == 45.0
+
 
 class TestWeightedPitchControl:
     def test_single_team_full_control(self):
@@ -112,9 +142,7 @@ class TestWeightedPitchControl:
         pc = WeightedPitchControl(grid_rows=10, grid_cols=15, time_horizon=3.0)
         home = [(26.0, 34.0)]
         away = [(79.0, 34.0)]
-        result = pc.compute_frame_control(
-            home, away, home_speeds=[8.0], away_speeds=[2.0]
-        )
+        result = pc.compute_frame_control(home, away, home_speeds=[8.0], away_speeds=[2.0])
         fast_home = result.home_control_pct
         pc_slow = WeightedPitchControl(grid_rows=10, grid_cols=15, time_horizon=3.0)
         result_slow = pc_slow.compute_frame_control(
@@ -132,8 +160,18 @@ class TestWeightedPitchControl:
     def test_match_control_aggregates(self):
         pc = WeightedPitchControl(grid_rows=10, grid_cols=15)
         frames = [
-            {"timestamp": 0.0, "home_positions": [(26, 34)], "away_positions": [(79, 34)], "ball_pos": None},
-            {"timestamp": 10.0, "home_positions": [(26, 34)], "away_positions": [(79, 34)], "ball_pos": (30, 34)},
+            {
+                "timestamp": 0.0,
+                "home_positions": [(26, 34)],
+                "away_positions": [(79, 34)],
+                "ball_pos": None,
+            },
+            {
+                "timestamp": 10.0,
+                "home_positions": [(26, 34)],
+                "away_positions": [(79, 34)],
+                "ball_pos": (30, 34),
+            },
         ]
         result = pc.compute_match_control(frames)
         assert 30.0 < result.avg_home_control < 70.0
@@ -147,8 +185,18 @@ class TestWeightedPitchControl:
     def test_voronoi_no_ball_in_any_frame(self):
         pc = VoronoiPitchControl(grid_rows=10, grid_cols=15)
         frames = [
-            {"timestamp": 0.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": None},
-            {"timestamp": 10.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": None},
+            {
+                "timestamp": 0.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": None,
+            },
+            {
+                "timestamp": 10.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": None,
+            },
         ]
         result = pc.compute_match_control(frames)
         assert result.ball_in_home_third == 0
@@ -165,8 +213,18 @@ class TestWeightedPitchControl:
     def test_weighted_control_varying_player_counts(self):
         pc = WeightedPitchControl(grid_rows=10, grid_cols=15)
         frames = [
-            {"timestamp": 0.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": (50, 34)},
-            {"timestamp": 10.0, "home_positions": [(20, 34), (30, 40)], "away_positions": [(80, 34)], "ball_pos": (50, 34)},
+            {
+                "timestamp": 0.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (50, 34),
+            },
+            {
+                "timestamp": 10.0,
+                "home_positions": [(20, 34), (30, 40)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (50, 34),
+            },
         ]
         result = pc.compute_match_control(frames)
         assert len(result.frames) == 2
@@ -174,8 +232,18 @@ class TestWeightedPitchControl:
     def test_weighted_match_ball_third_distribution(self):
         pc = WeightedPitchControl(grid_rows=10, grid_cols=15)
         frames = [
-            {"timestamp": 0.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": (90, 34)},
-            {"timestamp": 10.0, "home_positions": [(20, 34)], "away_positions": [(80, 34)], "ball_pos": (10, 34)},
+            {
+                "timestamp": 0.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (90, 34),
+            },
+            {
+                "timestamp": 10.0,
+                "home_positions": [(20, 34)],
+                "away_positions": [(80, 34)],
+                "ball_pos": (10, 34),
+            },
         ]
         result = pc.compute_match_control(frames)
         assert result.ball_in_away_third > 0

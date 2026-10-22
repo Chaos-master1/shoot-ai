@@ -2,11 +2,10 @@
 
 > **The AI Football Coach for Amateur Teams** — 100% Private, 100% Offline, $0 Cost
 
-> 📊 **Current state:** 100+ services, 8 external data sources, 4500+ unit tests, full Arabic+English support.
-> 🚧 **Status:** Production-aiming. See [STATUS.md](STATUS.md) for the full report.
+> 📊 **Current state:** 100+ services, 8 external data sources, 5,164 unit tests (5,122 passing + 42 documented skips), full Arabic+English support.
+> 🚧 **Status:** Production-aiming. See [CLAUDE.md](CLAUDE.md) for the full, accurate report (what's fixed, what's known-broken, what's untested).
 
-[![Tests](https://github.com/user-attachments/assets/4e7f3e3a-1e0e-4f0f-8f0f-3e3a1e0e4f0f)](.github/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-50%25-yellowgreen)](.github/workflows/ci.yml)
+[![Tests](https://github.com/wizard404error/shoot-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/wizard404error/shoot-ai/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -38,7 +37,7 @@
 ## ⚠️ Status
 
 This project is under active development toward production quality.
-- 100+ backend services, 4500+ unit tests, full Arabic+English UI
+- 100+ backend services, 5,164 unit tests (69% measured coverage), full Arabic+English UI
 - Multi-phase roadmap: ✅ Phase 1 (test coverage), 🚧 Phase 2 (real-time), Phase 3 (pro analytics), Phase 4 (UX polish)
 
 **What works:**
@@ -64,7 +63,12 @@ This project is under active development toward production quality.
 - ⚠️ **No validation with real coaches**: Everything is theoretical until tested in the wild.
 - ⚠️ **Bundle is 1.75 GB**: Way too big for amateur adoption.
 
-**Read [STATUS.md](STATUS.md) for the full honest assessment.**
+**Read [CLAUDE.md](CLAUDE.md) for the full honest assessment**, including a
+2026-07-30 audit that found and fixed several launch-blocking bugs (the
+desktop app couldn't actually be started by any documented method) and
+CI/packaging issues (a fresh `pip install` of this project failed outright)
+— see that file for the complete list of what was broken, what's fixed, and
+what's still a known gap.
 
 ---
 
@@ -107,7 +111,7 @@ winget install Ollama.Ollama
 winget install Gyan.FFmpeg
 
 # 4. Clone this repository
-git clone https://github.com/jraya106/kawkab-ai.git
+git clone https://github.com/wizard404error/shoot-ai.git
 cd kawkab-ai
 
 # 5. Install dependencies (includes qasync for Qt+asyncio bridge)
@@ -258,8 +262,11 @@ kawkab-ai/
 ├── scripts/                    # Test & utility scripts
 ├── tests/                      # Unit tests
 ├── data/                       # User videos
-├── docs/                       # Additional documentation
-└── PLAN.md                     # Original development plan
+├── docs/                       # Additional documentation (docs/archive/
+│                                 has the historical sprint logs and plans
+│                                 CLAUDE.md superseded)
+└── CLAUDE.md                   # Source of truth: architecture, invariants,
+                                  what's fixed, known gaps
 ```
 
 ### Running Tests
@@ -304,10 +311,12 @@ This is a **viable technical architecture** with **real domain knowledge** in th
 5. **Building the trust layer** (model card, data card, ground truth eval, LLM groundedness)
 
 See **[`docs/INDEX.md`](docs/INDEX.md)** for the full documentation map.
-See **[`ITERATION_LOG.md`](ITERATION_LOG.md)** for the current cycle log and the 63-target backlog.
+See **[`CLAUDE.md`](CLAUDE.md)** for the current, accurate status — what's
+fixed, what's a known gap, and why each invariant in the codebase exists.
 
 **The vision is sound. The execution is iterating.**
 
 ---
 
-*Initial review by Claude (kawkab-ai-review.md). Subsequent cycles tracked in ITERATION_LOG.md.*
+*Historical review cycles (kawkab-ai-review.md, ITERATION_LOG.md, and other
+superseded planning docs) are preserved in [`docs/archive/`](docs/archive/).*

@@ -7,13 +7,13 @@ and structures them into a progressive overload program.
 
 from __future__ import annotations
 
-import logging
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 from kawkab.core.logging import get_logger
-from kawkab.services.knowledge_service import KnowledgeService, Drill
+from kawkab.services.knowledge_service import KnowledgeService
 from kawkab.services.reasoning_service import Diagnosis, DiagnosisReport
 
 logger = get_logger(__name__)
@@ -29,6 +29,7 @@ class DrillSession:
     drills: list[str]
     total_duration_min: int
     intensity: str
+    md_offset: str = ""  # morphocycle position: MD+1, MD-3, MD-1, ... (empty = fixed weekday)
 
 
 @dataclass
@@ -59,6 +60,19 @@ class TrainingPlan:
     expected_overall_improvement: str
     re_test_at_end: bool = True
     language: str = "en"
+    # Honesty: drill IDs referenced by this plan that the knowledge base
+    # cannot resolve. Empty list = every drill resolves. The handler
+    # surfaces this so a plan never silently shows phantom drills.
+    unresolved_drills: list[str] = field(default_factory=list)
+    # Club game-model principles the plan is built to develop (Phase B).
+    # Empty when no active game model exists — the plan is then built
+    # from diagnoses alone, and says so.
+    game_model_principles: list[str] = field(default_factory=list)
+    game_model_loaded: bool = False
+    # Diagnosis provenance: which matches the underlying report pooled,
+    # and whether it was a multi-match (min_matches-capable) report.
+    based_on_match_ids: list[int] = field(default_factory=list)
+    multi_match: bool = False
 
 
 class TrainingPlanGenerator:
@@ -68,6 +82,38 @@ class TrainingPlanGenerator:
         "en": ["Monday", "Wednesday", "Friday", "Saturday"],
         "ar": ["الإثنين", "الأربعاء", "الجمعة", "السبت"],
     }
+
+    # Tactical Periodization morphocycle: the weekly cycle is structured
+    # around match day (MD), not calendar weekdays. Recovery immediately
+    # after the match, tactical/physical build mid-week, activation the
+    # day before. (Frade's morphocycle; the MD+1→MD-1 rhythm used across
+    # professional one-match weeks.)
+    MORPHOCYCLE = [
+        {
+            "md_offset": "MD+1",
+            "label_en": "MD+1 — Recovery",
+            "label_ar": "MD+1 — استشفاء",
+            "intensity": "low",
+        },
+        {
+            "md_offset": "MD-3",
+            "label_en": "MD-3 — Tactical build",
+            "label_ar": "MD-3 — بناء تكتيكي",
+            "intensity": "high",
+        },
+        {
+            "md_offset": "MD-2",
+            "label_en": "MD-2 — Physical + tactics",
+            "label_ar": "MD-2 — بدني وتكتيكي",
+            "intensity": "medium",
+        },
+        {
+            "md_offset": "MD-1",
+            "label_en": "MD-1 — Activation",
+            "label_ar": "MD-1 — تفعيل",
+            "intensity": "low",
+        },
+    ]
 
     def __init__(self, knowledge_service: KnowledgeService) -> None:
         self.kb = knowledge_service
@@ -82,49 +128,96 @@ class TrainingPlanGenerator:
         duration_weeks: int = 4,
         training_days_per_week: int = 3,
         language: str = "en",
+        use_morphocycle: bool = True,
+        game_model: dict[str, Any] | None = None,
     ) -> TrainingPlan:
         """Generate a multi-week training plan from a diagnosis report.
 
         Args:
             diagnosis: DiagnosisReport from the reasoning engine
             duration_weeks: Plan length (default 4)
-            training_days_per_week: Sessions per week
+            training_days_per_week: Sessions per week (fixed-weekday mode)
             language: "en" or "ar"
+            use_morphocycle: structure sessions around match day
+                (MD+1 recovery → MD-1 activation). Default on: the
+                morphocycle is the professional weekly rhythm; pass
+                False for fixed weekdays.
+            game_model: the club's active game model dict (as persisted
+                via save_game_model), whose principles shape the plan.
+                None/missing => plan built from diagnoses alone.
 
         Returns:
-            TrainingPlan with weekly structure and drill selections
+            TrainingPlan with weekly structure and drill selections.
+            ``plan.unresolved_drills`` lists any drill IDs the knowledge
+            base cannot resolve — callers must surface this, never hide it.
         """
         await self.initialize()
 
         plan_id = f"plan_{diagnosis.match_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         top_diagnoses = diagnosis.diagnoses[:5]
 
+        game_model_principles: list[str] = []
+        game_model_loaded = False
+        if isinstance(game_model, dict) and game_model:
+            # Keys follow the persisted schema (migration 032 game_model
+            # columns: transition_attack / transition_defence).
+            for key in (
+                "in_possession",
+                "out_of_possession",
+                "transition_attack",
+                "transition_defence",
+            ):
+                value = str(game_model.get(key) or "").strip()
+                if value:
+                    game_model_principles.append(value)
+            non_negotiables = game_model.get("non_negotiables")
+            if isinstance(non_negotiables, str):
+                try:
+                    non_negotiables = json.loads(non_negotiables)
+                except (TypeError, json.JSONDecodeError):
+                    non_negotiables = []
+            if isinstance(non_negotiables, list):
+                game_model_principles.extend(
+                    str(n).strip() for n in non_negotiables if str(n).strip()
+                )
+            game_model_loaded = bool(game_model_principles)
+            if not game_model_loaded:
+                logger.warning("Game model provided but has no principle text; ignoring")
+
         weeks = []
         all_drill_ids = set()
         priority_addressed = []
 
+        unresolved: set[str] = set()
         for week_num in range(1, duration_weeks + 1):
             week = self._build_week(
                 week_num=week_num,
                 diagnoses=top_diagnoses,
                 training_days=training_days_per_week,
                 language=language,
+                use_morphocycle=use_morphocycle,
             )
             weeks.append(week)
             for session in week.sessions:
                 for drill_id in session.drills:
                     all_drill_ids.add(drill_id)
-
-        for d in top_diagnoses:
-            priority_addressed.append(
-                d.rule_name_ar if language == "ar" else d.rule_name
+                    if self.kb.get_drill(drill_id) is None:
+                        unresolved.add(drill_id)
+        if unresolved:
+            logger.warning(
+                f"Plan references {len(unresolved)} drills missing from the "
+                f"knowledge base: {sorted(unresolved)}"
             )
 
-        schedule = self._build_weekly_schedule(training_days_per_week, language)
+        for d in top_diagnoses:
+            priority_addressed.append(d.rule_name_ar if language == "ar" else d.rule_name)
 
-        overall_improvement = self._build_overall_improvement(
-            top_diagnoses, language
-        )
+        if use_morphocycle:
+            schedule = self.build_morphocycle_schedule(language)
+        else:
+            schedule = self._build_weekly_schedule(training_days_per_week, language)
+
+        overall_improvement = self._build_overall_improvement(top_diagnoses, language)
 
         plan = TrainingPlan(
             plan_id=plan_id,
@@ -138,6 +231,11 @@ class TrainingPlanGenerator:
             expected_overall_improvement=overall_improvement,
             re_test_at_end=True,
             language=language,
+            unresolved_drills=sorted(unresolved),
+            game_model_principles=game_model_principles,
+            game_model_loaded=game_model_loaded,
+            based_on_match_ids=list(getattr(diagnosis, "match_ids", []) or []),
+            multi_match=bool(getattr(diagnosis, "multi_match", False)),
         )
 
         logger.info(
@@ -153,6 +251,7 @@ class TrainingPlanGenerator:
         diagnoses: list[Diagnosis],
         training_days: int,
         language: str,
+        use_morphocycle: bool = False,
     ) -> TrainingWeek:
         """Build a single training week."""
         if not diagnoses:
@@ -190,18 +289,17 @@ class TrainingPlanGenerator:
             training_days=training_days,
             progression=progression,
             language=language,
+            use_morphocycle=use_morphocycle,
         )
 
-        expected = self._build_expected_improvements(
-            primary, secondary, tertiary, language
-        )
+        expected = self._build_expected_improvements(primary, secondary, tertiary, language)
 
         re_test = (
             f"Re-analyze with Kawkab AI: check if '{primary.rule_name}' "
             f"has improved (target: {primary.confidence * 0.7:.0%} reduction in issue severity)"
             if language == "en"
             else f"أعد التحليل بكوكب AI: تحقق من تحسن '{primary.rule_name_ar}' "
-                 f"(الهدف: تقليل {primary.confidence * 0.7:.0%} في شدة المشكلة)"
+            f"(الهدف: تقليل {primary.confidence * 0.7:.0%} في شدة المشكلة)"
         )
 
         return TrainingWeek(
@@ -223,9 +321,17 @@ class TrainingPlanGenerator:
         training_days: int,
         progression: str,
         language: str,
+        use_morphocycle: bool = False,
     ) -> list[DrillSession]:
         """Build the sessions for a week."""
-        days = self.WEEKLY_SCHEDULE[language][:training_days]
+        if use_morphocycle:
+            days = [m[f"label_{language}"] for m in self.MORPHOCYCLE]
+            md_offsets = [m["md_offset"] for m in self.MORPHOCYCLE]
+            md_intensities = [m["intensity"] for m in self.MORPHOCYCLE]
+        else:
+            days = self.WEEKLY_SCHEDULE[language][:training_days]
+            md_offsets = [""] * len(days)
+            md_intensities = [""] * len(days)
         sessions = []
 
         primary_drills = primary.recommended_drills[:2] if primary.recommended_drills else []
@@ -258,26 +364,31 @@ class TrainingPlanGenerator:
                 if drill:
                     total_duration += drill.duration_min
 
-            sessions.append(DrillSession(
-                week=week_num,
-                day=day,
-                focus=focus,
-                drills=drills,
-                total_duration_min=total_duration,
-                intensity=session_intensity,
-            ))
+            sessions.append(
+                DrillSession(
+                    week=week_num,
+                    day=day,
+                    focus=focus,
+                    drills=drills,
+                    total_duration_min=total_duration,
+                    intensity=md_intensities[i] or session_intensity,
+                    md_offset=md_offsets[i],
+                )
+            )
 
         return sessions
 
-    def _build_weekly_schedule(
-        self, training_days: int, language: str
-    ) -> dict[str, list[str]]:
+    def _build_weekly_schedule(self, training_days: int, language: str) -> dict[str, list[str]]:
         """Build the weekly schedule structure."""
         days = self.WEEKLY_SCHEDULE[language][:training_days]
         schedule = {}
         for day in days:
             schedule[day] = ["60-90 min session"]
         return schedule
+
+    def build_morphocycle_schedule(self, language: str = "en") -> dict[str, list[str]]:
+        """The MD-anchored weekly structure (for UI display alongside the plan)."""
+        return {m[f"label_{language}"]: ["session"] for m in self.MORPHOCYCLE}
 
     def _build_expected_improvements(
         self,
@@ -292,22 +403,16 @@ class TrainingPlanGenerator:
             if d is None:
                 continue
             if language == "ar":
-                improvements.append(
-                    f"تحسن بنسبة 30-40% في '{d.rule_name_ar}'"
-                )
+                improvements.append(f"تحسن بنسبة 30-40% في '{d.rule_name_ar}'")
             else:
-                improvements.append(
-                    f"30-40% improvement in '{d.rule_name}'"
-                )
+                improvements.append(f"30-40% improvement in '{d.rule_name}'")
         if not improvements:
             improvements = [
                 "Maintain current form" if language == "en" else "الحفاظ على المستوى الحالي"
             ]
         return improvements
 
-    def _build_overall_improvement(
-        self, diagnoses: list[Diagnosis], language: str
-    ) -> str:
+    def _build_overall_improvement(self, diagnoses: list[Diagnosis], language: str) -> str:
         """Build the overall expected improvement message."""
         if not diagnoses:
             return ""
@@ -335,7 +440,9 @@ class TrainingPlanGenerator:
             secondary_focus="",
             sessions=[],
             expected_improvements=[],
-            re_test_focus="Re-analyze after week 4" if language == "en" else "أعد التحليل بعد الأسبوع 4",
+            re_test_focus="Re-analyze after week 4"
+            if language == "en"
+            else "أعد التحليل بعد الأسبوع 4",
         )
 
     def export_to_dict(self, plan: TrainingPlan) -> dict[str, Any]:
@@ -365,10 +472,17 @@ class TrainingPlanGenerator:
                             "drills": s.drills,
                             "total_duration_min": s.total_duration_min,
                             "intensity": s.intensity,
+                            "md_offset": s.md_offset,
                         }
                         for s in w.sessions
                     ],
                 }
                 for w in plan.weeks
             ],
+            "unresolved_drills": plan.unresolved_drills,
+            "drills_resolved": not plan.unresolved_drills,
+            "game_model_principles": plan.game_model_principles,
+            "game_model_loaded": plan.game_model_loaded,
+            "based_on_match_ids": plan.based_on_match_ids,
+            "multi_match": plan.multi_match,
         }

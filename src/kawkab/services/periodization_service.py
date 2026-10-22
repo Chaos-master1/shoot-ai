@@ -14,17 +14,16 @@ to provide macro-level planning insight:
 from __future__ import annotations
 
 import logging
-import math
 import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class CyclePhase(str, Enum):
+class CyclePhase(StrEnum):
     """Where a week sits in a training cycle."""
 
     PREPARATION = "preparation"
@@ -36,7 +35,7 @@ class CyclePhase(str, Enum):
     UNKNOWN = "unknown"
 
 
-class CongestionLevel(str, Enum):
+class CongestionLevel(StrEnum):
     """How packed the match schedule is."""
 
     LIGHT = "light"
@@ -130,32 +129,27 @@ class PeriodizationService:
             wk = r.get("week_start")
             if not wk:
                 from datetime import date as _date
+
                 d = _date.fromisoformat(r["date"])
                 wk = d.isoformat()
             by_week[wk].append(r)
         weeks_sorted = sorted(by_week.keys())
         summaries: list[WeekSummary] = []
         for wk in weeks_sorted:
-            recs = by_week[wk]
-            summary = self._build_week_summary(wk, recs)
+            week_records = by_week[wk]
+            summary = self._build_week_summary(wk, week_records)
             if weeks_sorted:
-                prev_loads = [
-                    self._calc_total_load(by_week[w]) for w in weeks_sorted if w < wk
-                ]
+                prev_loads = [self._calc_total_load(by_week[w]) for w in weeks_sorted if w < wk]
                 if prev_loads:
                     prev_load = prev_loads[-1]
                     if prev_load > 0:
                         drop = (prev_load - summary.total_load) / prev_load
                         if drop >= self.taper_load_drop_pct:
                             summary.phase = CyclePhase.TAPER
-                            summary.notes.append(
-                                f"taper detected (load drop {drop:.0%})"
-                            )
+                            summary.notes.append(f"taper detected (load drop {drop:.0%})")
             summaries.append(summary)
         peak_weeks = [
-            w.week_start
-            for w in summaries
-            if w.phase in (CyclePhase.PEAK, CyclePhase.COMPETITION)
+            w.week_start for w in summaries if w.phase in (CyclePhase.PEAK, CyclePhase.COMPETITION)
         ]
         taper_weeks = [w.week_start for w in summaries if w.phase == CyclePhase.TAPER]
         congestion_weeks = [
@@ -163,9 +157,7 @@ class PeriodizationService:
             for w in summaries
             if w.congestion in (CongestionLevel.CONGESTED, CongestionLevel.OVERLOADED)
         ]
-        avg_load = (
-            statistics.mean(w.total_load for w in summaries) if summaries else 0.0
-        )
+        avg_load = statistics.mean(w.total_load for w in summaries) if summaries else 0.0
         load_trend = self._compute_load_trend(summaries)
         recs = self._build_macro_recommendations(summaries, congestion_weeks, taper_weeks)
         notes = self._build_notes(summaries, load_trend)
@@ -198,9 +190,7 @@ class PeriodizationService:
             notes=[],
         )
 
-    def _build_week_summary(
-        self, week_start: str, records: list[dict[str, Any]]
-    ) -> WeekSummary:
+    def _build_week_summary(self, week_start: str, records: list[dict[str, Any]]) -> WeekSummary:
         matches = sum(1 for r in records if r.get("source") == "match")
         training = sum(1 for r in records if r.get("source") == "training")
         total_min = sum(int(r.get("duration_min", 0)) for r in records)
@@ -277,7 +267,7 @@ class PeriodizationService:
         x = list(range(n))
         mean_x = sum(x) / n
         mean_y = sum(loads) / n
-        num = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, loads))
+        num = sum((xi - mean_x) * (yi - mean_y) for xi, yi in zip(x, loads, strict=False))
         den = sum((xi - mean_x) ** 2 for xi in x)
         slope = num / den if den > 0 else 0.0
         if slope > 50:
@@ -314,9 +304,7 @@ class PeriodizationService:
             notes.append("Weekly load is trending downward — possible taper or off-season")
         return notes
 
-    def classify_macrocycle(
-        self, weeks: list[WeekSummary]
-    ) -> dict[str, Any]:
+    def classify_macrocycle(self, weeks: list[WeekSummary]) -> dict[str, Any]:
         """Classify a sequence of weeks into a macrocycle structure.
 
         Returns a dict with phase counts and cycle length recommendation.
@@ -349,9 +337,7 @@ class PeriodizationService:
         }
 
     @staticmethod
-    def _macrocycle_recommendation(
-        cycle_type: str, phase_counts: dict[str, int]
-    ) -> str:
+    def _macrocycle_recommendation(cycle_type: str, phase_counts: dict[str, int]) -> str:
         if cycle_type == "well-structured":
             return "Macrocycle is balanced — maintain current plan"
         if cycle_type == "build-heavy":

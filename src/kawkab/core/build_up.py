@@ -68,14 +68,18 @@ class BuildUpReport:
     def summary_text(self) -> str:
         lines = [f"Build-Up Report for {self.team} (Match: {self.match_id})"]
         gk = self.goal_kick_patterns
-        lines.append(f"  Goal kicks — short: {gk.get('short', {}).get('attempts', 0)} "
-                      f"({gk.get('short', {}).get('success_pct', 0.0):.0f}%), "
-                      f"long: {gk.get('long', {}).get('attempts', 0)} "
-                      f"({gk.get('long', {}).get('success_pct', 0.0):.0f}%)")
+        lines.append(
+            f"  Goal kicks — short: {gk.get('short', {}).get('attempts', 0)} "
+            f"({gk.get('short', {}).get('success_pct', 0.0):.0f}%), "
+            f"long: {gk.get('long', {}).get('attempts', 0)} "
+            f"({gk.get('long', {}).get('success_pct', 0.0):.0f}%)"
+        )
         lines.append(f"  Line-breaking passes: {len(self.line_breaking_passes)}")
         bp = self.build_out_under_pressure
-        lines.append(f"  Build-out under pressure: {bp.get('attempts', 0)} attempts, "
-                      f"{bp.get('success_pct', 0.0):.0f}% successful")
+        lines.append(
+            f"  Build-out under pressure: {bp.get('attempts', 0)} attempts, "
+            f"{bp.get('success_pct', 0.0):.0f}% successful"
+        )
         lines.append(f"  Build-up efficiency: {self.build_up_efficiency:.1%}")
         lines.append(f"  Avg pass sequence length: {self.average_pass_sequence_length:.1f}")
         return "\n".join(lines)
@@ -103,9 +107,7 @@ def _classify_zone(x: float) -> str:
     return "final_third"
 
 
-def _passes_through_line(
-    start_x: float, end_x: float, line_x: float
-) -> bool:
+def _passes_through_line(start_x: float, end_x: float, line_x: float) -> bool:
     """Return True if a pass from *start_x* to *end_x* crosses *line_x*."""
     return (start_x < line_x < end_x) or (end_x < line_x < start_x)
 
@@ -256,9 +258,12 @@ def analyze_build_up(
     """
     if not team_events or not match_events:
         return BuildUpReport(
-            team=team_id, match_id="",
-            goal_kick_patterns={"short": {"attempts": 0, "success_pct": 0.0},
-                                "long": {"attempts": 0, "success_pct": 0.0}},
+            team=team_id,
+            match_id="",
+            goal_kick_patterns={
+                "short": {"attempts": 0, "success_pct": 0.0},
+                "long": {"attempts": 0, "success_pct": 0.0},
+            },
             zone_exit_stats={},
             build_out_under_pressure={"attempts": 0, "success_pct": 0.0, "avg_touch_time": 0.0},
         )
@@ -308,7 +313,11 @@ def analyze_build_up(
     # Line-breaking passes
     line_breaking_passes: list[dict] = []
     for a in actions:
-        if a.type in ("pass", "carry") and a.defensive_line_bypassed and a.defensive_line_bypassed > 0:
+        if (
+            a.type in ("pass", "carry")
+            and a.defensive_line_bypassed
+            and a.defensive_line_bypassed > 0
+        ):
             line_breaking_passes.append(a.to_dict())
 
     # Build-out under pressure
@@ -317,7 +326,9 @@ def analyze_build_up(
         "attempts": len(pressured_actions),
         "success_pct": round(
             sum(1 for a in pressured_actions if a.successful) / len(pressured_actions) * 100, 1
-        ) if pressured_actions else 0.0,
+        )
+        if pressured_actions
+        else 0.0,
         "avg_touch_time": 0.0,
     }
 
@@ -343,9 +354,7 @@ def analyze_build_up(
         passes = sum(1 for ev in seq if ev.get("type") == "pass")
         if passes > 0:
             pass_seq_lengths.append(passes)
-    avg_seq_len = (
-        sum(pass_seq_lengths) / len(pass_seq_lengths) if pass_seq_lengths else 0.0
-    )
+    avg_seq_len = sum(pass_seq_lengths) / len(pass_seq_lengths) if pass_seq_lengths else 0.0
 
     return BuildUpReport(
         team=team_id,

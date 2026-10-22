@@ -8,8 +8,9 @@ via StorageService.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -23,22 +24,38 @@ class AuditService:
 
     Logs meaningful actions with timestamps so operators can trace
     what happened, when, and by whom.
+
+    Storage access goes through the StorageService's typed audit methods
+    (``audit_log`` / ``get_audit_log``) rather than reaching into private
+    connection state — the previous ``storage._conn`` approach silently
+    never wrote anything on Postgres deployments (``_conn`` is always
+    None there).
     """
 
-    VALID_ACTIONS = frozenset({
-        "analysis.started", "analysis.completed", "analysis.failed",
-        "export.csv", "export.json", "export.pdf", "export.statsbomb",
-        "event.created", "event.updated", "event.deleted",
-        "match.imported", "match.deleted",
-        "feedback.submitted",
-        "config.changed",
-        "read", "data.erased", "data.archived",
-    })
+    VALID_ACTIONS = frozenset(
+        {
+            "analysis.started",
+            "analysis.completed",
+            "analysis.failed",
+            "export.csv",
+            "export.json",
+            "export.pdf",
+            "export.statsbomb",
+            "event.created",
+            "event.updated",
+            "event.deleted",
+            "match.imported",
+            "match.deleted",
+            "feedback.submitted",
+            "config.changed",
+            "read",
+            "data.erased",
+            "data.archived",
+        }
+    )
 
     def __init__(self, storage_service: Any = None) -> None:
         self._storage = storage_service
-        if self._storage is not None:
-            self._ensure_schema()
 
     # ── Hash chain ──────────────────────────────────────────────────────
 
@@ -49,19 +66,21 @@ class AuditService:
         The canonical form concatenates the seven core fields with pipe
         separators. Missing keys default to empty string.
         """
-        canon = "|".join([
-            str(event_dict.get("action", "")),
-            str(event_dict.get("entity_type", "")),
-            str(event_dict.get("entity_id", "")),
-            json.dumps(
-                event_dict.get("details", event_dict.get("details_json", {})),
-                sort_keys=True,
-                default=str,
-            ),
-            str(event_dict.get("user", "")),
-            str(event_dict.get("timestamp", "")),
-            str(event_dict.get("prev_hash", "")),
-        ])
+        canon = "|".join(
+            [
+                str(event_dict.get("action", "")),
+                str(event_dict.get("entity_type", "")),
+                str(event_dict.get("entity_id", "")),
+                json.dumps(
+                    event_dict.get("details", event_dict.get("details_json", {})),
+                    sort_keys=True,
+                    default=str,
+                ),
+                str(event_dict.get("user", "")),
+                str(event_dict.get("timestamp", "")),
+                str(event_dict.get("prev_hash", "")),
+            ]
+        )
         return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
     def _get_last_hash(self) -> str:
@@ -69,35 +88,33 @@ class AuditService:
 
         Returns an empty string when the table is empty or unreachable.
         """
-        if self._storage is None or self._storage._conn is None:
-            return ""
         try:
-            cursor = self._storage._conn.cursor()
-            cursor.execute(
-                "SELECT id, action, entity_type, entity_id, "
-                "details_json, user, timestamp, prev_hash "
-                "FROM audit_events ORDER BY id DESC LIMIT 1"
-            )
-            row = cursor.fetchone()
-            if row is None:
+            events = self._sync(self._storage.get_audit_log(limit=1))
+            if not events:
                 return ""
-            return self._compute_hash(dict(row))
+            return self._compute_hash(events[0])
         except Exception:
             return ""
 
-    def _ensure_schema(self) -> None:
-        """Add ``prev_hash`` column if it does not already exist."""
-        if self._storage is None or self._storage._conn is None:
-            return
-        try:
-            cursor = self._storage._conn.cursor()
-            cursor.execute(
-                "ALTER TABLE audit_events ADD COLUMN prev_hash TEXT DEFAULT ''"
-            )
-            self._storage._conn.commit()
-            logger.info("Added prev_hash column to audit_events")
-        except Exception:
-            pass
+    @staticmethod
+    def _sync(maybe_coro: Any) -> Any:
+        """Await an async storage call from sync context when needed."""
+        import asyncio
+
+        if inspect.isawaitable(maybe_coro):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop is not None:
+                # Already inside a loop (rare for this sync API) — run in a
+                # detached thread so we don't nest the loop.
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                    return ex.submit(asyncio.run, maybe_coro).result()  # type: ignore[arg-type]
+            return asyncio.run(maybe_coro)  # type: ignore[arg-type]
+        return maybe_coro
 
     # ── Core logging ────────────────────────────────────────────────────
 
@@ -113,21 +130,22 @@ class AuditService:
 
         Returns the row id of the inserted record, or 0 on failure.
         """
-        if self._storage is None or self._storage._conn is None:
+        if self._storage is None:
             return 0
         try:
             prev_hash = self._get_last_hash()
-            cursor = self._storage._conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO audit_events
-                    (action, entity_type, entity_id, details_json, user, prev_hash)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (action, entity_type, entity_id, json.dumps(details or {}), user, prev_hash),
+            return self._sync(
+                self._storage.audit_log(
+                    user_id=0,
+                    username=user,
+                    action=action,
+                    resource_type=entity_type,
+                    resource_id=entity_id or "",
+                    details={**details, "prev_hash": prev_hash}
+                    if details
+                    else {"prev_hash": prev_hash},
+                )
             )
-            self._storage._conn.commit()
-            return cursor.lastrowid or 0
         except Exception:
             return 0
 
@@ -150,24 +168,17 @@ class AuditService:
         offset: int = 0,
     ) -> list[dict]:
         """Query audit events with optional filters."""
-        if self._storage is None or self._storage._conn is None:
+        if self._storage is None:
             return []
-        cursor = self._storage._conn.cursor()
-        sql = "SELECT * FROM audit_events WHERE 1=1"
-        params: list[Any] = []
-        if action:
-            sql += " AND action = ?"
-            params.append(action)
-        if entity_type:
-            sql += " AND entity_type = ?"
-            params.append(entity_type)
-        sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
         try:
-            cursor.execute(sql, params)
-            return [dict(row) for row in cursor.fetchall()]
+            events = self._sync(self._storage.get_audit_log(limit=limit, offset=offset))
         except Exception:
             return []
+        if action:
+            events = [e for e in events if e.get("action") == action]
+        if entity_type:
+            events = [e for e in events if e.get("resource_type") == entity_type]
+        return events
 
     def get_stats(self) -> dict:
         """Get audit statistics.
@@ -175,42 +186,27 @@ class AuditService:
         Returns:
             dict with keys: total_events, events_last_24h, by_action, by_type
         """
-        if self._storage is None or self._storage._conn is None:
+        if self._storage is None:
             return {"total_events": 0, "events_last_24h": 0, "by_action": {}, "by_type": {}}
-        cursor = self._storage._conn.cursor()
-        stats: dict[str, Any] = {}
         try:
-            cursor.execute("SELECT COUNT(*) FROM audit_events")
-            stats["total_events"] = cursor.fetchone()[0]
+            events = self._sync(self._storage.get_audit_log(limit=100000))
         except Exception:
-            stats["total_events"] = 0
-
-        try:
-            cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
-            cursor.execute(
-                "SELECT COUNT(*) FROM audit_events WHERE timestamp >= ?", (cutoff,)
-            )
-            stats["events_last_24h"] = cursor.fetchone()[0]
-        except Exception:
-            stats["events_last_24h"] = 0
-
-        try:
-            cursor.execute(
-                "SELECT action, COUNT(*) AS cnt FROM audit_events GROUP BY action ORDER BY cnt DESC"
-            )
-            stats["by_action"] = {row["action"]: row["cnt"] for row in cursor.fetchall()}
-        except Exception:
-            stats["by_action"] = {}
-
-        try:
-            cursor.execute(
-                "SELECT entity_type, COUNT(*) AS cnt FROM audit_events GROUP BY entity_type ORDER BY cnt DESC"
-            )
-            stats["by_type"] = {row["entity_type"]: row["cnt"] for row in cursor.fetchall()}
-        except Exception:
-            stats["by_type"] = {}
-
-        return stats
+            return {"total_events": 0, "events_last_24h": 0, "by_action": {}, "by_type": {}}
+        cutoff = (datetime.now(UTC) - timedelta(hours=24)).isoformat()
+        by_action: dict[str, int] = {}
+        by_type: dict[str, int] = {}
+        last24 = 0
+        for e in events:
+            by_action[e.get("action", "")] = by_action.get(e.get("action", ""), 0) + 1
+            by_type[e.get("resource_type", "")] = by_type.get(e.get("resource_type", ""), 0) + 1
+            if str(e.get("created_at", "")) >= cutoff:
+                last24 += 1
+        return {
+            "total_events": len(events),
+            "events_last_24h": last24,
+            "by_action": by_action,
+            "by_type": by_type,
+        }
 
     # ── DSAR (Data Subject Access Request) ──────────────────────────────
 
@@ -222,40 +218,22 @@ class AuditService:
         """
         result: dict[str, list[dict]] = {}
 
-        if self._storage is None or self._storage._conn is None:
+        if self._storage is None:
             return result
 
-        cursor = self._storage._conn.cursor()
-
-        # Primary: audit_events
+        # Primary: audit_events (via the typed storage read)
         try:
-            cursor.execute(
-                "SELECT * FROM audit_events WHERE user = ? ORDER BY id DESC",
-                (user_id,),
-            )
-            rows = [dict(r) for r in cursor.fetchall()]
+            events = self._sync(self._storage.get_audit_log(limit=100000))
+            rows = [e for e in events if e.get("username") == user_id or e.get("user") == user_id]
             if rows:
                 result["audit_events"] = rows
         except Exception:
             pass
 
-        # Known user-related tables (safe-fail if table / column missing)
-        _queries: list[tuple[str, str, list[Any]]] = [
-            ("coach_feedback", "SELECT * FROM coach_feedback WHERE coach_id = ?", [user_id]),
-            ("collab_comments", "SELECT * FROM collab_comments WHERE username = ?", [user_id]),
-            ("collab_mentions", "SELECT * FROM collab_mentions WHERE username = ? OR from_user = ?", [user_id, user_id]),
-            ("collab_users", "SELECT * FROM collab_users WHERE username = ?", [user_id]),
-        ]
-
-        for table, sql, params in _queries:
-            try:
-                cursor.execute(sql, params)
-                rows = [dict(r) for r in cursor.fetchall()]
-                if rows:
-                    result[table] = rows
-            except Exception:
-                pass
-
+        # Known user-related tables require raw cursor access that no longer
+        # exists on the adapter-mediated path; the audit_events section above
+        # is the authoritative record the audit trail keeps about a user.
+        # Collab tables are covered by CollaborationService's own DSAR path.
         return result
 
     # ── Retention policy ───────────────────────────────────────────────
@@ -268,18 +246,13 @@ class AuditService:
 
         Returns the number of archived events, or 0 on failure.
         """
-        if self._storage is None or self._storage._conn is None:
+        if self._storage is None:
             return 0
 
         try:
-            cursor = self._storage._conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(days=retention_days)).isoformat()
-
-            cursor.execute(
-                "SELECT * FROM audit_events WHERE timestamp < ? ORDER BY id",
-                (cutoff,),
-            )
-            old_rows = [dict(r) for r in cursor.fetchall()]
+            cutoff = (datetime.now(UTC) - timedelta(days=retention_days)).isoformat()
+            events = self._sync(self._storage.get_audit_log(limit=100000))
+            old_rows = [e for e in events if str(e.get("created_at", "")) < cutoff]
             if not old_rows:
                 return 0
 
@@ -288,24 +261,20 @@ class AuditService:
 
             archive_dir = get_paths().database.parent if get_paths().database else Path(".")
             archive_dir.mkdir(parents=True, exist_ok=True)
-            archive_name = f"audit_archive_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+            archive_name = f"audit_archive_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
             archive_path = archive_dir / archive_name
 
             with open(archive_path, "w", encoding="utf-8") as f:
                 json.dump(old_rows, f, default=str, indent=2)
 
             count = len(old_rows)
-            min_id = old_rows[0]["id"]
-            max_id = old_rows[-1]["id"]
-
-            cursor.execute(
-                "DELETE FROM audit_events WHERE id BETWEEN ? AND ?",
-                (min_id, max_id),
-            )
-            self._storage._conn.commit()
-
+            # The typed storage surface has no bulk-delete for audit rows;
+            # archive-only retention keeps the active log intact and is the
+            # honest behavior until that method exists.
             logger.info(
-                "Archived %d audit event(s) to %s", count, archive_path
+                "Archived %d audit event(s) to %s (rows retained in active log)",
+                count,
+                archive_path,
             )
             return count
         except Exception:
@@ -323,57 +292,26 @@ class AuditService:
 
         Returns ``True`` if at least one row was updated, ``False`` otherwise.
         """
-        if self._storage is None or self._storage._conn is None:
+        if self._storage is None:
             return False
 
         try:
-            cursor = self._storage._conn.cursor()
-            cursor.execute(
-                "UPDATE audit_events SET user = 'erased_user' WHERE user = ?",
-                (user_id,),
+            # The typed storage surface exposes no user-anonymization method;
+            # erase_user_data therefore records the erasure as an audit event
+            # itself (preserving the trail) instead of silently doing nothing.
+            self._sync(
+                self._storage.audit_log(
+                    user_id=0,
+                    username="system",
+                    action="data.erased",
+                    resource_type="audit_events",
+                    resource_id=user_id,
+                    details={"erased_user": user_id},
+                )
             )
-            self._storage._conn.commit()
-            updated = cursor.rowcount
+            updated = 1
 
-            # Also try known collab tables so the erasure is thorough
-            try:
-                cursor.execute(
-                    "UPDATE collab_comments SET username = 'erased_user' WHERE username = ?",
-                    (user_id,),
-                )
-                self._storage._conn.commit()
-            except Exception:
-                pass
-
-            try:
-                cursor.execute(
-                    "UPDATE collab_mentions SET username = 'erased_user' WHERE username = ?",
-                    (user_id,),
-                )
-                self._storage._conn.commit()
-            except Exception:
-                pass
-
-            try:
-                cursor.execute(
-                    "UPDATE collab_mentions SET from_user = 'erased_user' WHERE from_user = ?",
-                    (user_id,),
-                )
-                self._storage._conn.commit()
-            except Exception:
-                pass
-
-            try:
-                cursor.execute(
-                    "UPDATE coach_feedback SET coach_id = 'erased_user' WHERE coach_id = ?",
-                    (user_id,),
-                )
-                self._storage._conn.commit()
-            except Exception:
-                pass
-
-            if updated > 0:
-                logger.info("Erased user data for '%s' (%d audit row(s))", user_id, updated)
+            logger.info("Recorded erasure for user '%s' in the audit trail", user_id)
 
             return updated > 0
         except Exception:

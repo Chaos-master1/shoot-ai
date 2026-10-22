@@ -25,14 +25,23 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: ${{ runner.os }}-pip-
       - name: Install dependencies
+        # NOTE: this project declares dependencies via PEP 621
+        # [project.optional-dependencies] (test/dev/cloud/...), not uv's
+        # [tool.uv.dev-dependencies] / [dependency-groups] -- `uv sync
+        # --only-dev` (the previous command here) refers to the latter,
+        # which doesn't exist in this pyproject.toml, so it installed
+        # nothing and every job below failed at its first tool invocation.
         run: |
           python -m pip install --upgrade pip
           pip install uv
-          uv sync --only-dev
-      - name: ruff
-        run: uv run ruff check src/ tests/
-      - name: black
-        run: uv run black --check src/ tests/
+          uv sync --extra dev
+      - name: ruff check
+        # Pinned tool versions (see pyproject.toml [project.optional-dependencies].dev):
+        # `uv run` re-resolves `ruff>=X` to the latest release otherwise, so a new
+        # upstream version can flip the gate without any code change.
+        run: uv run --with ruff==0.16.6 ruff check src/ tests/
+      - name: ruff format --check
+        run: uv run --with ruff==0.16.6 ruff format --check src/ tests/
 
   typecheck:
     runs-on: ubuntu-latest
@@ -48,12 +57,18 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: ${{ runner.os }}-pip-
       - name: Install dependencies
+        # NOTE: this project declares dependencies via PEP 621
+        # [project.optional-dependencies] (test/dev/cloud/...), not uv's
+        # [tool.uv.dev-dependencies] / [dependency-groups] -- `uv sync
+        # --only-dev` (the previous command here) refers to the latter,
+        # which doesn't exist in this pyproject.toml, so it installed
+        # nothing and every job below failed at its first tool invocation.
         run: |
           python -m pip install --upgrade pip
           pip install uv
-          uv sync --only-dev
+          uv sync --extra dev
       - name: mypy
-        run: uv run mypy src/ --ignore-missing-imports
+        run: uv run --with mypy==2.3.1 mypy src/ --ignore-missing-imports
 
   test-core:
     runs-on: ubuntu-latest
@@ -69,13 +84,24 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: ${{ runner.os }}-pip-
       - name: Install dependencies
+        # NOTE: this project declares dependencies via PEP 621
+        # [project.optional-dependencies] (test/dev/cloud/...), not uv's
+        # [tool.uv.dev-dependencies] / [dependency-groups] -- `uv sync
+        # --only-dev` (the previous command here) refers to the latter,
+        # which doesn't exist in this pyproject.toml, so it installed
+        # nothing and every job below failed at its first tool invocation.
         run: |
           python -m pip install --upgrade pip
           pip install uv
-          uv sync --only-dev
+          uv sync --extra test --extra cloud
       - name: Run pytest
+        # `python -m pytest` invokes the ambient runner Python, which has
+        # no pytest -- the deps went into uv's venv, so this step failed
+        # with "No module named pytest" on every push (lint only survived
+        # via `uv run --with ruff`, gui-e2e via `uv run pytest`). `uv run`
+        # executes inside the venv `uv sync` just built.
         run: |
-          python -m pytest tests/unit/test_core_events.py tests/unit/test_xg_model.py tests/unit/test_pitch_control.py tests/unit/test_player_rating.py tests/unit/test_formation_analysis.py tests/unit/test_offball_metrics.py tests/unit/test_substitution_analysis.py tests/unit/test_export_converters.py tests/unit/test_season_aggregator.py tests/unit/test_analysis_service_xg_xt.py tests/unit/test_analysis_service_extensions.py tests/unit/test_xt_model.py tests/unit/test_pass_network.py tests/unit/test_heatmap.py tests/unit/test_tactical_periods.py tests/unit/test_game_state.py tests/unit/test_security.py tests/unit/test_xa_model.py tests/unit/test_benchmarks.py tests/unit/test_match_timeline.py tests/unit/test_migration_manager.py tests/unit/test_logging.py tests/unit/test_win_probability.py tests/unit/test_psxg_model.py tests/unit/test_momentum.py tests/unit/test_defensive_actions.py tests/unit/test_transitions.py tests/unit/test_vaep.py tests/unit/test_set_piece_analysis.py tests/unit/test_storage_service.py tests/unit/test_coding_handler.py tests/unit/test_cv_service.py tests/unit/test_api_external_services.py tests/e2e/test_e2e_pipeline.py tests/e2e/test_e2e_full_pipeline.py -v --tb=short
+          uv run --with PySide6==6.11.2 pytest tests/unit/test_core_events.py tests/unit/test_xg_model.py tests/unit/test_pitch_control.py tests/unit/test_player_rating.py tests/unit/test_formation_analysis.py tests/unit/test_offball_metrics.py tests/unit/test_substitution_analysis.py tests/unit/test_export_converters.py tests/unit/test_season_aggregator.py tests/unit/test_analysis_service_xg_xt.py tests/unit/test_analysis_service_extensions.py tests/unit/test_xt_model.py tests/unit/test_pass_network.py tests/unit/test_heatmap.py tests/unit/test_tactical_periods.py tests/unit/test_game_state.py tests/unit/test_security.py tests/unit/test_xa_model.py tests/unit/test_benchmarks.py tests/unit/test_match_timeline.py tests/unit/test_migration_manager.py tests/unit/test_logging.py tests/unit/test_win_probability.py tests/unit/test_psxg_model.py tests/unit/test_momentum.py tests/unit/test_defensive_actions.py tests/unit/test_transitions.py tests/unit/test_vaep.py tests/unit/test_set_piece_analysis.py tests/unit/test_storage_service.py tests/unit/test_coding_handler.py tests/unit/test_cv_service.py tests/unit/test_api_external_services.py tests/e2e/test_e2e_pipeline.py tests/e2e/test_e2e_full_pipeline.py -v --tb=short
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -98,12 +124,20 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: ${{ runner.os }}-pip-
       - name: Install dependencies
+        # NOTE: this project declares dependencies via PEP 621
+        # [project.optional-dependencies] (test/dev/cloud/...), not uv's
+        # [tool.uv.dev-dependencies] / [dependency-groups] -- `uv sync
+        # --only-dev` (the previous command here) refers to the latter,
+        # which doesn't exist in this pyproject.toml, so it installed
+        # nothing and every job below failed at its first tool invocation.
         run: |
           python -m pip install --upgrade pip
           pip install uv
-          uv sync --only-dev
+          uv sync --extra test --extra cloud
       - name: Run benchmarks
-        run: python -m kawkab benchmark --output benchmark-results.json || echo "Benchmark suite incomplete"
+        # `uv run` for the same ambient-python reason as test-core: without
+        # it the module wasn't found and `|| echo` masked a hard failure.
+        run: uv run python -m kawkab benchmark --output benchmark-results.json || echo "Benchmark suite incomplete"
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@v4
@@ -119,6 +153,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      # test_entrypoints imports kawkab.app (Qt) — needs the same system
+      # libs the gui-e2e job installs, else ImportError: libEGL.so.1.
+      - name: Install system libs
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -126,13 +164,21 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
           restore-keys: ${{ runner.os }}-pip-
       - name: Install dependencies
+        # NOTE: this project declares dependencies via PEP 621
+        # [project.optional-dependencies] (test/dev/cloud/...), not uv's
+        # [tool.uv.dev-dependencies] / [dependency-groups] -- `uv sync
+        # --only-dev` (the previous command here) refers to the latter,
+        # which doesn't exist in this pyproject.toml, so it installed
+        # nothing and every job below failed at its first tool invocation.
         run: |
           python -m pip install --upgrade pip
           pip install uv
-          uv sync --only-dev
+          uv sync --extra test --extra cloud
       - name: Run coverage
+        # uv run, not bare python -m pytest: the ambient runner Python has
+        # no pytest/pytest-cov (see test-core note).
         run: |
-          python -m pytest tests/unit/ --ignore=tests/unit/test_audio_service.py -q --cov=src/kawkab --cov-report=xml --cov-report=term
+          uv run --with PySide6==6.11.2 pytest tests/unit/ -q --cov=src/kawkab --cov-report=xml --cov-report=term
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -144,3 +190,64 @@ jobs:
         with:
           file: coverage.xml
           fail_ci_if_error: false
+
+  js-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/kawkab/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/kawkab/web/package-lock.json
+      - name: Install JS dependencies
+        run: npm ci
+      - name: Run jest suite
+        # The frontend __tests__ pin bridge-slot wiring, whiteboard flows,
+        # router and utils behavior (149 tests). Run with --ci so a flaky
+        # open handle fails loudly instead of hanging the runner.
+        run: npx jest --ci
+
+  gui-e2e:
+    runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+      - name: Install dependencies
+        # Same PEP 621 extras note as the other jobs; PySide6 comes from the
+        # project's main dependencies (pyproject [project] dependencies).
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          uv sync --extra test --extra cloud
+      - name: Install system GL libraries
+        # Qt's offscreen platform still dlopens libEGL/libGL; without them
+        # every boot attempt died with "ImportError: libEGL.so.1: cannot
+        # open shared object file" before a single test ran.
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
+      - name: Run GUI boot e2e
+        # Boots the real MainWindow offscreen: services -> storage WAL ->
+        # bridge (split handlers) -> shutdown. --with pins the Qt binding
+        # the way the lint/typecheck jobs pin ruff/mypy. All three GUI
+        # modules run here: handler dispatch + the slot audit (the
+        # regression gate for the v0.13.2 bridge fixes) previously never
+        # gated CI, which is exactly how dead-slot regressions shipped.
+        run: |
+          uv run --with PySide6==6.11.2 pytest \
+            tests/e2e/test_gui_boot.py \
+            tests/e2e/test_gui_handler_dispatch.py \
+            tests/e2e/test_gui_slot_audit.py \
+            -v

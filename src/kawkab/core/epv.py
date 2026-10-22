@@ -6,8 +6,6 @@ field location, progression, and eventual outcome. All numpy-only.
 
 from __future__ import annotations
 
-import functools
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -24,14 +22,30 @@ ZONE_HEIGHT = PITCH_WIDTH / Y_ZONES
 
 
 def _to_zone(x: float, y: float) -> tuple[int, int]:
+    # Events without spatial data arrive as x/y=None (storage's json_extract
+    # emits NULL when the event has no coordinates). Zone math on None
+    # raised TypeError for every such possession — treat unlocated events
+    # as pitch-center rather than crashing the whole match report.
+    if x is None or y is None:
+        x = PITCH_LENGTH / 2.0
+        y = PITCH_WIDTH / 2.0
     zx = min(int(x / ZONE_WIDTH), X_ZONES - 1)
     zy = min(int(y / ZONE_HEIGHT), Y_ZONES - 1)
     return (zx, zy)
 
 
 def _possession_switching_events() -> set[str]:
-    return {"tackle", "interception", "clearance", "block", "ball_recovery",
-            "dribble_past", "miscontrol", "foul", "own_goal"}
+    return {
+        "tackle",
+        "interception",
+        "clearance",
+        "block",
+        "ball_recovery",
+        "dribble_past",
+        "miscontrol",
+        "foul",
+        "own_goal",
+    }
 
 
 def _extract_possessions(
@@ -54,9 +68,7 @@ def _extract_possessions(
         team = ev.get("team", current_team)
         ev_type = ev.get("type", "")
         is_switch = False
-        if ev_type in switching:
-            is_switch = True
-        elif ev_type in ("pass", "carry", "shot") and team != current_team:
+        if ev_type in switching or ev_type in ("pass", "carry", "shot") and team != current_team:
             is_switch = True
 
         if is_switch:
@@ -73,11 +85,11 @@ def _extract_possessions(
 
 # Zone-based possession value grid (expected goals per 100 possessions)
 _ZONE_EPV_GRID: list[list[float]] = [
-    [0.50, 0.80, 1.20, 1.20, 0.80, 0.50],   # row 0 — six-yard box
-    [0.20, 0.35, 0.55, 0.55, 0.35, 0.20],   # row 1 — penalty box
-    [0.08, 0.15, 0.25, 0.25, 0.15, 0.08],   # row 2 — penalty box edge
-    [0.04, 0.08, 0.12, 0.12, 0.08, 0.04],   # row 3 — outside box
-    [0.02, 0.04, 0.06, 0.06, 0.04, 0.02],   # row 4 — final third wide
+    [0.50, 0.80, 1.20, 1.20, 0.80, 0.50],  # row 0 — six-yard box
+    [0.20, 0.35, 0.55, 0.55, 0.35, 0.20],  # row 1 — penalty box
+    [0.08, 0.15, 0.25, 0.25, 0.15, 0.08],  # row 2 — penalty box edge
+    [0.04, 0.08, 0.12, 0.12, 0.08, 0.04],  # row 3 — outside box
+    [0.02, 0.04, 0.06, 0.06, 0.04, 0.02],  # row 4 — final third wide
 ]
 
 
@@ -133,16 +145,22 @@ class EPVModel:
 
     def __init__(self):
         self._epv_grid = np.array(_ZONE_EPV_GRID, dtype=np.float64)
+        self._zone_value_cache: dict[tuple[float, float], float] = {}
 
-    @functools.lru_cache(maxsize=32)
     def _zone_value(self, x: float, y: float) -> float:
+        cache_key = (x, y)
+        cached = self._zone_value_cache.get(cache_key)
+        if cached is not None:
+            return cached
         zx, zy = _to_zone(x, y)
         # Reverse x: high x (near attacking goal) -> row 0 (highest EPV)
         # x=105 -> row 0, x=0 -> row 4
         reversed_x = X_ZONES - 1 - zx
         r = min(4, int(reversed_x / X_ZONES * 5))
         c = min(5, int(zy / Y_ZONES * 6))
-        return float(self._epv_grid[r, c])
+        value = float(self._epv_grid[r, c])
+        self._zone_value_cache[cache_key] = value
+        return value
 
     def compute_possession_epv(
         self,
@@ -152,20 +170,31 @@ class EPVModel:
             return EPVResult()
 
         team = possession[0].get("team", "home")
-        start_x = possession[0].get("x", 52.5)
-        start_y = possession[0].get("y", 34.0)
+
+        # Coordinates may be present-but-NULL for events without spatial
+        # data — fall back to the previous event's position / pitch
+        # center instead of propagating None into the progress math
+        # (end_x - start_x raised TypeError on real imported matches).
+        def _coord(value: Any, fallback: float) -> float:
+            return float(value) if value is not None else fallback
+
+        start_x = _coord(possession[0].get("x"), 52.5)
+        start_y = _coord(possession[0].get("y"), 34.0)
         last_ev = possession[-1]
-        end_x = last_ev.get("end_x", last_ev.get("x", start_x))
-        end_y = last_ev.get("end_y", last_ev.get("y", start_y))
+        raw_end_x = last_ev.get("end_x")
+        if raw_end_x is None:
+            raw_end_x = last_ev.get("x")
+        end_x = _coord(raw_end_x, start_x)
+        raw_end_y = last_ev.get("end_y")
+        if raw_end_y is None:
+            raw_end_y = last_ev.get("y")
+        end_y = _coord(raw_end_y, start_y)
 
         start_val = self._zone_value(start_x, start_y)
 
         # Check possession outcome
         has_shot = any(ev.get("type") == "shot" for ev in possession)
-        is_goal = any(
-            ev.get("type") == "shot" and ev.get("is_goal")
-            for ev in possession
-        )
+        is_goal = any(ev.get("type") == "shot" and ev.get("is_goal") for ev in possession)
 
         # EPV = starting zone value + progression bonus + outcome bonus
         # Progression: how much further forward the possession moved

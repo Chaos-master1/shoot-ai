@@ -1,11 +1,10 @@
 """Tests for player rating / performance index."""
 
-import pytest
 from kawkab.core.player_rating import (
     PlayerPosition,
     PlayerRating,
-    compute_rating,
     _infer_position_from_x,
+    compute_rating,
 )
 
 
@@ -112,9 +111,10 @@ class TestComputeRating:
     def test_defaults_with_no_stats(self):
         r = compute_rating(avg_x=50.0)
         assert 0.0 <= r.overall <= 10.0
-        assert all(0.0 <= getattr(r, attr) <= 10.0
-                   for attr in ["passing", "shooting", "defending",
-                                "physical", "positioning", "dribbling"])
+        assert all(
+            0.0 <= getattr(r, attr) <= 10.0
+            for attr in ["passing", "shooting", "defending", "physical", "positioning", "dribbling"]
+        )
 
     def test_elite_stats_high_rating(self):
         r = compute_rating(

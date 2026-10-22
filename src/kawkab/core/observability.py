@@ -17,11 +17,8 @@ Usage:
 from __future__ import annotations
 
 import math
-import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
-
 
 # ── Metric primitives ────────────────────────────────────────────────
 
@@ -67,8 +64,21 @@ class Histogram:
 
     name: str
     buckets: tuple[float, ...] = (
-        0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
-        2.5, 5.0, 10.0, 30.0, 60.0, 120.0, float("inf"),
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.1,
+        0.25,
+        0.5,
+        1.0,
+        2.5,
+        5.0,
+        10.0,
+        30.0,
+        60.0,
+        120.0,
+        float("inf"),
     )
     help_text: str = ""
     labels: dict[str, str] = field(default_factory=dict)
@@ -104,7 +114,7 @@ class Histogram:
         return sorted_vals[f] * (c - k) + sorted_vals[c] * (k - f)
 
     def bucket_counts(self) -> dict[float, int]:
-        counts: dict[float, int] = {b: 0 for b in self.buckets}
+        counts: dict[float, int] = dict.fromkeys(self.buckets, 0)
         for v in self.values:
             for b in self.buckets:
                 if v <= b:
@@ -132,9 +142,7 @@ class MetricsCollector:
         labels: dict[str, str] | None = None,
     ) -> Counter:
         if name not in self._counters:
-            self._counters[name] = Counter(
-                name=name, help_text=help_text, labels=labels or {}
-            )
+            self._counters[name] = Counter(name=name, help_text=help_text, labels=labels or {})
         return self._counters[name]
 
     def gauge(
@@ -144,9 +152,7 @@ class MetricsCollector:
         labels: dict[str, str] | None = None,
     ) -> Gauge:
         if name not in self._gauges:
-            self._gauges[name] = Gauge(
-                name=name, help_text=help_text, labels=labels or {}
-            )
+            self._gauges[name] = Gauge(name=name, help_text=help_text, labels=labels or {})
         return self._gauges[name]
 
     def histogram(

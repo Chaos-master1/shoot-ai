@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from typing import Any
-import math
-import random
 
 
 @dataclass
@@ -124,16 +123,18 @@ def generate_possession_phase(
         ex = max(0, min(pitch_length, ex))
         ey = max(0, min(pitch_width, ey))
 
-        events.append(ScriptedEvent(
-            minute=minute,
-            event_type=event_type,
-            team=team,
-            start_x=sx,
-            start_y=sy,
-            end_x=ex,
-            end_y=ey,
-            attributes={"completed": completed, "intensity": round(intensity, 2)},
-        ))
+        events.append(
+            ScriptedEvent(
+                minute=minute,
+                event_type=event_type,
+                team=team,
+                start_x=sx,
+                start_y=sy,
+                end_x=ex,
+                end_y=ey,
+                attributes={"completed": completed, "intensity": round(intensity, 2)},
+            )
+        )
 
     return ScriptedPhase(
         name=f"{'Home' if team == 'home' else 'Away'} Possession",
@@ -141,9 +142,9 @@ def generate_possession_phase(
         end_minute=start_minute + duration_minutes,
         team_focus=team,
         intensity=intensity,
-        description=f"Patient possession phase with progressive build-up",
+        description="Patient possession phase with progressive build-up",
         events=events,
-        coaching_notes=f"Focus on maintaining shape and creating passing lanes",
+        coaching_notes="Focus on maintaining shape and creating passing lanes",
     )
 
 
@@ -166,16 +167,18 @@ def generate_pressing_phase(
         ex = sx + random.uniform(-15, 15) * intensity
         ey = sy + random.uniform(-10, 10) * intensity
 
-        events.append(ScriptedEvent(
-            minute=minute,
-            event_type="tackle" if random.random() < 0.3 else "run",
-            team=pressing_team,
-            start_x=max(0, min(pitch_length, sx)),
-            start_y=max(0, min(pitch_width, sy)),
-            end_x=max(0, min(pitch_length, ex)),
-            end_y=max(0, min(pitch_width, ey)),
-            attributes={"intensity": round(intensity, 2), "pressing": True},
-        ))
+        events.append(
+            ScriptedEvent(
+                minute=minute,
+                event_type="tackle" if random.random() < 0.3 else "run",
+                team=pressing_team,
+                start_x=max(0, min(pitch_length, sx)),
+                start_y=max(0, min(pitch_width, sy)),
+                end_x=max(0, min(pitch_length, ex)),
+                end_y=max(0, min(pitch_width, ey)),
+                attributes={"intensity": round(intensity, 2), "pressing": True},
+            )
+        )
 
     return ScriptedPhase(
         name=f"{'Home' if pressing_team == 'home' else 'Away'} High Press",
@@ -202,54 +205,66 @@ def generate_counter_attack_phase(
     recovery_x = 15 if attacking_team == "home" else 90
     recovery_y = random.uniform(15, 53)
 
-    events.append(ScriptedEvent(
-        minute=start_minute,
-        event_type="tackle",
-        team=attacking_team,
-        start_x=recovery_x, start_y=recovery_y,
-        end_x=recovery_x + random.uniform(5, 15),
-        end_y=recovery_y + random.uniform(-5, 5),
-        attributes={"completed": True},
-    ))
+    events.append(
+        ScriptedEvent(
+            minute=start_minute,
+            event_type="tackle",
+            team=attacking_team,
+            start_x=recovery_x,
+            start_y=recovery_y,
+            end_x=recovery_x + random.uniform(5, 15),
+            end_y=recovery_y + random.uniform(-5, 5),
+            attributes={"completed": True},
+        )
+    )
 
     # Quick vertical pass
     direction = 1 if attacking_team == "home" else -1
-    events.append(ScriptedEvent(
-        minute=start_minute + 0.1,
-        event_type="pass",
-        team=attacking_team,
-        start_x=recovery_x, start_y=recovery_y,
-        end_x=recovery_x + direction * 40 + random.uniform(-5, 5),
-        end_y=recovery_y + random.uniform(-10, 10),
-        attributes={"completed": True, "type": "through_ball"},
-    ))
+    events.append(
+        ScriptedEvent(
+            minute=start_minute + 0.1,
+            event_type="pass",
+            team=attacking_team,
+            start_x=recovery_x,
+            start_y=recovery_y,
+            end_x=recovery_x + direction * 40 + random.uniform(-5, 5),
+            end_y=recovery_y + random.uniform(-10, 10),
+            attributes={"completed": True, "type": "through_ball"},
+        )
+    )
 
     # Run with ball / second pass
     mid_x = recovery_x + direction * 40
     mid_y = recovery_y
-    events.append(ScriptedEvent(
-        minute=start_minute + 0.3,
-        event_type="pass" if random.random() < 0.5 else "carry",
-        team=attacking_team,
-        start_x=mid_x, start_y=mid_y,
-        end_x=mid_x + direction * 25 + random.uniform(-3, 3),
-        end_y=mid_y + random.uniform(-8, 8),
-        attributes={"completed": True},
-    ))
+    events.append(
+        ScriptedEvent(
+            minute=start_minute + 0.3,
+            event_type="pass" if random.random() < 0.5 else "carry",
+            team=attacking_team,
+            start_x=mid_x,
+            start_y=mid_y,
+            end_x=mid_x + direction * 25 + random.uniform(-3, 3),
+            end_y=mid_y + random.uniform(-8, 8),
+            attributes={"completed": True},
+        )
+    )
 
     # Shot
     shot_x = mid_x + direction * 25
     shot_y = mid_y + random.uniform(-10, 10)
     goal_x = 105 if attacking_team == "home" else 0
-    events.append(ScriptedEvent(
-        minute=start_minute + 0.5,
-        event_type="shot",
-        team=attacking_team,
-        start_x=max(0, min(pitch_length, shot_x)),
-        start_y=max(0, min(pitch_width, shot_y)),
-        end_x=goal_x, end_y=34 + random.uniform(-15, 15),
-        attributes={"is_goal": random.random() < 0.3},
-    ))
+    events.append(
+        ScriptedEvent(
+            minute=start_minute + 0.5,
+            event_type="shot",
+            team=attacking_team,
+            start_x=max(0, min(pitch_length, shot_x)),
+            start_y=max(0, min(pitch_width, shot_y)),
+            end_x=goal_x,
+            end_y=34 + random.uniform(-15, 15),
+            attributes={"is_goal": random.random() < 0.3},
+        )
+    )
 
     return ScriptedPhase(
         name="Counter Attack",
@@ -287,24 +302,28 @@ def generate_match_script(
 
     for _ in range(cfg["home_poss"]):
         duration = random.uniform(2, 5)
-        phases.append(generate_possession_phase(
-            "home", current_minute, duration, random.uniform(0.3, 0.7), "right"
-        ))
+        phases.append(
+            generate_possession_phase(
+                "home", current_minute, duration, random.uniform(0.3, 0.7), "right"
+            )
+        )
         current_minute += duration + random.uniform(0.5, 1.5)
 
     for _ in range(cfg["away_poss"]):
         duration = random.uniform(2, 5)
-        phases.append(generate_possession_phase(
-            "away", current_minute, duration, random.uniform(0.3, 0.7), "left"
-        ))
+        phases.append(
+            generate_possession_phase(
+                "away", current_minute, duration, random.uniform(0.3, 0.7), "left"
+            )
+        )
         current_minute += duration + random.uniform(0.5, 1.5)
 
     for _ in range(cfg["press"]):
         duration = random.uniform(1.5, 3)
         team = "home" if random.random() < 0.5 else "away"
-        phases.append(generate_pressing_phase(
-            team, current_minute, duration, random.uniform(0.7, 1.0)
-        ))
+        phases.append(
+            generate_pressing_phase(team, current_minute, duration, random.uniform(0.7, 1.0))
+        )
         current_minute += duration + random.uniform(0.3, 1.0)
 
     for _ in range(cfg["counter"]):

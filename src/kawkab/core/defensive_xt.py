@@ -7,7 +7,7 @@ representing the scoring threat that was prevented.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -81,6 +81,13 @@ def compute_defensive_xt(
             ex = ev.get("x", ex)
             ey = ev.get("y", ey)
 
+        # Events without spatial data arrive as None (json_extract NULL) —
+        # zone math on None raised TypeError. Skip unlocated defensive
+        # events entirely: an xT-prevented value needs a location to mean
+        # anything (a center-zone fallback would misattribute danger).
+        if ex is None or ey is None:
+            continue
+
         z = (zone(ey, PITCH_WIDTH, xT_rows), zone(ex, PITCH_LENGTH, xT_cols))
 
         try:
@@ -88,15 +95,17 @@ def compute_defensive_xt(
         except (IndexError, TypeError):
             xt_val = 0.0
 
-        results.append(DefensiveAction(
-            event_idx=idx,
-            event_type=etype,
-            team=ev.get("team", ""),
-            xT_prevented=xt_val,
-            zone=z,
-            x=ex,
-            y=ey,
-        ))
+        results.append(
+            DefensiveAction(
+                event_idx=idx,
+                event_type=etype,
+                team=ev.get("team", ""),
+                xT_prevented=xt_val,
+                zone=z,
+                x=ex,
+                y=ey,
+            )
+        )
 
     results.sort(key=lambda a: a.xT_prevented, reverse=True)
     return results

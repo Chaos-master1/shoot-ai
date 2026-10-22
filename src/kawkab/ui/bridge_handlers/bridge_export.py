@@ -7,18 +7,14 @@ from pathlib import Path
 
 from kawkab.core.logging import get_logger
 from kawkab.core.paths import get_paths
-from kawkab.core.security import SecurityValidator, ErrorSanitizer
+from kawkab.core.security import ErrorSanitizer, SecurityValidator
+from kawkab.ui.bridge_handlers.base import BridgeHandlerBase
 
 logger = get_logger(__name__)
 
 
-class ExportHandler:
+class ExportHandler(BridgeHandlerBase):
     """Handles data export operations for Bridge."""
-
-    def __init__(self, bridge, services, rate_limiter=None):
-        self._bridge = bridge
-        self._services = services
-        self._rate_limiter = rate_limiter
 
     @property
     def data_export_service(self):
@@ -37,8 +33,8 @@ class ExportHandler:
             raise RuntimeError(f"Rate limit exceeded for {category}")
 
     async def export_match_csv(self, match_id_str):
-        self._check_rate_limit("export")
         try:
+            self._check_rate_limit("export")
             match_id = SecurityValidator.validate_match_id(match_id_str)
             if self.data_export_service is None:
                 return json.dumps({"error": "DataExportService not available"})
@@ -49,8 +45,8 @@ class ExportHandler:
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})
 
     async def export_match_json(self, match_id_str):
-        self._check_rate_limit("export")
         try:
+            self._check_rate_limit("export")
             match_id = SecurityValidator.validate_match_id(match_id_str)
             if self.data_export_service is None:
                 return json.dumps({"error": "DataExportService not available"})
@@ -91,8 +87,12 @@ class ExportHandler:
             away_shots = sum(1 for e in shot_events if e.get("team") == "away")
             home_passes = sum(1 for e in pass_events if e.get("team") == "home")
             away_passes = sum(1 for e in pass_events if e.get("team") == "away")
-            home_on_target = sum(1 for e in shot_events if e.get("team") == "home" and e.get("on_target"))
-            away_on_target = sum(1 for e in shot_events if e.get("team") == "away" and e.get("on_target"))
+            home_on_target = sum(
+                1 for e in shot_events if e.get("team") == "home" and e.get("on_target")
+            )
+            away_on_target = sum(
+                1 for e in shot_events if e.get("team") == "away" and e.get("on_target")
+            )
 
             match_name = html_mod.escape(match.get("name", "Unnamed Match"))
             match_date = match.get("match_date", datetime.now().strftime("%Y-%m-%d"))
@@ -154,8 +154,8 @@ h3 {{ font-size: 1rem; color: #475569; margin: 1rem 0 0.5rem; }}
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})
 
     async def export_match_statsbomb(self, match_id_str, file_path):
-        self._check_rate_limit("export")
         try:
+            self._check_rate_limit("export")
             match_id = SecurityValidator.validate_match_id(match_id_str)
             if self.data_export_service is None:
                 return json.dumps({"error": "DataExportService not available"})
@@ -169,8 +169,8 @@ h3 {{ font-size: 1rem; color: #475569; margin: 1rem 0 0.5rem; }}
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})
 
     async def extract_event_clips(self, match_id):
-        self._check_rate_limit("export")
         try:
+            self._check_rate_limit("export")
             match_id = SecurityValidator.validate_match_id(match_id)
             if self.clip_service is None:
                 return json.dumps({"error": "ClipExtractionService not available"})
@@ -181,7 +181,10 @@ h3 {{ font-size: 1rem; color: #475569; margin: 1rem 0 0.5rem; }}
             shot_events = [e for e in events if e.get("type") == "shot"]
             if not shot_events:
                 return json.dumps({"error": "No shot events to extract"})
-            clip_events = [{"timestamp": e["timestamp"], "type": "shot", "team": e.get("team", "unknown")} for e in shot_events]
+            clip_events = [
+                {"timestamp": e["timestamp"], "type": "shot", "team": e.get("team", "unknown")}
+                for e in shot_events
+            ]
             clips = await self.clip_service.extract_event_clips(
                 video_path=Path(match["video_path"]),
                 events=clip_events,

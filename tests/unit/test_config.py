@@ -23,8 +23,8 @@ from kawkab.core.config import (
     _parse_value,
 )
 
-
 # ── DetectionConfig ───────────────────────────────────────────────────────
+
 
 class TestDetectionConfig:
     def test_default_values(self):
@@ -50,6 +50,7 @@ class TestDetectionConfig:
 
 # ── TrackingConfig ────────────────────────────────────────────────────────
 
+
 class TestTrackingConfig:
     def test_default_values(self):
         c = TrackingConfig()
@@ -70,6 +71,7 @@ class TestTrackingConfig:
 
 # ── FilterConfig ──────────────────────────────────────────────────────────
 
+
 class TestFilterConfig:
     def test_default_values(self):
         c = FilterConfig()
@@ -86,6 +88,7 @@ class TestFilterConfig:
 
 
 # ── StitchConfig ──────────────────────────────────────────────────────────
+
 
 class TestStitchConfig:
     def test_default_values(self):
@@ -105,6 +108,7 @@ class TestStitchConfig:
 
 # ── CameraCutConfig ───────────────────────────────────────────────────────
 
+
 class TestCameraCutConfig:
     def test_default_values(self):
         c = CameraCutConfig()
@@ -123,6 +127,7 @@ class TestCameraCutConfig:
 
 # ── PitchDetectionConfig ──────────────────────────────────────────────────
 
+
 class TestPitchDetectionConfig:
     def test_default_values(self):
         c = PitchDetectionConfig()
@@ -135,6 +140,7 @@ class TestPitchDetectionConfig:
 
 
 # ── ColorConfig ───────────────────────────────────────────────────────────
+
 
 class TestColorConfig:
     def test_default_values(self):
@@ -150,6 +156,7 @@ class TestColorConfig:
 
 
 # ── PerformanceConfig ─────────────────────────────────────────────────────
+
 
 class TestPerformanceConfig:
     def test_default_values(self):
@@ -169,6 +176,7 @@ class TestPerformanceConfig:
 
 
 # ── EventDetectionConfig ──────────────────────────────────────────────────
+
 
 class TestEventDetectionConfig:
     def test_default_values(self):
@@ -190,6 +198,7 @@ class TestEventDetectionConfig:
 
 # ── TrackingConfigRoot ────────────────────────────────────────────────────
 
+
 class TestTrackingConfigRoot:
     def test_default_root(self):
         root = TrackingConfigRoot()
@@ -204,24 +213,24 @@ class TestTrackingConfigRoot:
         assert isinstance(root.performance, PerformanceConfig)
 
     def test_from_dict_override_detection(self):
-        root = TrackingConfigRoot._from_dict({
-            "detection": {"confidence_threshold": 0.9, "enable_tiling": True}
-        })
+        root = TrackingConfigRoot._from_dict(
+            {"detection": {"confidence_threshold": 0.9, "enable_tiling": True}}
+        )
         assert root.detection.confidence_threshold == 0.9
         assert root.detection.enable_tiling is True
         assert root.detection.iou_threshold == 0.5  # unchanged
 
     def test_from_dict_override_tracking(self):
-        root = TrackingConfigRoot._from_dict({
-            "tracking": {"max_age": 100, "iou_match_thresh": 0.6}
-        })
+        root = TrackingConfigRoot._from_dict(
+            {"tracking": {"max_age": 100, "iou_match_thresh": 0.6}}
+        )
         assert root.tracking.max_age == 100
         assert root.tracking.iou_match_thresh == 0.6
 
     def test_from_dict_override_performance(self):
-        root = TrackingConfigRoot._from_dict({
-            "performance": {"frame_skip": 2, "gpu_enabled": False}
-        })
+        root = TrackingConfigRoot._from_dict(
+            {"performance": {"frame_skip": 2, "gpu_enabled": False}}
+        )
         assert root.performance.frame_skip == 2
         assert root.performance.gpu_enabled is False
 
@@ -234,19 +243,19 @@ class TestTrackingConfigRoot:
         assert root.detection.confidence_threshold == 0.4
 
     def test_from_dict_partial_override(self):
-        root = TrackingConfigRoot._from_dict({
-            "filter": {"expected_player_count": 10},
-            "stitch": {"spatial_threshold_px": 30.0},
-        })
+        root = TrackingConfigRoot._from_dict(
+            {
+                "filter": {"expected_player_count": 10},
+                "stitch": {"spatial_threshold_px": 30.0},
+            }
+        )
         assert root.filter.expected_player_count == 10
         assert root.filter.max_keep_top_n == 28
         assert root.stitch.spatial_threshold_px == 30.0
 
     def test_load_json(self):
         data = {"detection": {"confidence_threshold": 0.7}}
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(data, f)
             f.flush()
             p = Path(f.name)
@@ -262,6 +271,7 @@ class TestTrackingConfigRoot:
 
 
 # ── _load_yaml ────────────────────────────────────────────────────────────
+
 
 class TestLoadYaml:
     def test_valid_yaml(self):
@@ -329,6 +339,7 @@ class TestLoadYaml:
 
 
 # ── _parse_value ──────────────────────────────────────────────────────────
+
 
 class TestParseValue:
     def test_boolean_true(self):

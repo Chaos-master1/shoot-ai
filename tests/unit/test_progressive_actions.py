@@ -1,13 +1,8 @@
 """Tests for progressive passes and carries — ball-advancement analysis."""
 
-import math
-
-import pytest
-
 from kawkab.core.progressive_actions import (
     CORRIDOR_WIDTH,
     MIN_CARRY_PROGRESSION_M,
-    MIN_PROGRESSION_RATIO,
     PITCH_LENGTH,
     PITCH_WIDTH,
     ProgressiveAction,
@@ -218,11 +213,20 @@ class TestCountOpponentsBehindPass:
 class TestProgressiveAction:
     def test_to_dict(self):
         a = ProgressiveAction(
-            action_type="pass", player_track_id=10, team="home",
-            start_x=50, start_y=34, end_x=80, end_y=34,
-            distance_m=30, progression_m=30, is_progressive=True,
-            zone_start="Middle Center", zone_end="Attacking Center",
-            opponent_bypassed=2, danger_rating=0.5,
+            action_type="pass",
+            player_track_id=10,
+            team="home",
+            start_x=50,
+            start_y=34,
+            end_x=80,
+            end_y=34,
+            distance_m=30,
+            progression_m=30,
+            is_progressive=True,
+            zone_start="Middle Center",
+            zone_end="Attacking Center",
+            opponent_bypassed=2,
+            danger_rating=0.5,
         )
         d = a.to_dict()
         assert d["action_type"] == "pass"
@@ -237,13 +241,25 @@ class TestProgressiveAction:
 class TestProgressiveReport:
     def test_to_dict(self):
         r = ProgressiveReport(
-            team="home", total_progressive_passes=5, total_progressive_carries=3,
-            total_pass_progression_m=120, total_carry_progression_m=40,
-            avg_pass_progression_m=24, avg_carry_progression_m=13.33,
-            progressive_pass_rate=0.25, progressive_carry_rate=0.3,
+            team="home",
+            total_progressive_passes=5,
+            total_progressive_carries=3,
+            total_pass_progression_m=120,
+            total_carry_progression_m=40,
+            avg_pass_progression_m=24,
+            avg_carry_progression_m=13.33,
+            progressive_pass_rate=0.25,
+            progressive_carry_rate=0.3,
             actions_by_zone={"Middle Center": 4, "Attacking Center": 4},
             danger_actions=2,
-            top_players=[{"player_track_id": 7, "team": "home", "total_progression_m": 50, "progressive_actions": 3}],
+            top_players=[
+                {
+                    "player_track_id": 7,
+                    "team": "home",
+                    "total_progression_m": 50,
+                    "progressive_actions": 3,
+                }
+            ],
         )
         d = r.to_dict()
         assert d["total_progressive_passes"] == 5
@@ -270,9 +286,16 @@ class TestAnalyzeProgressivePasses:
 
     def test_no_progressive_actions(self):
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 60, "start_y": 34, "end_x": 55, "end_y": 34,
-             "distance": 5},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 60,
+                "start_y": 34,
+                "end_x": 55,
+                "end_y": 34,
+                "distance": 5,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes == 0
@@ -280,12 +303,26 @@ class TestAnalyzeProgressivePasses:
 
     def test_mixed_passes_and_carries(self):
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 40, "start_y": 34, "end_x": 75, "end_y": 34,
-             "distance": 35},
-            {"type": "carry", "player_track_id": 1, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 60, "end_y": 34,
-             "distance": 12},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 75,
+                "end_y": 34,
+                "distance": 35,
+            },
+            {
+                "type": "carry",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "distance": 12,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes >= 0
@@ -293,21 +330,42 @@ class TestAnalyzeProgressivePasses:
 
     def test_wrong_team_filtered(self):
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "away",
-             "start_x": 40, "start_y": 34, "end_x": 75, "end_y": 34,
-             "distance": 35},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "away",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 75,
+                "end_y": 34,
+                "distance": 35,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes == 0
 
     def test_progressive_pass_rate_calculated(self):
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 40, "start_y": 34, "end_x": 75, "end_y": 34,
-             "distance": 35},
-            {"type": "pass", "player_track_id": 2, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 52, "end_y": 34,
-             "distance": 2},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 75,
+                "end_y": 34,
+                "distance": 35,
+            },
+            {
+                "type": "pass",
+                "player_track_id": 2,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 52,
+                "end_y": 34,
+                "distance": 2,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes == 1
@@ -316,24 +374,52 @@ class TestAnalyzeProgressivePasses:
     def test_danger_actions_counted(self):
         """A progressive pass ending inside the 6-yard box qualifies as danger action."""
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 102, "end_y": 34,
-             "distance": 52},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 102,
+                "end_y": 34,
+                "distance": 52,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.danger_actions == 1
 
     def test_top_players_ranking(self):
         events = [
-            {"type": "pass", "player_track_id": 7, "team": "home",
-             "start_x": 40, "start_y": 34, "end_x": 80, "end_y": 34,
-             "distance": 40},
-            {"type": "pass", "player_track_id": 7, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 85, "end_y": 34,
-             "distance": 35},
-            {"type": "carry", "player_track_id": 3, "team": "home",
-             "start_x": 45, "start_y": 34, "end_x": 60, "end_y": 34,
-             "distance": 16},
+            {
+                "type": "pass",
+                "player_track_id": 7,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "distance": 40,
+            },
+            {
+                "type": "pass",
+                "player_track_id": 7,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 85,
+                "end_y": 34,
+                "distance": 35,
+            },
+            {
+                "type": "carry",
+                "player_track_id": 3,
+                "team": "home",
+                "start_x": 45,
+                "start_y": 34,
+                "end_x": 60,
+                "end_y": 34,
+                "distance": 16,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert len(report.top_players) >= 1
@@ -344,18 +430,32 @@ class TestAnalyzeProgressivePasses:
         events = []
         for pid in range(1, 6):
             events.append(
-                {"type": "pass", "player_track_id": pid, "team": "home",
-                 "start_x": 40, "start_y": 34, "end_x": 80, "end_y": 34,
-                 "distance": 40},
+                {
+                    "type": "pass",
+                    "player_track_id": pid,
+                    "team": "home",
+                    "start_x": 40,
+                    "start_y": 34,
+                    "end_x": 80,
+                    "end_y": 34,
+                    "distance": 40,
+                },
             )
         report = analyze_progressive_passes(events, "home", 1)
         assert len(report.top_players) <= 3
 
     def test_actions_by_zone_populated(self):
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 40, "start_y": 34, "end_x": 80, "end_y": 34,
-             "distance": 40},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "distance": 40,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert len(report.actions_by_zone) >= 1
@@ -364,9 +464,16 @@ class TestAnalyzeProgressivePasses:
     def test_zero_distance_actions(self):
         """Actions with zero start/end distance should not cause errors."""
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 50, "end_y": 34,
-             "distance": 0},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+                "distance": 0,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes == 0
@@ -374,10 +481,17 @@ class TestAnalyzeProgressivePasses:
     def test_opponent_bypassed_integration(self):
         """Integration: opponent_positions fed through to count bypassed."""
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 80, "end_y": 34,
-             "distance": 30,
-             "opponent_positions": [{"x": 65, "y": 34}]},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "distance": 30,
+                "opponent_positions": [{"x": 65, "y": 34}],
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes >= 1
@@ -385,8 +499,15 @@ class TestAnalyzeProgressivePasses:
     def test_non_pass_carry_events_skipped(self):
         """Events with unknown type should be silently skipped."""
         events = [
-            {"type": "tackle", "player_track_id": 1, "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 50, "end_y": 34},
+            {
+                "type": "tackle",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes == 0
@@ -395,9 +516,16 @@ class TestAnalyzeProgressivePasses:
     def test_attacking_direction_left(self):
         """Analyze with attacking_direction=-1."""
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "home",
-             "start_x": 80, "start_y": 34, "end_x": 40, "end_y": 34,
-             "distance": 40},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "home",
+                "start_x": 80,
+                "start_y": 34,
+                "end_x": 40,
+                "end_y": 34,
+                "distance": 40,
+            },
         ]
         report = analyze_progressive_passes(events, "home", -1)
         assert report.total_progressive_passes >= 1
@@ -405,9 +533,16 @@ class TestAnalyzeProgressivePasses:
     def test_team_with_no_events(self):
         """Team with no matching events returns empty report."""
         events = [
-            {"type": "pass", "player_track_id": 1, "team": "away",
-             "start_x": 50, "start_y": 34, "end_x": 80, "end_y": 34,
-             "distance": 30},
+            {
+                "type": "pass",
+                "player_track_id": 1,
+                "team": "away",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "distance": 30,
+            },
         ]
         report = analyze_progressive_passes(events, "home", 1)
         assert report.total_progressive_passes == 0

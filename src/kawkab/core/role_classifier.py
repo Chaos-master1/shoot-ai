@@ -6,8 +6,6 @@ shot locations, and defensive actions to classify player roles.
 
 from __future__ import annotations
 
-import math
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -54,7 +52,9 @@ ROLE_DEFINITIONS: list[tuple[str, str, str]] = [
 ]
 
 
-def _avg_position(events: list[dict[str, Any]], key_x: str = "start_x", key_y: str = "start_y") -> tuple[float, float]:
+def _avg_position(
+    events: list[dict[str, Any]], key_x: str = "start_x", key_y: str = "start_y"
+) -> tuple[float, float]:
     xs = [e.get(key_x, 0) for e in events if e.get(key_x) is not None]
     ys = [e.get(key_y, 0) for e in events if e.get(key_y) is not None]
     if not xs or not ys:
@@ -92,7 +92,7 @@ def classify_player_role(
     crosses = [e for e in player_events if e.get("type") == "cross"]
 
     def_actions = len(tackles) + len(interceptions) + len(clearances)
-    total_actions = len(player_events)
+    total_actions = float(len(player_events))
 
     # pass direction bias
     forward_passes = 0
@@ -113,13 +113,18 @@ def classify_player_role(
     backward_pct = backward_passes / max(total_passes, 1)
 
     # shot characteristics
-    avg_shot_x = _avg_position(shots, "start_x", "start_y")[0] if shots else 0
+    _ = _avg_position(shots, "start_x", "start_y")[0] if shots else 0
     shot_volume = len(shots) / max(total_actions, 1)
 
     # wide vs central
-    wide_pct = sum(1 for e in player_events
-                   if e.get("start_y", PITCH_WIDTH / 2) < PITCH_WIDTH * 0.25
-                   or e.get("start_y", PITCH_WIDTH / 2) > PITCH_WIDTH * 0.75)
+    wide_pct = float(
+        sum(
+            1
+            for e in player_events
+            if e.get("start_y", PITCH_WIDTH / 2) < PITCH_WIDTH * 0.25
+            or e.get("start_y", PITCH_WIDTH / 2) > PITCH_WIDTH * 0.75
+        )
+    )
     wide_pct /= max(total_actions, 1)
 
     scores: dict[str, float] = {}
@@ -140,7 +145,7 @@ def classify_player_role(
     scores["full_back"] = fb_score
 
     ifb_score = fb_score * 0.5
-    pos_central = 1.0 - abs(avg_y_rel - 0.5) * 2
+    _ = 1.0 - abs(avg_y_rel - 0.5) * 2
     ifb_score += max(0, avg_x_rel - 0.3) * 3
     scores["inverted_fullback"] = ifb_score
 
@@ -155,7 +160,7 @@ def classify_player_role(
     bbm_score += forward_pct * 4
     scores["box_to_box_midfielder"] = bbm_score
 
-    wm_score = wide_pct * 7
+    wm_score = float(wide_pct * 7)
     wm_score += len(crosses) / max(total_actions, 1) * 5
     wm_score += max(0, 0.5 - avg_x_rel) * 3
     scores["wide_midfielder"] = wm_score
@@ -167,19 +172,19 @@ def classify_player_role(
     am_score += (1.0 - def_actions / max(total_actions, 1)) * 3
     scores["attacking_midfielder"] = am_score
 
-    winger_score = wide_pct * 8
+    winger_score = float(wide_pct * 8)
     winger_score += len(crosses) / max(total_actions, 1) * 6
     winger_score += max(0, avg_x_rel - 0.5) * 4
     winger_score += (1.0 - def_actions / max(total_actions, 1)) * 3
     scores["winger"] = winger_score
 
-    iff_score = wide_pct * 4
+    iff_score = float(wide_pct * 4)
     iff_score += max(0, avg_x_rel - 0.6) * 6
     iff_score += shot_volume * 6
     iff_score += (1.0 - def_actions / max(total_actions, 1)) * 2
     scores["inside_forward"] = iff_score
 
-    tf_score = max(0, avg_x_rel - 0.6) * 8
+    tf_score = float(max(0, avg_x_rel - 0.6) * 8)
     tf_score += shot_volume * 7
     tf_score += backward_pct * 2
     tf_score += (1.0 - wide_pct) * 4

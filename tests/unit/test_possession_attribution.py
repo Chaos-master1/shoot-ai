@@ -52,9 +52,7 @@ class TestAttributeTackle:
             {"x": 0, "y": 0, "player_track_id": 1, "team": "home"},
             {"x": 100, "y": 68, "player_track_id": 11, "team": "away"},
         ]
-        result = svc.attribute_tackle(
-            events, ball_pos=(50, 34), max_distance_m=5.0
-        )
+        result = svc.attribute_tackle(events, ball_pos=(50, 34), max_distance_m=5.0)
         assert result["candidates"] == 0
 
     def test_custom_max_distance(self, svc: PossessionService) -> None:
@@ -77,7 +75,14 @@ class TestAttributePossessionLoss:
 
     def test_misplaced_pass_cause(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 100, "completed": False, "x": 60, "y": 40},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 100,
+                "completed": False,
+                "x": 60,
+                "y": 40,
+            },
         ]
         loss = {"team": "home", "timestamp_s": 100, "x": 60, "y": 40}
         result = svc.attribute_possession_loss(events, loss)
@@ -108,7 +113,14 @@ class TestAttributePossessionLoss:
 
     def test_tackle_takes_precedence_over_pass(self, svc: PossessionService) -> None:
         events = [
-            {"type": "pass", "team": "home", "timestamp_s": 100, "completed": False, "x": 50, "y": 34},
+            {
+                "type": "pass",
+                "team": "home",
+                "timestamp_s": 100,
+                "completed": False,
+                "x": 50,
+                "y": 34,
+            },
             {"type": "tackle", "team": "away", "timestamp_s": 101, "x": 50, "y": 34},
         ]
         loss = {"team": "home", "timestamp_s": 101, "x": 50, "y": 34}

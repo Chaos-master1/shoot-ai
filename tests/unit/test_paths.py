@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from kawkab.core.paths import Paths, get_paths
 
 

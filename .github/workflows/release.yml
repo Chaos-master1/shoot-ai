@@ -1,4 +1,4 @@
-name: Release — Build Wheel & GitHub Release
+name: Release — Test, Build Wheel & Desktop Apps, GitHub Release
 
 on:
   push:
@@ -8,10 +8,52 @@ permissions:
   contents: write
 
 jobs:
-  build-wheel:
+  # Gates the release: a tag alone used to be enough to publish a public
+  # GitHub Release (build-wheel had `needs: []`, i.e. no dependency on any
+  # test/lint job at all). This job is deliberately a minimal, currently-
+  # achievable gate -- the real unit suite -- not the full ruff/mypy gate,
+  # which still has hundreds of pre-existing errors unrelated to correctness
+  # and would make every release impossible until that separate cleanup lands.
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install project (test + cloud extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test,cloud]"
+      - name: Run unit test suite
+        run: python -m pytest tests/unit/ -q
+
+  build-wheel:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/kawkab/web/package-lock.json
+
+      # The wheel's index.html loads dist/app.bundle.min.js. That file is
+      # gitignored (it's a build artifact, not source) and is force-included
+      # into the wheel via `[tool.hatch.build.targets.wheel] artifacts` in
+      # pyproject.toml -- but only if it actually exists on disk when
+      # `python -m build` runs. Without this step the wheel silently shipped
+      # an index.html whose only <script> 404s.
+      - name: Build frontend bundle
+        working-directory: src/kawkab/web
+        run: |
+          npm ci
+          npm run build:frontend
+      - name: Verify frontend bundle was produced
+        run: test -s src/kawkab/web/dist/app.bundle.min.js
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -27,11 +69,105 @@ jobs:
           pip install build
       - name: Build wheel
         run: python -m build --wheel
+      - name: Verify the wheel actually contains the frontend bundle
+        run: |
+          set -e
+          WHEEL=$(ls dist/*.whl | head -1)
+          echo "Checking $WHEEL for the JS bundle..."
+          python -m zipfile -l "$WHEEL" | grep -q "web/dist/app.bundle.min.js" || {
+            echo "::error::Wheel is missing src/kawkab/web/dist/app.bundle.min.js -- shipping this would repeat the broken-UI regression."
+            exit 1
+          }
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
           name: wheel
           path: dist/*.whl
+          if-no-files-found: error
+
+  # Desktop builds. The product is a PySide6 desktop app (KawkabAI.spec),
+  # so a release that ships only a wheel forces every user to hand-install
+  # Python + torch. Both jobs below build the single-folder PyInstaller
+  # bundle and attach archives to the GitHub Release.
+  desktop:
+    needs: [test]
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            archive: KawkabAI-windows-x64.zip
+          - os: ubuntu-latest
+            archive: KawkabAI-linux-x64.tar.gz
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/kawkab/web/package-lock.json
+      - name: Build frontend bundle
+        working-directory: src/kawkab/web
+        run: |
+          npm ci
+          npm run build:frontend
+      - name: Verify frontend bundle was produced
+        run: test -s src/kawkab/web/dist/app.bundle.min.js
+        shell: bash
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install project (base + build extras)
+        run: uv sync --extra build
+
+      - name: Build desktop bundle (PyInstaller)
+        run: uv run pyinstaller KawkabAI.spec --noconfirm
+
+      - name: Smoke-check the bundle
+        shell: bash
+        run: |
+          test -f dist/KawkabAI/KawkabAI.exe || test -f dist/KawkabAI/KawkabAI
+          # The UI must ship inside the bundle: a missing bundle.min.js here
+          # is exactly the broken-UI regression the wheel check guards against.
+          find dist/KawkabAI -name "app.bundle.min.js" | grep -q . || {
+            echo "::error::Desktop bundle is missing the frontend bundle."
+            exit 1
+          }
+          find dist/KawkabAI -path "*kawkab/knowledge*" | grep -q . || {
+            echo "::error::Desktop bundle is missing the knowledge base."
+            exit 1
+          }
+
+      - name: Archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/KawkabAI/* -DestinationPath ${{ matrix.archive }}
+      - name: Archive (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf ${{ matrix.archive }} -C dist KawkabAI
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+          if-no-files-found: error
+
+  publish:
+    needs: [build-wheel, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: List artifacts to be attached
+        run: ls -la artifacts/
       - name: Generate release notes
         id: release_notes
         run: |
@@ -45,7 +181,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.whl
+          files: |
+            artifacts/*.whl
+            artifacts/KawkabAI-windows-x64.zip
+            artifacts/KawkabAI-linux-x64.tar.gz
           body: ${{ steps.release_notes.outputs.notes }}
           generate_release_notes: true
           draft: false

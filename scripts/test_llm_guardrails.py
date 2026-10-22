@@ -5,8 +5,10 @@ The previous test said "Tunisia dominated" which was WRONG (Tunisia lost badly).
 
 The fix: pass is_clip=True so the LLM knows this is a short clip, not a full match.
 """
+
 import asyncio
 import os
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 import sys
 import time
@@ -15,7 +17,12 @@ from pathlib import Path
 
 async def main() -> int:
     from kawkab.services import (
-        CVService, AnalysisService, HomographyService, VRAMManager, LLMService, LLMConfig
+        AnalysisService,
+        CVService,
+        HomographyService,
+        LLMConfig,
+        LLMService,
+        VRAMManager,
     )
 
     print("=" * 70)
@@ -25,7 +32,7 @@ async def main() -> int:
 
     video_path = Path("data/sweden_test_60s.mp4")
     if not video_path.exists():
-        print(f"[ERROR] Video not found")
+        print("[ERROR] Video not found")
         return 1
 
     print("\n[1/4] Initializing services...")
@@ -41,39 +48,44 @@ async def main() -> int:
     track_data = await cv.process_video(video_path)
     cv_time = time.time() - t0
     metrics = track_data.tracking_metrics
-    print(f"  Done in {cv_time:.1f}s: {metrics['validated_player_tracks']} tracks, "
-          f"quality={metrics['tracking_quality']}")
+    print(
+        f"  Done in {cv_time:.1f}s: {metrics['validated_player_tracks']} tracks, "
+        f"quality={metrics['tracking_quality']}"
+    )
 
     print("\n[3/4] Analysis with homography...")
     matrix = homography.compute_homography_from_corners(
         pixel_corners=[(150, 100), (1770, 100), (1770, 980), (150, 980)],
-        pitch_length_m=105.0, pitch_width_m=68.0,
+        pitch_length_m=105.0,
+        pitch_width_m=68.0,
     )
     ma = await analysis.analyze_match(track_data, match_id=0, homography_matrix=matrix)
 
-    top_players = sorted(
-        ma.players.values(), key=lambda p: p.distance_covered_m, reverse=True
-    )[:5]
-    top_summary = ", ".join(
-        f"#{p.track_id}({p.distance_covered_m:.0f}m)" for p in top_players
-    )
+    top_players = sorted(ma.players.values(), key=lambda p: p.distance_covered_m, reverse=True)[:5]
+    top_summary = ", ".join(f"#{p.track_id}({p.distance_covered_m:.0f}m)" for p in top_players)
 
     print("\n[4/4] Generate report with PROPER CONTEXT...")
     await cv.shutdown()
     import gc
+
     gc.collect()
     try:
         import torch
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
     except Exception:
         pass
     await asyncio.sleep(3)
 
-    llm = LLMService(LLMConfig(
-        provider="ollama", ollama_model="ministral-3:14b",
-        max_tokens=4000, num_gpu=99,
-    ))
+    llm = LLMService(
+        LLMConfig(
+            provider="ollama",
+            ollama_model="ministral-3:14b",
+            max_tokens=4000,
+            num_gpu=99,
+        )
+    )
 
     actual_duration = track_data.duration_seconds
     is_clip = actual_duration < 1500
@@ -92,7 +104,7 @@ async def main() -> int:
     llm_prompt = f"""Match: Sweden vs Tunisia (FIFA World Cup 2026 highlight)
 Duration: {actual_duration:.0f} seconds (CLIP, not full match)
 Possession: Home {ma.home_team.possession_pct:.1f}%, Away {ma.away_team.possession_pct:.1f}%
-Formations: {ma.formations.get('home', {}).get('formation', '?')} vs {ma.formations.get('away', {}).get('formation', '?')}
+Formations: {ma.formations.get("home", {}).get("formation", "?")} vs {ma.formations.get("away", {}).get("formation", "?")}
 Confidence: {ma.confidence_overall:.1%}
 Top players (60s clip): {top_summary}
 Events: {len(ma.events)} detected
@@ -102,16 +114,14 @@ Match outcomes can completely change over 90 minutes.
 Do NOT claim any team won or dominated based on this data.
 """
 
-    report = await llm.generate_coach_report(
-        llm_prompt, language="en", match_context=context
-    )
+    report = await llm.generate_coach_report(llm_prompt, language="en", match_context=context)
 
     print("\n" + "=" * 70)
     print("LLM REPORT (with guardrails)")
     print("=" * 70)
     print(report[:2000])
     if len(report) > 2000:
-        print(f"... ({len(report)-2000} more chars)")
+        print(f"... ({len(report) - 2000} more chars)")
     print("=" * 70)
 
     print("\n" + "=" * 70)
@@ -119,10 +129,22 @@ Do NOT claim any team won or dominated based on this data.
     print("=" * 70)
     report_lower = report.lower()
     checks = [
-        ("Mentions 'clip' or '60-second'", any(w in report_lower for w in ["clip", "60-second", "60 second", "60s"])),
-        ("Does NOT claim 'dominated' or 'won'", "dominated" not in report_lower and "won" not in report_lower),
+        (
+            "Mentions 'clip' or '60-second'",
+            any(w in report_lower for w in ["clip", "60-second", "60 second", "60s"]),
+        ),
+        (
+            "Does NOT claim 'dominated' or 'won'",
+            "dominated" not in report_lower and "won" not in report_lower,
+        ),
         ("Does NOT claim 'controlled'", "controlled" not in report_lower),
-        ("Mentions 'need more data' or 'cannot determine'", any(w in report_lower for w in ["need more", "cannot determine", "incomplete", "limited"])),
+        (
+            "Mentions 'need more data' or 'cannot determine'",
+            any(
+                w in report_lower
+                for w in ["need more", "cannot determine", "incomplete", "limited"]
+            ),
+        ),
     ]
     for check, passed in checks:
         status = "✓" if passed else "✗"

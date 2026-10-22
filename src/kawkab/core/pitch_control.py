@@ -214,19 +214,15 @@ class VoronoiPitchControl:
             hg = result.home_grid
             ag = result.away_grid
             if hg and ag:
-                pitch_x_per_col = pitch_length / self.grid_cols
-                for zone_idx, zone_name in enumerate([0, 1, 2]):
+                _ = pitch_length / self.grid_cols
+                for zone_idx, _zone_name in enumerate([0, 1, 2]):
                     c_start = int(zone_idx * self.grid_cols / 3)
                     c_end = int((zone_idx + 1) * self.grid_cols / 3)
                     zone_home = sum(
-                        hg[r][c]
-                        for r in range(self.grid_rows)
-                        for c in range(c_start, c_end)
+                        hg[r][c] for r in range(self.grid_rows) for c in range(c_start, c_end)
                     )
                     zone_away = sum(
-                        ag[r][c]
-                        for r in range(self.grid_rows)
-                        for c in range(c_start, c_end)
+                        ag[r][c] for r in range(self.grid_rows) for c in range(c_start, c_end)
                     )
                     zone_total = zone_home + zone_away
                     zone_home_pct = (zone_home / zone_total * 100) if zone_total > 0 else 50.0
@@ -259,12 +255,13 @@ class VoronoiPitchControl:
             ball_in_away_third=(ball_away / max(ball_frames, 1)) * 100,
         )
 
+
 class WeightedPitchControl:
     """Velocity-weighted pitch control model.
 
     Uses soft assignment based on player reachable area instead of hard Voronoi.
     Each player's influence radius is proportional to their speed: σ = v_max × τ.
-    
+
     This is closer to professional models (e.g., StatsBomb, Tractable) than
     basic Voronoi tessellation.
 
@@ -311,7 +308,7 @@ class WeightedPitchControl:
         Returns:
             PitchControlFrame with continuous control values and grid.
         """
-        total = self.grid_rows * self.grid_cols
+        _ = self.grid_rows * self.grid_cols
 
         all_players = home_positions + away_positions
         n_home = len(home_positions)
@@ -326,10 +323,10 @@ class WeightedPitchControl:
         # Build per-player sigma
         home_speeds = home_speeds or [self.default_speed] * n_home
         away_speeds = away_speeds or [self.default_speed] * len(away_positions)
-        all_sigmas = np.array([
-            max(s * self.time_horizon, 2.0)
-            for s in list(home_speeds) + list(away_speeds)
-        ], dtype=np.float64)
+        all_sigmas = np.array(
+            [max(s * self.time_horizon, 2.0) for s in list(home_speeds) + list(away_speeds)],
+            dtype=np.float64,
+        )
 
         gx = (np.arange(self.grid_cols) + 0.5) * pitch_length / self.grid_cols
         gy = (np.arange(self.grid_rows) + 0.5) * pitch_width / self.grid_rows
@@ -356,7 +353,7 @@ class WeightedPitchControl:
         if ball_pos is not None and all_players:
             bx, by = ball_pos
             d2 = (bx - player_arr[:, 0]) ** 2 + (by - player_arr[:, 1]) ** 2
-            influence_ball = np.exp(-d2 / (2.0 * all_sigmas ** 2))
+            influence_ball = np.exp(-d2 / (2.0 * all_sigmas**2))
             best_idx = int(np.argmax(influence_ball))
             ball_zone_team = "home" if best_idx < n_home else "away"
 
@@ -440,14 +437,10 @@ class WeightedPitchControl:
                     c_start = int(zone_idx * self.grid_cols / 3)
                     c_end = int((zone_idx + 1) * self.grid_cols / 3)
                     zone_home = sum(
-                        hg[r][c]
-                        for r in range(self.grid_rows)
-                        for c in range(c_start, c_end)
+                        hg[r][c] for r in range(self.grid_rows) for c in range(c_start, c_end)
                     )
                     zone_away = sum(
-                        ag[r][c]
-                        for r in range(self.grid_rows)
-                        for c in range(c_start, c_end)
+                        ag[r][c] for r in range(self.grid_rows) for c in range(c_start, c_end)
                     )
                     zone_total = zone_home + zone_away
                     zone_home_pct = (zone_home / zone_total * 100) if zone_total > 0 else 50.0

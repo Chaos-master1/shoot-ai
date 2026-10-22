@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
@@ -16,15 +15,46 @@ def mock_client():
     service = EasySoccerService()
     fake = MagicMock()
     fake.get_events.return_value = [
-        {"id": 1, "home_team": "A", "away_team": "B", "home_score": 1, "away_score": 0,
-         "status": "live", "league_name": "PL", "current_minute": 30}
+        {
+            "id": 1,
+            "home_team": "A",
+            "away_team": "B",
+            "home_score": 1,
+            "away_score": 0,
+            "status": "live",
+            "league_name": "PL",
+            "current_minute": 30,
+        }
     ]
-    fake.get_event.return_value = {"id": 1, "home_team": "A", "away_team": "B", "home_score": 1, "away_score": 0,
-                                   "status": "finished", "venue": "Stadium", "league_name": "PL", "event_date": "2024-01-01"}
-    fake.get_match_incidents.return_value = [{"type": "goal", "team": "home", "player": "P1", "minute": 15,
-                                              "score_home": 1, "score_away": 0}]
-    fake.get_player.return_value = {"id": 1, "name": "Player1", "position": "FW", "jersey_number": 9,
-                                    "nationality": "Country", "date_of_birth": "2000-01-01"}
+    fake.get_event.return_value = {
+        "id": 1,
+        "home_team": "A",
+        "away_team": "B",
+        "home_score": 1,
+        "away_score": 0,
+        "status": "finished",
+        "venue": "Stadium",
+        "league_name": "PL",
+        "event_date": "2024-01-01",
+    }
+    fake.get_match_incidents.return_value = [
+        {
+            "type": "goal",
+            "team": "home",
+            "player": "P1",
+            "minute": 15,
+            "score_home": 1,
+            "score_away": 0,
+        }
+    ]
+    fake.get_player.return_value = {
+        "id": 1,
+        "name": "Player1",
+        "position": "FW",
+        "jersey_number": 9,
+        "nationality": "Country",
+        "date_of_birth": "2000-01-01",
+    }
     service._client = fake
     service._available = True
     return service
@@ -64,9 +94,18 @@ class TestEasySoccerService:
         assert mock_client.check_available() is True
 
     def test_unavailable_no_client(self):
-        service = EasySoccerService()
-        assert service.get_live_events() == []
-        assert service.check_available() is False
+        # Mock esd so the real module (which creates a Playwright event loop) is never loaded
+        with patch.dict("sys.modules", {"esd": MagicMock()}):
+            import importlib
+
+            import kawkab.services.easy_soccer_service as _ess_mod
+
+            importlib.reload(_ess_mod)
+            service = _ess_mod.EasySoccerService()
+            assert service.get_live_events() == []
+            # With esd mocked, SofascoreClient() raises ImportError at import time,
+            # so _get_client returns None and check_available returns False.
+            assert service.check_available() is False
 
     def test_exception_returns_empty(self, mock_client):
         mock_client._client.get_events.side_effect = Exception("fail")

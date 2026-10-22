@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from kawkab.core.form_analysis import form_by_competition, form_by_opponent_strength
 
 

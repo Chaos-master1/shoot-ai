@@ -7,7 +7,7 @@ such as cross height, distance from goal, and defender proximity.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from kawkab.core.game_constants import GAME
@@ -119,7 +119,9 @@ def compute_cross_xg(event: dict[str, Any]) -> CrossXgFactors:
     placement_angle = abs(end_y - PITCH_WIDTH / 2) / (PITCH_WIDTH / 2) * 90
     angle_factor = 0.7 + 0.3 * (placement_angle / 90.0)
 
-    headed_chance = 0.2 if cross_height in ("high", "lofted") else 0.8 if cross_height == "ground" else 0.5
+    headed_chance = (
+        0.2 if cross_height in ("high", "lofted") else 0.8 if cross_height == "ground" else 0.5
+    )
 
     xg = base_zone_xg * height_mult * dist_decay * def_factor * byline_boost * angle_factor
     xg = min(xg, 0.35)

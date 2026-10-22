@@ -4,13 +4,11 @@ repos:
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+      # ruff-format replaces black -- running both meant every commit got
+      # reformatted twice, each tool undoing part of the other's changes,
+      # so the pre-commit hook loop never settled. See [tool.ruff.format]
+      # in pyproject.toml (configured to match black's own defaults).
       - id: ruff-format
-
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
-    hooks:
-      - id: black
-        language_version: python3.12
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.10.0

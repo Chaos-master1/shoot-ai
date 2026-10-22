@@ -24,6 +24,7 @@ install_kawkab_stubs()
 # Module-level stubs for cv2 and sklearn (both absent from test env)
 # ---------------------------------------------------------------------------
 
+
 def _install_cv2_stub() -> None:
     if "cv2" in sys.modules:
         return
@@ -35,9 +36,20 @@ def _install_cv2_stub() -> None:
     cv2_stub.MORPH_OPEN = 3
     cv2_stub.CAP_PROP_FPS = 5
     cv2_stub.CAP_PROP_FRAME_COUNT = 7
-    for fn in ("cvtColor", "inRange", "morphologyEx", "findContours",
-               "contourArea", "drawContours", "VideoCapture",
-               "setUseOptimized", "useOptimized"):
+    for fn in (
+        "cvtColor",
+        "inRange",
+        "morphologyEx",
+        "findContours",
+        "contourArea",
+        "drawContours",
+        "calcHist",
+        "GaussianBlur",
+        "countNonZero",
+        "VideoCapture",
+        "setUseOptimized",
+        "useOptimized",
+    ):
         setattr(cv2_stub, fn, MagicMock())
     # Add cv2.ocl sub-module
     ocl_mod = types.ModuleType("cv2.ocl")
@@ -52,8 +64,12 @@ def _install_sklearn_stub() -> None:
     """Minimal sklearn stub so @patch('sklearn.cluster.KMeans') resolves."""
     if "sklearn" in sys.modules:
         return
+    from importlib.machinery import ModuleSpec
+
     sk_mod = types.ModuleType("sklearn")
+    sk_mod.__spec__ = ModuleSpec("sklearn", None)
     sk_cluster = types.ModuleType("sklearn.cluster")
+    sk_cluster.__spec__ = ModuleSpec("sklearn.cluster", None)
     sk_cluster.KMeans = MagicMock()
     sk_mod.cluster = sk_cluster
     sys.modules["sklearn"] = sk_mod
@@ -74,14 +90,19 @@ def cv_mod():
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class _CpuTensor:
     """Minimal stand-in for an Ultralytics tensor: .cpu().numpy() -> ndarray."""
+
     def __init__(self, arr):
         self._arr = np.asarray(arr)
+
     def cpu(self):
         return self
+
     def numpy(self):
         return self._arr
+
 
 def _make_mock_boxes(xyxys, confs, cls_ids, track_ids=None):
     """Create a mock Ultralytics Boxes object."""
@@ -106,8 +127,9 @@ def _make_track_schedule(schedule: dict[int, list[int]], bbox_map: dict[int, tup
                   If omitted, each track gets a widely-spaced x-center
                   (cx = 10 + tid*60) to avoid false stitching by P0-A1.
     """
+
     def _factory(cv_mod):
-        async def _detect(frame, frame_number, timestamp, norfair_tracker=None):
+        async def _detect(frame, frame_number, timestamp, norfair_tracker=None, period=1):
             dets = []
             for tid, frames in schedule.items():
                 if frame_number in frames:
@@ -116,15 +138,25 @@ def _make_track_schedule(schedule: dict[int, list[int]], bbox_map: dict[int, tup
                     else:
                         x_offset = 10 + tid * 60
                         bbox = (x_offset, 20, x_offset + 50, 120)
-                    dets.append(cv_mod.Detection(
-                        bbox=bbox, confidence=0.85,
-                        class_id=0, class_name="person", track_id=tid,
-                    ))
+                    dets.append(
+                        cv_mod.Detection(
+                            bbox=bbox,
+                            confidence=0.85,
+                            class_id=0,
+                            class_name="person",
+                            track_id=tid,
+                        )
+                    )
             return cv_mod.FrameDetections(
-                frame_number=frame_number, timestamp=timestamp,
-                detections=dets, image_width=100, image_height=100,
+                frame_number=frame_number,
+                timestamp=timestamp,
+                detections=dets,
+                image_width=100,
+                image_height=100,
             )
+
         return _detect
+
     return _factory
 
 
@@ -132,13 +164,18 @@ def _make_track_schedule(schedule: dict[int, list[int]], bbox_map: dict[int, tup
 # MatchTrackData.swap_teams
 # ===================================================================
 
+
 class TestMatchTrackDataSwapTeams:
     """MatchTrackData.swap_teams swaps home/away assignments and metrics."""
 
     def test_swap_teams_basic(self, cv_mod):
         data = cv_mod.MatchTrackData(
-            match_id=1, fps=30, total_frames=100, duration_seconds=10.0,
-            frames=[], track_registry={},
+            match_id=1,
+            fps=30,
+            total_frames=100,
+            duration_seconds=10.0,
+            frames=[],
+            track_registry={},
             player_teams={1: "home", 2: "away", 3: "home"},
         )
         data.swap_teams()
@@ -146,8 +183,12 @@ class TestMatchTrackDataSwapTeams:
 
     def test_swap_teams_with_metrics(self, cv_mod):
         data = cv_mod.MatchTrackData(
-            match_id=1, fps=30, total_frames=100, duration_seconds=10.0,
-            frames=[], track_registry={},
+            match_id=1,
+            fps=30,
+            total_frames=100,
+            duration_seconds=10.0,
+            frames=[],
+            track_registry={},
             player_teams={1: "home", 2: "away"},
             tracking_metrics={
                 "team_detection": {
@@ -167,8 +208,12 @@ class TestMatchTrackDataSwapTeams:
 
     def test_swap_teams_partial_metrics(self, cv_mod):
         data = cv_mod.MatchTrackData(
-            match_id=1, fps=30, total_frames=100, duration_seconds=10.0,
-            frames=[], track_registry={},
+            match_id=1,
+            fps=30,
+            total_frames=100,
+            duration_seconds=10.0,
+            frames=[],
+            track_registry={},
             player_teams={1: "home", 2: "away"},
             tracking_metrics={"team_detection": {"home_size": 10}},
         )
@@ -179,8 +224,12 @@ class TestMatchTrackDataSwapTeams:
 
     def test_swap_teams_preserves_non_team_labels(self, cv_mod):
         data = cv_mod.MatchTrackData(
-            match_id=1, fps=30, total_frames=100, duration_seconds=10.0,
-            frames=[], track_registry={},
+            match_id=1,
+            fps=30,
+            total_frames=100,
+            duration_seconds=10.0,
+            frames=[],
+            track_registry={},
             player_teams={1: "referee", 2: "unknown"},
         )
         data.swap_teams()
@@ -192,6 +241,7 @@ class TestMatchTrackDataSwapTeams:
 # _compute_pitch_mask
 # ===================================================================
 
+
 class TestComputePitchMask:
     """CVService._compute_pitch_mask returns a binary pitch mask or None."""
 
@@ -202,21 +252,21 @@ class TestComputePitchMask:
             patch("cv2.morphologyEx") as mock_morph,
             patch("cv2.findContours") as mock_find,
             patch("cv2.contourArea") as mock_area,
-            patch("cv2.drawContours") as mock_draw,
+            patch("cv2.countNonZero") as mock_count,
+            patch("cv2.drawContours") as _,
         ):
             mock_cvt.return_value = np.zeros((100, 100, 3), dtype=np.uint8)
             mock_inrange.return_value = np.zeros((100, 100), dtype=np.uint8)
             mock_morph.return_value = np.zeros((100, 100), dtype=np.uint8)
-            cnt = np.array([[[0, 0]], [[0, 99]], [[99, 99]], [[99, 0]]],
-                           dtype=np.int32)
+            mock_count.return_value = 5000
+            cnt = np.array([[[0, 0]], [[0, 99]], [[99, 99]], [[99, 0]]], dtype=np.int32)
             mock_find.return_value = ([cnt], None)
             mock_area.return_value = 5000.0
 
             service = cv_mod.CVService(model_size="n")
             service._initialized = True
-            mask = service._compute_pitch_mask(
-                np.zeros((100, 100, 3), dtype=np.uint8)
-            )
+            service._pitch_hsv_range = (np.array([40, 40, 40]), np.array([80, 255, 255]))
+            mask = service._compute_pitch_mask(np.zeros((100, 100, 3), dtype=np.uint8))
             assert mask is not None
             assert mask.dtype == np.bool_
 
@@ -234,22 +284,19 @@ class TestComputePitchMask:
 
             service = cv_mod.CVService(model_size="n")
             service._initialized = True
-            assert service._compute_pitch_mask(
-                np.zeros((100, 100, 3), dtype=np.uint8)
-            ) is None
+            assert service._compute_pitch_mask(np.zeros((100, 100, 3), dtype=np.uint8)) is None
 
     def test_exception_returns_none(self, cv_mod):
         with patch("cv2.cvtColor", side_effect=ValueError("mock error")):
             service = cv_mod.CVService(model_size="n")
             service._initialized = True
-            assert service._compute_pitch_mask(
-                np.zeros((100, 100, 3), dtype=np.uint8)
-            ) is None
+            assert service._compute_pitch_mask(np.zeros((100, 100, 3), dtype=np.uint8)) is None
 
 
 # ===================================================================
 # _get_dominant_color
 # ===================================================================
+
 
 class TestGetDominantColor:
     """CVService._get_dominant_color returns average BGR or None."""
@@ -263,30 +310,22 @@ class TestGetDominantColor:
     def test_empty_image_returns_none(self, cv_mod):
         service = cv_mod.CVService(model_size="n")
         service._initialized = True
-        assert service._get_dominant_color(
-            np.zeros((0, 0, 3), dtype=np.uint8)
-        ) is None
+        assert service._get_dominant_color(np.zeros((0, 0, 3), dtype=np.uint8)) is None
 
     def test_too_small_image_returns_none(self, cv_mod):
         service = cv_mod.CVService(model_size="n")
         service._initialized = True
-        assert service._get_dominant_color(
-            np.zeros((3, 3, 3), dtype=np.uint8)
-        ) is None
+        assert service._get_dominant_color(np.zeros((3, 3, 3), dtype=np.uint8)) is None
 
     def test_all_white_image_returns_none(self, cv_mod):
         service = cv_mod.CVService(model_size="n")
         service._initialized = True
-        assert service._get_dominant_color(
-            np.full((20, 20, 3), 255, dtype=np.uint8)
-        ) is None
+        assert service._get_dominant_color(np.full((20, 20, 3), 255, dtype=np.uint8)) is None
 
     def test_all_black_image_returns_none(self, cv_mod):
         service = cv_mod.CVService(model_size="n")
         service._initialized = True
-        assert service._get_dominant_color(
-            np.zeros((20, 20, 3), dtype=np.uint8)
-        ) is None
+        assert service._get_dominant_color(np.zeros((20, 20, 3), dtype=np.uint8)) is None
 
     def test_few_colored_pixels_returns_none(self, cv_mod):
         service = cv_mod.CVService(model_size="n")
@@ -299,6 +338,7 @@ class TestGetDominantColor:
 # ===================================================================
 # _cluster_team_colors
 # ===================================================================
+
 
 class TestClusterTeamColors:
     """CVService._cluster_team_colors labels tracks as home/away/referee."""
@@ -314,7 +354,8 @@ class TestClusterTeamColors:
         mock_km = MagicMock()
         mock_km.fit_predict.return_value = np.array([0, 1])
         mock_km.cluster_centers_ = np.array(
-            [[200, 100, 50], [50, 100, 200]], dtype=np.float64,
+            [[200, 100, 50], [50, 100, 200]],
+            dtype=np.float64,
         )
         mock_kmeans.return_value = mock_km
 
@@ -334,7 +375,8 @@ class TestClusterTeamColors:
         mock_km = MagicMock()
         mock_km.fit_predict.return_value = np.array([0, 1])
         mock_km.cluster_centers_ = np.array(
-            [[50, 100, 200], [200, 150, 50]], dtype=np.float64,
+            [[50, 100, 200], [200, 150, 50]],
+            dtype=np.float64,
         )
         mock_kmeans.return_value = mock_km
 
@@ -353,13 +395,24 @@ class TestClusterTeamColors:
         mock_km = MagicMock()
         mock_km.fit_predict.return_value = np.array([0, 1, 2])
         mock_km.cluster_centers_ = np.array(
-            [[80, 80, 80], [50, 100, 200], [200, 100, 50]], dtype=np.float64,
+            [[80, 80, 80], [50, 100, 200], [200, 100, 50]],
+            dtype=np.float64,
         )
         mock_kmeans.return_value = mock_km
 
-        mock_cvt.side_effect = (
-            lambda img, code: np.array([[[0, 20, 80]]], dtype=np.uint8)
-        )
+        # Shape-preserving cvtColor stub: the LAB clustering path converts
+        # BOTH the per-track colors (N,1,3) and the cluster centroids
+        # (K,1,3); the old fixed-shape mock broke the centroid conversion.
+        # Pass-through with a fixed BGR->HSV-style mapping per row keeps the
+        # referee (low saturation) heuristic deterministic.
+        def _cvt(img, code):
+            arr = np.asarray(img, dtype=np.float32)
+            out = arr.reshape(-1, 3).copy()
+            # deterministic transform: keep first channel low (low "sat")
+            out[:, 1] = out[:, 1] * 0.2
+            return out.reshape(arr.shape)
+
+        mock_cvt.side_effect = _cvt
         service = cv_mod.CVService(model_size="n")
         service._initialized = True
         data = {
@@ -381,8 +434,7 @@ class TestClusterTeamColors:
                 raise ImportError(f"No module named '{name}'")
             return _real_import(name, *args, **kwargs)
 
-        saved = {k: sys.modules.pop(k)
-                 for k in list(sys.modules) if k.startswith("sklearn")}
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k.startswith("sklearn")}
         try:
             with patch.object(builtins, "__import__", _block_sklearn):
                 service = cv_mod.CVService(model_size="n")
@@ -408,6 +460,7 @@ class TestClusterTeamColors:
 # detect_frame
 # ===================================================================
 
+
 class TestDetectFrame:
     """CVService.detect_frame filtering and tracking."""
 
@@ -425,13 +478,22 @@ class TestDetectFrame:
     async def test_basic_detection(self, cv_mod):
         service = self._build_service(cv_mod, confidence_threshold=0.3)
         service._model.names = {0: "person"}
-        self._stub_results(service, _make_mock_boxes(
-            [(10, 20, 40, 60)], [0.85], [0], track_ids=[1],
-        ))
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 100), dtype=bool)):
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(10, 20, 40, 60)],
+                [0.85],
+                [0],
+                track_ids=[1],
+            ),
+        )
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 100), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 100, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 100, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 1
         d = result.detections[0]
@@ -444,13 +506,21 @@ class TestDetectFrame:
     async def test_person_below_confidence_filtered(self, cv_mod):
         service = self._build_service(cv_mod, confidence_threshold=0.5)
         service._model.names = {0: "person"}
-        self._stub_results(service, _make_mock_boxes(
-            [(10, 20, 40, 60)], [0.3], [0],
-        ))
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 100), dtype=bool)):
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(10, 20, 40, 60)],
+                [0.3],
+                [0],
+            ),
+        )
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 100), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 100, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 100, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -458,13 +528,21 @@ class TestDetectFrame:
     async def test_person_bbox_area_below_min_filtered(self, cv_mod):
         service = self._build_service(cv_mod, min_bbox_area_ratio=0.05)
         service._model.names = {0: "person"}
-        self._stub_results(service, _make_mock_boxes(
-            [(100, 100, 110, 105)], [0.8], [0],
-        ))
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((720, 540), dtype=bool)):
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(100, 100, 110, 105)],
+                [0.8],
+                [0],
+            ),
+        )
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((720, 540), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((720, 540, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((720, 540, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -472,13 +550,21 @@ class TestDetectFrame:
     async def test_person_bbox_area_above_max_filtered(self, cv_mod):
         service = self._build_service(cv_mod, max_bbox_area_ratio=0.02)
         service._model.names = {0: "person"}
-        self._stub_results(service, _make_mock_boxes(
-            [(0, 0, 200, 100)], [0.8], [0],
-        ))
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 100), dtype=bool)):
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(0, 0, 200, 100)],
+                [0.8],
+                [0],
+            ),
+        )
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 100), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 100, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 100, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -486,14 +572,21 @@ class TestDetectFrame:
     async def test_person_outside_pitch_mask_filtered(self, cv_mod):
         service = self._build_service(cv_mod)
         service._model.names = {0: "person"}
-        self._stub_results(service, _make_mock_boxes(
-            [(10, 20, 40, 60)], [0.85], [0],
-        ))
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(10, 20, 40, 60)],
+                [0.85],
+                [0],
+            ),
+        )
         mask = np.ones((200, 100), dtype=bool)
         mask[65, 25] = False  # foot = min(60+5, 199) = 65, x = int((10+40)/2) = 25
         with patch.object(service, "_compute_pitch_mask", return_value=mask):
             result = await service.detect_frame(
-                np.zeros((200, 100, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 100, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -501,13 +594,21 @@ class TestDetectFrame:
     async def test_sports_ball_below_confidence_filtered(self, cv_mod):
         service = self._build_service(cv_mod, ball_confidence_threshold=0.5)
         service._model.names = {32: "sports ball"}
-        self._stub_results(service, _make_mock_boxes(
-            [(100, 100, 110, 110)], [0.3], [32],
-        ))
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 200), dtype=bool)):
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(100, 100, 110, 110)],
+                [0.3],
+                [32],
+            ),
+        )
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 200), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 200, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 200, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -515,31 +616,45 @@ class TestDetectFrame:
     async def test_sports_ball_outside_pitch_mask_filtered(self, cv_mod):
         service = self._build_service(cv_mod)
         service._model.names = {32: "sports ball"}
-        self._stub_results(service, _make_mock_boxes(
-            [(100, 100, 110, 110)], [0.85], [32],
-        ))
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(100, 100, 110, 110)],
+                [0.85],
+                [32],
+            ),
+        )
         mask = np.ones((200, 200), dtype=bool)
         mask[105, 105] = False
         with patch.object(service, "_compute_pitch_mask", return_value=mask):
             result = await service.detect_frame(
-                np.zeros((200, 200, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 200, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
     @pytest.mark.asyncio
     async def test_multiple_detections_filtered_correctly(self, cv_mod):
-        service = self._build_service(cv_mod, confidence_threshold=0.5,
-                                      ball_confidence_threshold=0.2)
+        service = self._build_service(
+            cv_mod, confidence_threshold=0.5, ball_confidence_threshold=0.2
+        )
         service._model.names = {0: "person", 32: "sports ball"}
-        self._stub_results(service, _make_mock_boxes(
-            [(10, 20, 40, 60), (100, 100, 110, 110)],
-            [0.85, 0.3],
-            [0, 32],
-        ))
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 200), dtype=bool)):
+        self._stub_results(
+            service,
+            _make_mock_boxes(
+                [(10, 20, 40, 60), (100, 100, 110, 110)],
+                [0.85, 0.3],
+                [0, 32],
+            ),
+        )
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 200), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 200, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 200, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 2
 
@@ -547,10 +662,13 @@ class TestDetectFrame:
     async def test_empty_results_returns_no_detections(self, cv_mod):
         service = self._build_service(cv_mod)
         service._model.track.return_value = []
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 200), dtype=bool)):
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 200), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 200, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 200, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -560,10 +678,13 @@ class TestDetectFrame:
         mock_result = MagicMock()
         mock_result.boxes = None
         service._model.track.return_value = [mock_result]
-        with patch.object(service, "_compute_pitch_mask",
-                          return_value=np.ones((200, 200), dtype=bool)):
+        with patch.object(
+            service, "_compute_pitch_mask", return_value=np.ones((200, 200), dtype=bool)
+        ):
             result = await service.detect_frame(
-                np.zeros((200, 200, 3), dtype=np.uint8), 0, 0.0,
+                np.zeros((200, 200, 3), dtype=np.uint8),
+                0,
+                0.0,
             )
         assert len(result.detections) == 0
 
@@ -576,7 +697,10 @@ class TestDetectFrame:
             service = self._build_service(cv_mod)
             service._model.names = {0: "person"}
             mock_boxes = _make_mock_boxes(
-                [(10, 20, 40, 60)], [0.85], [0], track_ids=None,
+                [(10, 20, 40, 60)],
+                [0.85],
+                [0],
+                track_ids=None,
             )
             service._model.return_value = [MagicMock(boxes=mock_boxes)]
 
@@ -585,10 +709,13 @@ class TestDetectFrame:
                 {"track_id": 42, "bbox": (10, 20, 40, 60), "label": "person"},
             ]
 
-            with patch.object(service, "_compute_pitch_mask",
-                              return_value=np.ones((200, 100), dtype=bool)):
+            with patch.object(
+                service, "_compute_pitch_mask", return_value=np.ones((200, 100), dtype=bool)
+            ):
                 result = await service.detect_frame(
-                    np.zeros((200, 100, 3), dtype=np.uint8), 0, 0.0,
+                    np.zeros((200, 100, 3), dtype=np.uint8),
+                    0,
+                    0.0,
                     norfair_tracker=norfair_mock,
                 )
             assert len(result.detections) == 1
@@ -598,8 +725,8 @@ class TestDetectFrame:
 def _mock_video_capture(n_frames=90, fps=30.0, height=100, width=100):
     """Patch cv2.VideoCapture to yield n_frames then stop."""
     from unittest.mock import patch as _patch
-    frames = [(True, np.zeros((height, width, 3), dtype=np.uint8))
-              for _ in range(n_frames)]
+
+    frames = [(True, np.zeros((height, width, 3), dtype=np.uint8)) for _ in range(n_frames)]
     frames.append((False, None))
 
     vc_patcher = _patch("cv2.VideoCapture")
@@ -607,16 +734,26 @@ def _mock_video_capture(n_frames=90, fps=30.0, height=100, width=100):
     mock_cap = MagicMock()
     mock_vc.return_value = mock_cap
     mock_cap.isOpened.return_value = True
-    mock_cap.get.side_effect = (
-        lambda prop: fps if prop == 5 else n_frames
-    )
+    mock_cap.get.side_effect = lambda prop: fps if prop == 5 else n_frames
     mock_cap.read.side_effect = frames
-    return vc_patcher
+
+    # Patch camera cut detector to prevent consuming the shared mock
+    cc_patcher = _patch("kawkab.services.camera_cut_detector.CameraCutDetector.detect_cuts_fast")
+    cc_mock = cc_patcher.start()
+    cc_mock.return_value = []
+
+    class _CombinedPatcher:
+        def stop(self):
+            cc_patcher.stop()
+            vc_patcher.stop()
+
+    return _CombinedPatcher()
 
 
 # ===================================================================
 # process_video
 # ===================================================================
+
 
 class TestProcessVideo:
     """CVService.process_video full pipeline and track filtering."""
@@ -631,7 +768,8 @@ class TestProcessVideo:
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=1,
+            Path("/fake/video.mp4"),
+            frame_skip=1,
             enable_team_detection=False,
         )
         vc_patcher.stop()
@@ -646,7 +784,8 @@ class TestProcessVideo:
     async def test_frame_skip_reuses_last_detections(self, cv_mod):
         vc_patcher = _mock_video_capture(30)
         service = cv_mod.CVService(
-            model_size="n", expected_player_count=22,
+            model_size="n",
+            expected_player_count=22,
             min_track_lifetime_frames=1,
         )
         service._initialized = True
@@ -655,7 +794,8 @@ class TestProcessVideo:
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=2,
+            Path("/fake/video.mp4"),
+            frame_skip=2,
             enable_team_detection=False,
         )
         vc_patcher.stop()
@@ -667,19 +807,23 @@ class TestProcessVideo:
     async def test_track_lifetime_filtering(self, cv_mod):
         vc_patcher = _mock_video_capture(20)
         service = cv_mod.CVService(
-            model_size="n", expected_player_count=22,
+            model_size="n",
+            expected_player_count=22,
             min_track_lifetime_frames=5,
         )
         service._initialized = True
 
-        factory = _make_track_schedule({
-            1: list(range(0, 20)),
-            2: [0, 5, 10],
-        })
+        factory = _make_track_schedule(
+            {
+                1: list(range(0, 20)),
+                2: [0, 5, 10],
+            }
+        )
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=1,
+            Path("/fake/video.mp4"),
+            frame_skip=1,
             enable_team_detection=False,
         )
         vc_patcher.stop()
@@ -691,8 +835,10 @@ class TestProcessVideo:
     async def test_top_n_truncation(self, cv_mod):
         vc_patcher = _mock_video_capture(30)
         service = cv_mod.CVService(
-            model_size="n", expected_player_count=10,
-            min_track_lifetime_frames=1, max_keep_top_n=3,
+            model_size="n",
+            expected_player_count=10,
+            min_track_lifetime_frames=1,
+            max_keep_top_n=3,
         )
         service._initialized = True
 
@@ -707,7 +853,8 @@ class TestProcessVideo:
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=1,
+            Path("/fake/video.mp4"),
+            frame_skip=1,
             enable_team_detection=False,
         )
         vc_patcher.stop()
@@ -723,18 +870,18 @@ class TestProcessVideo:
         """22 tracks with 100% lifetime → count_ratio=1.0 → excellent."""
         vc_patcher = _mock_video_capture(60)
         service = cv_mod.CVService(
-            model_size="n", expected_player_count=22,
+            model_size="n",
+            expected_player_count=22,
             min_track_lifetime_frames=1,
         )
         service._initialized = True
 
-        factory = _make_track_schedule(
-            {i: list(range(0, 60)) for i in range(1, 23)}
-        )
+        factory = _make_track_schedule({i: list(range(0, 60)) for i in range(1, 23)})
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=1,
+            Path("/fake/video.mp4"),
+            frame_skip=1,
             enable_team_detection=False,
         )
         vc_patcher.stop()
@@ -747,7 +894,8 @@ class TestProcessVideo:
         + high avg_span → inferred as full_match."""
         vc_patcher = _mock_video_capture(n_frames=360, fps=0.2)
         service = cv_mod.CVService(
-            model_size="n", expected_player_count=22,
+            model_size="n",
+            expected_player_count=22,
             min_track_lifetime_frames=1,
         )
         service._initialized = True
@@ -756,7 +904,8 @@ class TestProcessVideo:
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=1,
+            Path("/fake/video.mp4"),
+            frame_skip=1,
             enable_team_detection=False,
         )
         vc_patcher.stop()
@@ -770,6 +919,7 @@ class TestProcessVideo:
 # ===================================================================
 # _detect_track_stitches
 # ===================================================================
+
 
 class TestDetectTrackStitches:
     """CVService._detect_track_stitches merges fragments of the same player."""
@@ -787,17 +937,35 @@ class TestDetectTrackStitches:
     def test_no_stitch_needed(self, cv_mod):
         """Two tracks with disjoint time windows and far positions → no merge."""
         frames = [
-            cv_mod.FrameDetections(0, 0.0, [
-                cv_mod.Detection((0, 0, 20, 40), 0.9, 0, "person", track_id=1),
-            ], 100, 100),
-            cv_mod.FrameDetections(200, 6.67, [
-                cv_mod.Detection((80, 0, 100, 40), 0.9, 0, "person", track_id=2),
-            ], 100, 100),
+            cv_mod.FrameDetections(
+                0,
+                0.0,
+                [
+                    cv_mod.Detection((0, 0, 20, 40), 0.9, 0, "person", track_id=1),
+                ],
+                100,
+                100,
+            ),
+            cv_mod.FrameDetections(
+                200,
+                6.67,
+                [
+                    cv_mod.Detection((80, 0, 100, 40), 0.9, 0, "person", track_id=2),
+                ],
+                100,
+                100,
+            ),
         ]
         svc = self._make_service(cv_mod)
         result = svc._detect_track_stitches(
-            frames, {1, 2}, {1: 0, 2: 200}, {1: 0, 2: 200}, 30.0, {},
-            spatial_threshold_px=20.0, temporal_gap_max=1.0,
+            frames,
+            {1, 2},
+            {1: 0, 2: 200},
+            {1: 0, 2: 200},
+            30.0,
+            {},
+            spatial_threshold_px=20.0,
+            temporal_gap_max=1.0,
         )
         assert result == {}
 
@@ -812,8 +980,14 @@ class TestDetectTrackStitches:
             frames.append(cv_mod.FrameDetections(fn, fn / 30.0, dets, 100, 100))
         svc = self._make_service(cv_mod)
         result = svc._detect_track_stitches(
-            frames, {1, 2}, {1: 0, 2: 0}, {1: 9, 2: 9}, 30.0, {},
-            spatial_threshold_px=10.0, temporal_gap_max=1.0,
+            frames,
+            {1, 2},
+            {1: 0, 2: 0},
+            {1: 9, 2: 9},
+            30.0,
+            {},
+            spatial_threshold_px=10.0,
+            temporal_gap_max=1.0,
         )
         assert len(result) == 1
         discarded, survivor = list(result.items())[0]
@@ -824,17 +998,39 @@ class TestDetectTrackStitches:
         """Two sequential tracks with small gap and close boundary positions."""
         frames = []
         for fn in range(5):
-            frames.append(cv_mod.FrameDetections(fn, fn / 30.0, [
-                cv_mod.Detection((20, 20, 40, 60), 0.9, 0, "person", track_id=1),
-            ], 100, 100))
+            frames.append(
+                cv_mod.FrameDetections(
+                    fn,
+                    fn / 30.0,
+                    [
+                        cv_mod.Detection((20, 20, 40, 60), 0.9, 0, "person", track_id=1),
+                    ],
+                    100,
+                    100,
+                )
+            )
         for fn in range(8, 13):
-            frames.append(cv_mod.FrameDetections(fn, fn / 30.0, [
-                cv_mod.Detection((22, 20, 42, 60), 0.9, 0, "person", track_id=2),
-            ], 100, 100))
+            frames.append(
+                cv_mod.FrameDetections(
+                    fn,
+                    fn / 30.0,
+                    [
+                        cv_mod.Detection((22, 20, 42, 60), 0.9, 0, "person", track_id=2),
+                    ],
+                    100,
+                    100,
+                )
+            )
         svc = self._make_service(cv_mod)
         result = svc._detect_track_stitches(
-            frames, {1, 2}, {1: 0, 2: 8}, {1: 4, 2: 12}, 30.0, {},
-            spatial_threshold_px=10.0, temporal_gap_max=5.0,
+            frames,
+            {1, 2},
+            {1: 0, 2: 8},
+            {1: 4, 2: 12},
+            30.0,
+            {},
+            spatial_threshold_px=10.0,
+            temporal_gap_max=5.0,
         )
         assert len(result) == 1
         discarded, survivor = list(result.items())[0]
@@ -852,11 +1048,17 @@ class TestDetectTrackStitches:
             frames.append(cv_mod.FrameDetections(fn, fn / 30.0, dets, 100, 100))
         svc = self._make_service(cv_mod)
         result = svc._detect_track_stitches(
-            frames, {1, 2, 3}, {1: 0, 2: 0, 3: 0}, {1: 9, 2: 9, 3: 9}, 30.0, {},
-            spatial_threshold_px=10.0, temporal_gap_max=1.0,
+            frames,
+            {1, 2, 3},
+            {1: 0, 2: 0, 3: 0},
+            {1: 9, 2: 9, 3: 9},
+            30.0,
+            {},
+            spatial_threshold_px=10.0,
+            temporal_gap_max=1.0,
         )
         assert len(result) >= 1
-        for discarded, survivor in result.items():
+        for _discarded, survivor in result.items():
             assert survivor not in result  # no transitive chains remain
 
     @pytest.mark.asyncio
@@ -864,7 +1066,8 @@ class TestDetectTrackStitches:
         """Integration: overlapping tracks in process_video get stitched."""
         vc_patcher = _mock_video_capture(30)
         service = cv_mod.CVService(
-            model_size="n", expected_player_count=22,
+            model_size="n",
+            expected_player_count=22,
             min_track_lifetime_frames=1,
         )
         service._initialized = True
@@ -879,7 +1082,8 @@ class TestDetectTrackStitches:
         service.detect_frame = factory(cv_mod)
 
         result = await service.process_video(
-            Path("/fake/video.mp4"), frame_skip=1,
+            Path("/fake/video.mp4"),
+            frame_skip=1,
             enable_team_detection=False,
         )
         vc_patcher.stop()

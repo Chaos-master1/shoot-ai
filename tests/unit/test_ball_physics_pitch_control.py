@@ -1,4 +1,5 @@
 """Tests for physics-based pitch control — ball trajectory + player arrival."""
+
 import pytest
 
 from kawkab.core.ball_physics_pitch_control import (
@@ -99,7 +100,6 @@ class TestComputeFrameControl:
         frame = ctrl.compute_frame_control([(52.5, 34.0)], [(40.0, 30.0)])
         assert isinstance(frame, PhysicsPitchControlFrame)
 
-
     def test_control_percentages_sum_to_100_plus_disputed(self):
         ctrl = BallPhysicsPitchControl(grid_rows=10, grid_cols=10)
         frame = ctrl.compute_frame_control(
@@ -116,14 +116,16 @@ class TestComputeFrameControl:
         away = [(55.0, 34.0)]
         frame_no_vel = ctrl.compute_frame_control(home, away)
         frame_fast = ctrl.compute_frame_control(
-            home, away,
+            home,
+            away,
             home_velocities=[(7.0, 0.0)],
             away_velocities=[(0.0, 0.0)],
         )
         # With velocity toward away's area, home should gain
-        assert frame_no_vel.home_control_pct != pytest.approx(
-            frame_fast.home_control_pct, abs=0.01
-        ) or abs(frame_fast.home_control_pct - frame_no_vel.home_control_pct) < 100
+        assert (
+            frame_no_vel.home_control_pct != pytest.approx(frame_fast.home_control_pct, abs=0.01)
+            or abs(frame_fast.home_control_pct - frame_no_vel.home_control_pct) < 100
+        )
 
 
 class TestComputeMatchControl:

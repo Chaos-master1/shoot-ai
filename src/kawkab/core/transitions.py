@@ -11,7 +11,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-from kawkab.core.coords import FINAL_THIRD_X, PitchConfig, STANDARD_PITCH
+from kawkab.core.coords import FINAL_THIRD_X, STANDARD_PITCH, PitchConfig
 
 
 @dataclass

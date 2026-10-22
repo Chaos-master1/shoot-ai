@@ -6,7 +6,6 @@ All methods are numpy-only and use game_constants pitch dimensions.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any
 
 import numpy as np
@@ -15,9 +14,7 @@ from kawkab.core.game_constants import GAME
 
 PITCH_LENGTH = getattr(GAME, "PITCH_LENGTH_M", 105.0)
 PITCH_WIDTH = getattr(GAME, "PITCH_WIDTH_M", 68.0)
-PRESSING_TRAP_ZONE_BOUNDARY_PCT = getattr(
-    GAME, "PRESSING_TRAP_ZONE_BOUNDARY_PCT", (0.25, 0.75)
-)
+PRESSING_TRAP_ZONE_BOUNDARY_PCT = getattr(GAME, "PRESSING_TRAP_ZONE_BOUNDARY_PCT", (0.25, 0.75))
 
 
 class PressingEfficiencyAnalyzer:
@@ -55,27 +52,28 @@ class PressingEfficiencyAnalyzer:
             goals_from_traps = 0
             used_shot_indices: set[int] = set()
 
-            team_positions = np.array(
+            _ = np.array(
                 [
                     [
-                        float(e.get("x", e.get("start_x", 0))),
-                        float(e.get("y", e.get("start_y", 0))),
+                        # dict.get(k, default) returns None when the key
+                        # exists with a NULL value (storage's json_extract
+                        # emits x/y=None for events without spatial data) —
+                        # explicit None-check, same fix as
+                        # tactical_shape_analyzer._analyze_window.
+                        float(e["x"] if e.get("x") is not None else e.get("start_x", 0)),
+                        float(e["y"] if e.get("y") is not None else e.get("start_y", 0)),
                     ]
                     for e in team_events
                 ],
                 dtype=np.float64,
             )
-            trap_mask = np.array(
-                [self._is_trap_event(e) for e in team_events], dtype=bool
-            )
+            trap_mask = np.array([self._is_trap_event(e) for e in team_events], dtype=bool)
             trap_indices = np.where(trap_mask)[0]
 
             for ti in trap_indices:
                 traps += 1
                 idx_in_sorted = sorted_ev.index(team_events[ti])
-                window = sorted_ev[
-                    idx_in_sorted + 1 : min(n, idx_in_sorted + 6)
-                ]
+                window = sorted_ev[idx_in_sorted + 1 : min(n, idx_in_sorted + 6)]
                 for wi, we in enumerate(window):
                     actual_idx = idx_in_sorted + 1 + wi
                     if self._is_shot_event(we) and actual_idx not in used_shot_indices:
@@ -89,9 +87,7 @@ class PressingEfficiencyAnalyzer:
                 "traps": float(traps),
                 "shots_from_traps": float(shots_from_traps),
                 "goals_from_traps": float(goals_from_traps),
-                "conversion_rate": (
-                    shots_from_traps / traps if traps > 0 else 0.0
-                ),
+                "conversion_rate": (shots_from_traps / traps if traps > 0 else 0.0),
             }
 
         return result
@@ -115,9 +111,7 @@ class PressingEfficiencyAnalyzer:
                     continue
                 traps += 1
                 idx = sorted_ev.index(ev)
-                window = sorted_ev[
-                    idx + 1 : min(n, idx + 6)
-                ]
+                window = sorted_ev[idx + 1 : min(n, idx + 6)]
                 for wi, we in enumerate(window):
                     actual_idx = idx + 1 + wi
                     if self._is_goal_event(we) and actual_idx not in used_goal_indices:
@@ -128,16 +122,12 @@ class PressingEfficiencyAnalyzer:
             result[team] = {
                 "traps": float(traps),
                 "goals_from_traps": float(goals_from_traps),
-                "conversion_rate": (
-                    goals_from_traps / traps if traps > 0 else 0.0
-                ),
+                "conversion_rate": (goals_from_traps / traps if traps > 0 else 0.0),
             }
 
         return result
 
-    def analyze_high_press_efficiency(
-        self, events: list[dict[str, Any]]
-    ) -> dict[str, float]:
+    def analyze_high_press_efficiency(self, events: list[dict[str, Any]]) -> dict[str, float]:
         """High press efficiency index.
 
         Traps in attacking third / shots conceded after losing press.
@@ -158,7 +148,11 @@ class PressingEfficiencyAnalyzer:
                     continue
                 if not self._is_trap_event(ev):
                     continue
-                x = float(ev.get("x", ev.get("start_x", 0)))
+                # dict.get(k, default) returns None when the key exists
+                # with a NULL value (storage's json_extract emits x=None
+                # for events without spatial data) -- explicit None-check,
+                # same fix as compute_trap_to_shot_rate above.
+                x = float(ev["x"] if ev.get("x") is not None else ev.get("start_x", 0))
                 if x < attacking_third_x:
                     continue
                 traps_in_attacking += 1
@@ -167,15 +161,11 @@ class PressingEfficiencyAnalyzer:
                 opponent = "away" if team == "home" else "home"
                 for j in range(i + 1, min(n, i + 6)):
                     later = sorted_ev[j]
-                    if later.get("team") == opponent and self._is_shot_event(
-                        later
-                    ):
+                    if later.get("team") == opponent and self._is_shot_event(later):
                         shots_after_press_loss += 1
                         break
 
-            efficiency = (
-                traps_in_attacking / max(shots_after_press_loss, 1)
-            )
+            efficiency = traps_in_attacking / max(shots_after_press_loss, 1)
             result[team] = round(efficiency, 4)
 
         return result
@@ -229,9 +219,7 @@ class PressingEfficiencyAnalyzer:
                 # Check if this leads to a chance (shot) within next 8 events
                 for j in range(i + 1, min(n, i + 10)):
                     later = sorted_ev[j]
-                    if later.get("team") == team and self._is_shot_event(
-                        later
-                    ):
+                    if later.get("team") == team and self._is_shot_event(later):
                         chances_created += 1
                         xg_created += float(later.get("xg", 0.0))
                         shot_ts = float(later.get("timestamp", ts))
@@ -243,9 +231,7 @@ class PressingEfficiencyAnalyzer:
                 "chances_created": float(chances_created),
                 "xg_created": round(xg_created, 4),
                 "avg_time_to_shot": (
-                    round(float(np.mean(times_to_shot)), 2)
-                    if times_to_shot
-                    else 0.0
+                    round(float(np.mean(times_to_shot)), 2) if times_to_shot else 0.0
                 ),
             }
 

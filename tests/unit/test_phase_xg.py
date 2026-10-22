@@ -1,13 +1,10 @@
 """Tests for Phase xG Breakdown module."""
 
-import pytest
-
 from kawkab.core.phase_xg import (
-    PossessionPhase,
     PhaseXgBreakdown,
     PhaseXgReport,
+    PossessionPhase,
     _detect_possession_chains,
-    _measure_chain,
     _find_chain_for_shot,
     classify_possession_phase,
     compute_phase_xg,
@@ -253,22 +250,47 @@ class TestPhaseXgReport:
         bd = PhaseXgBreakdown(
             team="home",
             phases={
-                "settled_possession": {"shots": 3, "goals": 1, "xg": 1.2, "shots_on_target": 2, "avg_xg_per_shot": 0.4},
+                "settled_possession": {
+                    "shots": 3,
+                    "goals": 1,
+                    "xg": 1.2,
+                    "shots_on_target": 2,
+                    "avg_xg_per_shot": 0.4,
+                },
             },
             totals={"shots": 3, "goals": 1, "xg": 1.2},
             phase_distribution_pct={"settled_possession": 100.0},
         )
-        obd = PhaseXgBreakdown(team="away", phases={}, totals={"shots": 0, "goals": 0, "xg": 0.0}, phase_distribution_pct={})
-        report = PhaseXgReport(team="home", match_id="match_1", team_breakdown=bd, opponent_breakdown=obd)
+        obd = PhaseXgBreakdown(
+            team="away",
+            phases={},
+            totals={"shots": 0, "goals": 0, "xg": 0.0},
+            phase_distribution_pct={},
+        )
+        report = PhaseXgReport(
+            team="home", match_id="match_1", team_breakdown=bd, opponent_breakdown=obd
+        )
         text = report.summary_text()
         assert isinstance(text, str)
         assert len(text) > 20
         assert "Phase xG Breakdown" in text
 
     def test_to_dict(self):
-        bd = PhaseXgBreakdown(team="home", phases={}, totals={"shots": 0, "goals": 0, "xg": 0.0}, phase_distribution_pct={})
-        obd = PhaseXgBreakdown(team="away", phases={}, totals={"shots": 0, "goals": 0, "xg": 0.0}, phase_distribution_pct={})
-        report = PhaseXgReport(team="home", match_id="m1", team_breakdown=bd, opponent_breakdown=obd)
+        bd = PhaseXgBreakdown(
+            team="home",
+            phases={},
+            totals={"shots": 0, "goals": 0, "xg": 0.0},
+            phase_distribution_pct={},
+        )
+        obd = PhaseXgBreakdown(
+            team="away",
+            phases={},
+            totals={"shots": 0, "goals": 0, "xg": 0.0},
+            phase_distribution_pct={},
+        )
+        report = PhaseXgReport(
+            team="home", match_id="m1", team_breakdown=bd, opponent_breakdown=obd
+        )
         d = report.to_dict()
         assert d["team"] == "home"
         assert d["match_id"] == "m1"
@@ -280,7 +302,9 @@ class TestPhaseXgReport:
             _make_event(2, team="home", timestamp=2.0, start_x=60.0, end_x=70.0),
             _make_event(3, team="home", timestamp=3.0, start_x=70.0, end_x=80.0),
             _make_event(4, team="home", timestamp=4.0, start_x=80.0, end_x=85.0),
-            _make_event(5, team="home", timestamp=5.0, etype="shot", xg=0.6, is_goal=True, on_target=True),
+            _make_event(
+                5, team="home", timestamp=5.0, etype="shot", xg=0.6, is_goal=True, on_target=True
+            ),
         ]
         home_events = [e for e in events if e.get("team") == "home"]
         report = compute_phase_xg(home_events, [], events)

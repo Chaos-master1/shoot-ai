@@ -33,7 +33,9 @@ class CrossMatchLinkingService:
 
     def __init__(self, storage_service: Any, profile_service: Any = None) -> None:
         self._storage = storage_service
-        self._profile_svc = profile_service if profile_service is not None else PlayerProfileService()
+        self._profile_svc = (
+            profile_service if profile_service is not None else PlayerProfileService()
+        )
 
     async def link_all_matches(self) -> dict[str, Any]:
         """Iterate all matches and link players to profiles.
@@ -100,35 +102,41 @@ class CrossMatchLinkingService:
                         )
                         if success:
                             linked += 1
-                        proposals.append({
-                            "track_id": track_id,
-                            "profile_id": match["profile_id"],
-                            "profile_name": match.get("display_name"),
-                            "distance": round(dist, 4),
-                            "confidence": round(1.0 - dist, 4),
-                            "action": "auto_linked",
-                        })
+                        proposals.append(
+                            {
+                                "track_id": track_id,
+                                "profile_id": match["profile_id"],
+                                "profile_name": match.get("display_name"),
+                                "distance": round(dist, 4),
+                                "confidence": round(1.0 - dist, 4),
+                                "action": "auto_linked",
+                            }
+                        )
                         continue
                     elif dist < FLAG_REVIEW_THRESHOLD:
-                        proposals.append({
-                            "track_id": track_id,
-                            "profile_id": match["profile_id"],
-                            "profile_name": match.get("display_name"),
-                            "distance": round(dist, 4),
-                            "confidence": round(1.0 - dist, 4),
-                            "action": "flag_for_review",
-                        })
+                        proposals.append(
+                            {
+                                "track_id": track_id,
+                                "profile_id": match["profile_id"],
+                                "profile_name": match.get("display_name"),
+                                "distance": round(dist, 4),
+                                "confidence": round(1.0 - dist, 4),
+                                "action": "flag_for_review",
+                            }
+                        )
                         flagged += 1
                         continue
 
-            proposals.append({
-                "track_id": track_id,
-                "profile_id": None,
-                "profile_name": None,
-                "distance": None,
-                "confidence": 0.0,
-                "action": "no_match",
-            })
+            proposals.append(
+                {
+                    "track_id": track_id,
+                    "profile_id": None,
+                    "profile_name": None,
+                    "distance": None,
+                    "confidence": 0.0,
+                    "action": "no_match",
+                }
+            )
 
         return {
             "match_id": match_id,
@@ -137,9 +145,7 @@ class CrossMatchLinkingService:
             "proposals": proposals,
         }
 
-    def _load_profile_embeddings(
-        self, profiles: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def _load_profile_embeddings(self, profiles: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Load face/reid embeddings from profiles into a searchable list."""
         embeddings: list[dict[str, Any]] = []
         for p in profiles:
@@ -148,6 +154,7 @@ class CrossMatchLinkingService:
             if emb_text:
                 try:
                     import json
+
                     emb = np.array(json.loads(emb_text), dtype=np.float32)
                 except (json.JSONDecodeError, TypeError):
                     pass
@@ -155,27 +162,29 @@ class CrossMatchLinkingService:
             if reid_text and emb is None:
                 try:
                     import json
+
                     emb = np.array(json.loads(reid_text), dtype=np.float32)
                 except (json.JSONDecodeError, TypeError):
                     pass
             if emb is not None:
-                embeddings.append({
-                    "profile_id": p["id"],
-                    "display_name": p.get("display_name"),
-                    "jersey_number": p.get("jersey_number"),
-                    "team": p.get("team"),
-                    "embedding": emb,
-                })
+                embeddings.append(
+                    {
+                        "profile_id": p["id"],
+                        "display_name": p.get("display_name"),
+                        "jersey_number": p.get("jersey_number"),
+                        "team": p.get("team"),
+                        "embedding": emb,
+                    }
+                )
         return embeddings
 
-    def _get_player_embedding(
-        self, player: dict[str, Any]
-    ) -> np.ndarray | None:
+    def _get_player_embedding(self, player: dict[str, Any]) -> np.ndarray | None:
         """Try to get an embedding for a match player from available data."""
         emb_text = player.get("reid_embedding") or player.get("face_embedding")
         if emb_text:
             try:
                 import json
+
                 return np.array(json.loads(emb_text), dtype=np.float32)
             except (json.JSONDecodeError, TypeError):
                 return None

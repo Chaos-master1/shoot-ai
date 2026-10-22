@@ -57,7 +57,11 @@ class TestXgSimple:
 
     def test_single_home_shot(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 30}},
+            {
+                "type": "shot",
+                "team": "home",
+                "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 30},
+            },
         ]
         result = svc.compute_xg_simple(events)
         assert result["home"] > 0
@@ -67,20 +71,56 @@ class TestXgSimple:
 
     def test_away_shot(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "shot", "team": "away", "metadata": {"distance_to_goal_m": 18, "angle_to_goal_deg": 25}},
+            {
+                "type": "shot",
+                "team": "away",
+                "metadata": {"distance_to_goal_m": 18, "angle_to_goal_deg": 25},
+            },
         ]
         result = svc.compute_xg_simple(events)
         assert result["home"] == 0
         assert result["away"] > 0
 
     def test_close_shot_higher_xg(self, svc: AnalysisService) -> None:
-        close = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 6, "angle_to_goal_deg": 30}}])
-        far = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 30, "angle_to_goal_deg": 30}}])
+        close = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 6, "angle_to_goal_deg": 30},
+                }
+            ]
+        )
+        far = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 30, "angle_to_goal_deg": 30},
+                }
+            ]
+        )
         assert close["home"] > far["home"]
 
     def test_central_shot_higher_xg(self, svc: AnalysisService) -> None:
-        center = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 0}}])
-        wide = svc.compute_xg_simple([{"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 75}}])
+        center = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 0},
+                }
+            ]
+        )
+        wide = svc.compute_xg_simple(
+            [
+                {
+                    "type": "shot",
+                    "team": "home",
+                    "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 75},
+                }
+            ]
+        )
         assert center["home"] > wide["home"]
 
     def test_non_shot_events_ignored(self, svc: AnalysisService) -> None:
@@ -94,15 +134,34 @@ class TestXgSimple:
         assert result["shot_details"] == []
 
     def test_shot_with_timestamp(self, svc: AnalysisService) -> None:
-        events = [{"type": "shot", "team": "home", "timestamp": 1234.5, "metadata": {"distance_to_goal_m": 10, "angle_to_goal_deg": 30}}]
+        events = [
+            {
+                "type": "shot",
+                "team": "home",
+                "timestamp": 1234.5,
+                "metadata": {"distance_to_goal_m": 10, "angle_to_goal_deg": 30},
+            }
+        ]
         result = svc.compute_xg_simple(events)
         assert result["shot_details"][0]["timestamp"] == 1234.5
 
     def test_multiple_shots_accumulate(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 10, "angle_to_goal_deg": 30}},
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 25}},
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 15, "angle_to_goal_deg": 35}},
+            {
+                "type": "shot",
+                "team": "home",
+                "metadata": {"distance_to_goal_m": 10, "angle_to_goal_deg": 30},
+            },
+            {
+                "type": "shot",
+                "team": "home",
+                "metadata": {"distance_to_goal_m": 12, "angle_to_goal_deg": 25},
+            },
+            {
+                "type": "shot",
+                "team": "home",
+                "metadata": {"distance_to_goal_m": 15, "angle_to_goal_deg": 35},
+            },
         ]
         result = svc.compute_xg_simple(events)
         assert result["home"] > 0
@@ -110,8 +169,16 @@ class TestXgSimple:
 
     def test_xg_bounded_zero_to_one(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 1, "angle_to_goal_deg": 0}},
-            {"type": "shot", "team": "home", "metadata": {"distance_to_goal_m": 80, "angle_to_goal_deg": 89}},
+            {
+                "type": "shot",
+                "team": "home",
+                "metadata": {"distance_to_goal_m": 1, "angle_to_goal_deg": 0},
+            },
+            {
+                "type": "shot",
+                "team": "home",
+                "metadata": {"distance_to_goal_m": 80, "angle_to_goal_deg": 89},
+            },
         ]
         result = svc.compute_xg_simple(events)
         for shot in result["shot_details"]:
@@ -126,7 +193,12 @@ class TestXtSimple:
 
     def test_single_pass_advances_xt(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "pass", "team": "home", "completed": True, "metadata": {"start_x_pct": 0.3, "end_x_pct": 0.7}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.3, "end_x_pct": 0.7},
+            },
         ]
         result = svc.compute_xt_simple(events)
         assert result["home"] >= 0
@@ -134,36 +206,66 @@ class TestXtSimple:
 
     def test_failed_pass_no_xt(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "pass", "team": "home", "completed": False, "metadata": {"start_x_pct": 0.3, "end_x_pct": 0.7}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": False,
+                "metadata": {"start_x_pct": 0.3, "end_x_pct": 0.7},
+            },
         ]
         result = svc.compute_xt_simple(events)
         assert result["home"] == 0
 
     def test_pass_in_attacking_third_higher_xt(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "pass", "team": "home", "completed": True, "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.9},
+            },
         ]
         result = svc.compute_xt_simple(events)
         assert result["home"] > 0
 
     def test_pass_progresses_forward(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "pass", "team": "home", "completed": True, "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.5}},
-            {"type": "pass", "team": "home", "completed": True, "metadata": {"start_x_pct": 0.5, "end_x_pct": 0.9}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.5},
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.5, "end_x_pct": 0.9},
+            },
         ]
         result = svc.compute_xt_simple(events)
         assert result["home"] > 0
 
     def test_backward_pass_no_xt(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "pass", "team": "home", "completed": True, "metadata": {"start_x_pct": 0.7, "end_x_pct": 0.3}},
+            {
+                "type": "pass",
+                "team": "home",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.7, "end_x_pct": 0.3},
+            },
         ]
         result = svc.compute_xt_simple(events)
         assert result["home"] == 0
 
     def test_away_passes_credit_away(self, svc: AnalysisService) -> None:
         events = [
-            {"type": "pass", "team": "away", "completed": True, "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7}},
+            {
+                "type": "pass",
+                "team": "away",
+                "completed": True,
+                "metadata": {"start_x_pct": 0.1, "end_x_pct": 0.7},
+            },
         ]
         result = svc.compute_xt_simple(events)
         assert result["away"] > 0
@@ -182,9 +284,11 @@ class TestXtSimple:
 class TestPpda:
     def test_empty_match_data(self, svc: AnalysisService) -> None:
         from dataclasses import dataclass, field
+
         @dataclass
         class FakeTrack:
             frames: list = field(default_factory=list)
+
         result = svc.compute_ppda(FakeTrack(), team="home")
         assert "ppda" in result
         assert result["ppda"] is None

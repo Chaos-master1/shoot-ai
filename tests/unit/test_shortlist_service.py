@@ -55,18 +55,28 @@ def svc(db: sqlite3.Connection) -> ShortlistService:  # type: ignore
 
 class TestAddPlayer:
     def test_add_creates_entry(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p1", "Player One", position="FWD", team="Team A", league="PL")
+        eid = svc.add_to_shortlist("p1", "Player One", position="FWD", team="Team A", league="PL")
         assert eid > 0
 
     def test_duplicate_player_returns_existing(self, svc: ShortlistService) -> None:
-        eid1 = svc.add_player("p1", "Player One")
-        eid2 = svc.add_player("p1", "Player One")
+        eid1 = svc.add_to_shortlist("p1", "Player One")
+        eid2 = svc.add_to_shortlist("p1", "Player One")
         assert eid1 == eid2
 
     def test_add_with_all_fields(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p2", "Player Two", position="MID", team="Team B",
-                              league="La Liga", priority="high", notes="Watch list",
-                              scout_rating=8.5, age=24, nationality="Spain", estimated_value=15.0)
+        eid = svc.add_to_shortlist(
+            "p2",
+            "Player Two",
+            position="MID",
+            team="Team B",
+            league="La Liga",
+            priority="high",
+            notes="Watch list",
+            scout_rating=8.5,
+            age=24,
+            nationality="Spain",
+            estimated_value=15.0,
+        )
         assert eid > 0
         entry = svc.get_player_on_shortlist("p2")
         assert entry is not None
@@ -76,63 +86,68 @@ class TestAddPlayer:
 
     def test_empty_storage_returns_graceful_defaults(self) -> None:
         s = ShortlistService()
-        assert s.add_player("p1", "P1") == 0
+        assert s.add_to_shortlist("p1", "P1") == 0
         assert s.get_shortlist() == []
-        assert s.get_shortlist_stats() == {"total": 0, "by_status": {}, "by_priority": {}, "by_position": {}}
+        assert s.get_shortlist_stats() == {
+            "total": 0,
+            "by_status": {},
+            "by_priority": {},
+            "by_position": {},
+        }
         assert s.get_player_on_shortlist("p1") is None
 
 
 class TestUpdateStatus:
     def test_update_status_works(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p1", "P1")
+        eid = svc.add_to_shortlist("p1", "P1")
         assert svc.update_status(eid, "contacted") is True
         entry = svc.get_player_on_shortlist("p1")
         assert entry["status"] == "contacted"
 
     def test_invalid_status_returns_false(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p1", "P1")
+        eid = svc.add_to_shortlist("p1", "P1")
         assert svc.update_status(eid, "invalid") is False
 
     def test_remove_archives(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p1", "P1")
+        eid = svc.add_to_shortlist("p1", "P1")
         assert svc.remove_player(eid) is True
         assert svc.get_player_on_shortlist("p1") is None
 
 
 class TestUpdatePriority:
     def test_update_priority_works(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p1", "P1", priority="low")
+        eid = svc.add_to_shortlist("p1", "P1", priority="low")
         assert svc.update_priority(eid, "urgent") is True
         entries = svc.get_shortlist(priority="urgent")
         assert len(entries) == 1
 
     def test_invalid_priority_returns_false(self, svc: ShortlistService) -> None:
-        eid = svc.add_player("p1", "P1")
+        eid = svc.add_to_shortlist("p1", "P1")
         assert svc.update_priority(eid, "critical") is False
 
 
 class TestGetShortlist:
     def test_filter_by_status(self, svc: ShortlistService) -> None:
-        svc.add_player("p1", "P1")
-        svc.add_player("p2", "P2")
-        eid3 = svc.add_player("p3", "P3")
+        svc.add_to_shortlist("p1", "P1")
+        svc.add_to_shortlist("p2", "P2")
+        eid3 = svc.add_to_shortlist("p3", "P3")
         svc.update_status(eid3, "signed")
         entries = svc.get_shortlist(status="signed")
         assert len(entries) == 1
         assert entries[0]["player_id"] == "p3"
 
     def test_filter_by_position(self, svc: ShortlistService) -> None:
-        svc.add_player("p1", "P1", position="FWD")
-        svc.add_player("p2", "P2", position="MID")
+        svc.add_to_shortlist("p1", "P1", position="FWD")
+        svc.add_to_shortlist("p2", "P2", position="MID")
         entries = svc.get_shortlist(position="MID")
         assert len(entries) == 1
 
 
 class TestShortlistStats:
     def test_stats_computed_correctly(self, svc: ShortlistService) -> None:
-        svc.add_player("p1", "P1", position="FWD", priority="high")
-        svc.add_player("p2", "P2", position="MID", priority="medium")
-        svc.add_player("p3", "P3", position="FWD", priority="high")
+        svc.add_to_shortlist("p1", "P1", position="FWD", priority="high")
+        svc.add_to_shortlist("p2", "P2", position="MID", priority="medium")
+        svc.add_to_shortlist("p3", "P3", position="FWD", priority="high")
         stats = svc.get_shortlist_stats()
         assert stats["total"] == 3
         assert stats["by_priority"]["high"] == 2

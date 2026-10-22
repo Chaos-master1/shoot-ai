@@ -23,7 +23,7 @@ def parse_po(text: str) -> dict[str, str]:
     entries: dict[str, str] = {}
     for m in PO_PATTERN.finditer(text):
         key = m.group(1)
-        value = m.group(2).replace('\\n', '\n')
+        value = m.group(2).replace("\\n", "\n")
         entries[key] = value
     return entries
 

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any
 
 import cv2
@@ -44,9 +43,7 @@ class FaceRecognitionService:
         if self._detector is not None:
             return
         try:
-            import insightface
             from insightface.app import FaceAnalysis
-            from insightface.model_zoo import get_model
 
             app = FaceAnalysis(
                 name=INSIGHTFACE_MODEL_PACK,
@@ -67,6 +64,7 @@ class FaceRecognitionService:
     def available(self) -> bool:
         try:
             import insightface  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -75,9 +73,7 @@ class FaceRecognitionService:
     # Face detection + embedding
     # ------------------------------------------------------------------
 
-    def detect_faces(
-        self, img: np.ndarray
-    ) -> list[dict[str, Any]]:
+    def detect_faces(self, img: np.ndarray) -> list[dict[str, Any]]:
         """Detect faces in an image, return list with bbox + embedding + confidence."""
         self._ensure_models()
         if self._app is None:
@@ -89,12 +85,14 @@ class FaceRecognitionService:
             bbox = face.bbox.astype(int).tolist()
             embedding = face.normed_embedding.tolist()
             det_score = float(face.det_score)
-            results.append({
-                "bbox": bbox,
-                "embedding": embedding,
-                "confidence": det_score,
-                "embedding_np": face.normed_embedding,
-            })
+            results.append(
+                {
+                    "bbox": bbox,
+                    "embedding": embedding,
+                    "confidence": det_score,
+                    "embedding_np": face.normed_embedding,
+                }
+            )
         return results
 
     def get_embedding(self, img: np.ndarray) -> np.ndarray | None:
@@ -102,9 +100,9 @@ class FaceRecognitionService:
         faces = self.detect_faces(img)
         if not faces:
             return None
-        largest = max(faces, key=lambda f: (
-            (f["bbox"][2] - f["bbox"][0]) * (f["bbox"][3] - f["bbox"][1])
-        ))
+        largest = max(
+            faces, key=lambda f: (f["bbox"][2] - f["bbox"][0]) * (f["bbox"][3] - f["bbox"][1])
+        )
         return largest["embedding_np"]
 
     # ------------------------------------------------------------------
@@ -126,15 +124,17 @@ class FaceRecognitionService:
                 emb = np.array(json.loads(emb_text), dtype=np.float32)
             except (json.JSONDecodeError, TypeError):
                 continue
-            self._gallery.append({
-                "profile_id": p["id"],
-                "global_id": p.get("global_id", ""),
-                "display_name": p.get("display_name", ""),
-                "jersey_number": p.get("jersey_number"),
-                "team": p.get("team", "home"),
-                "embedding": emb,
-                "confidence": p.get("face_confidence", 0.0),
-            })
+            self._gallery.append(
+                {
+                    "profile_id": p["id"],
+                    "global_id": p.get("global_id", ""),
+                    "display_name": p.get("display_name", ""),
+                    "jersey_number": p.get("jersey_number"),
+                    "team": p.get("team", "home"),
+                    "embedding": emb,
+                    "confidence": p.get("face_confidence", 0.0),
+                }
+            )
         self._gallery_loaded = True
         logger.info("Face gallery loaded: %d profiles", len(self._gallery))
 
@@ -145,11 +145,13 @@ class FaceRecognitionService:
         confidence: float,
     ) -> None:
         """Add a profile to the in-memory gallery."""
-        self._gallery.append({
-            "profile_id": profile_id,
-            "embedding": embedding,
-            "confidence": confidence,
-        })
+        self._gallery.append(
+            {
+                "profile_id": profile_id,
+                "embedding": embedding,
+                "confidence": confidence,
+            }
+        )
         self._gallery_loaded = True
 
     # ------------------------------------------------------------------
@@ -189,9 +191,7 @@ class FaceRecognitionService:
             "confidence": round(1.0 - best_dist, 4),
         }
 
-    def identify_player_from_crop(
-        self, player_crop: np.ndarray
-    ) -> dict[str, Any] | None:
+    def identify_player_from_crop(self, player_crop: np.ndarray) -> dict[str, Any] | None:
         """Identify a player from a cropped image of their upper body/face."""
         emb = self.get_embedding(player_crop)
         if emb is None:
@@ -236,9 +236,7 @@ class FaceRecognitionService:
                     continue
 
                 bbox = [int(v) for v in det.bbox]
-                crop = self._crop_face_region(
-                    frame_det, bbox, track_data
-                )
+                crop = self._crop_face_region(frame_det, bbox, track_data)
                 if crop is None:
                     continue
 
@@ -255,19 +253,19 @@ class FaceRecognitionService:
         logger.info(
             "Match identification: %d / %d players identified",
             len(identified),
-            len(set(
-                d.track_id for f in track_data.frames
-                for d in f.detections
-                if d.class_name == "person" and d.track_id is not None
-            )),
+            len(
+                {
+                    d.track_id
+                    for f in track_data.frames
+                    for d in f.detections
+                    if d.class_name == "person" and d.track_id is not None
+                }
+            ),
         )
         return identified
 
-    def _crop_face_region(
-        self, frame_det, bbox: list[int], track_data
-    ) -> np.ndarray | None:
+    def _crop_face_region(self, frame_det, bbox: list[int], track_data) -> np.ndarray | None:
         """Extract the upper-body region from a frame."""
-        import cv2
 
         w = frame_det.image_width
         h = frame_det.image_height

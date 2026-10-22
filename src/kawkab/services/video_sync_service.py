@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Optional
 
 from kawkab.core.logging import get_logger
 from kawkab.core.security import SecurityValidator
@@ -29,7 +28,7 @@ class SyncState:
 
 class MultiAngleSyncService:
     def __init__(self):
-        self._state: Optional[SyncState] = None
+        self._state: SyncState | None = None
 
     def load_videos(self, video_paths: list[dict]) -> str:
         validated = []
@@ -38,10 +37,11 @@ class MultiAngleSyncService:
             if not path or not os.path.isfile(path):
                 return json.dumps({"error": f"Video not found: {v.get('path')}"})
             label = v.get("label", os.path.basename(path))
-            validated.append(VideoSource(path=path, label=label))
+            validated.append(VideoSource(path=str(path), label=label))
         if not validated:
             return json.dumps({"error": "No valid video paths"})
         import cv2
+
         durations = []
         for vs in validated:
             cap = cv2.VideoCapture(vs.path)
@@ -56,13 +56,20 @@ class MultiAngleSyncService:
             master_index=0,
             master_duration=durations[0] if durations else 0.0,
         )
-        return json.dumps({
-            "sources": [
-                {"label": s.label, "path": s.path, "duration_s": round(s.duration_seconds, 1), "is_master": s.is_master}
-                for s in validated
-            ],
-            "master_duration": round(self._state.master_duration, 1),
-        })
+        return json.dumps(
+            {
+                "sources": [
+                    {
+                        "label": s.label,
+                        "path": s.path,
+                        "duration_s": round(s.duration_seconds, 1),
+                        "is_master": s.is_master,
+                    }
+                    for s in validated
+                ],
+                "master_duration": round(self._state.master_duration, 1),
+            }
+        )
 
     def set_offset(self, source_index: int, offset_seconds: float) -> str:
         if not self._state or source_index < 0 or source_index >= len(self._state.sources):
@@ -79,33 +86,37 @@ class MultiAngleSyncService:
         for i, s in enumerate(self._state.sources):
             slave_time = master_time - s.offset_seconds
             clamped = max(0.0, min(slave_time, s.duration_seconds - 0.04))
-            positions.append({
-                "index": i,
-                "label": s.label,
-                "path": s.path,
-                "time_s": round(clamped, 2),
-                "duration_s": round(s.duration_seconds, 1),
-            })
+            positions.append(
+                {
+                    "index": i,
+                    "label": s.label,
+                    "path": s.path,
+                    "time_s": round(clamped, 2),
+                    "duration_s": round(s.duration_seconds, 1),
+                }
+            )
         return json.dumps({"master_time": round(master_time, 2), "positions": positions})
 
     def get_state(self) -> str:
         if not self._state:
             return json.dumps({"loaded": False})
-        return json.dumps({
-            "loaded": True,
-            "sources": [
-                {
-                    "label": s.label,
-                    "path": s.path,
-                    "duration_s": s.duration_seconds,
-                    "offset_s": s.offset_seconds,
-                    "is_master": s.is_master,
-                }
-                for s in self._state.sources
-            ],
-            "master_index": self._state.master_index,
-            "master_duration": self._state.master_duration,
-        })
+        return json.dumps(
+            {
+                "loaded": True,
+                "sources": [
+                    {
+                        "label": s.label,
+                        "path": s.path,
+                        "duration_s": s.duration_seconds,
+                        "offset_s": s.offset_seconds,
+                        "is_master": s.is_master,
+                    }
+                    for s in self._state.sources
+                ],
+                "master_index": self._state.master_index,
+                "master_duration": self._state.master_duration,
+            }
+        )
 
     def clear(self) -> str:
         self._state = None

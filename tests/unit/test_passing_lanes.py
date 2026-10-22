@@ -1,13 +1,9 @@
 """Tests for Passing Lane Analysis module."""
 
-import pytest
-
 from kawkab.core.passing_lanes import (
     PassingLaneAnalysis,
-    _estimate_player_positions,
     _classify_zone,
-    PITCH_LENGTH,
-    PITCH_WIDTH,
+    _estimate_player_positions,
 )
 
 
@@ -41,9 +37,33 @@ class TestPassingLaneAnalysis:
         """Lane density returns per-team stats."""
         pla = PassingLaneAnalysis()
         events = [
-            {"type": "pass", "team": "home", "start_x": 40.0, "start_y": 34.0, "timestamp": 10.0, "end_x": 55.0, "end_y": 34.0},
-            {"type": "pass", "team": "home", "start_x": 50.0, "start_y": 34.0, "timestamp": 20.0, "end_x": 65.0, "end_y": 34.0},
-            {"type": "pass", "team": "away", "start_x": 60.0, "start_y": 34.0, "timestamp": 30.0, "end_x": 45.0, "end_y": 34.0},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 40.0,
+                "start_y": 34.0,
+                "timestamp": 10.0,
+                "end_x": 55.0,
+                "end_y": 34.0,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 50.0,
+                "start_y": 34.0,
+                "timestamp": 20.0,
+                "end_x": 65.0,
+                "end_y": 34.0,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "start_x": 60.0,
+                "start_y": 34.0,
+                "timestamp": 30.0,
+                "end_x": 45.0,
+                "end_y": 34.0,
+            },
         ]
         result = pla.analyze_lane_density(events)
         assert "home" in result
@@ -106,9 +126,33 @@ class TestPassingLaneAnalysis:
         """Progressive lane changes counted per team."""
         pla = PassingLaneAnalysis()
         events = [
-            {"type": "pass", "team": "home", "start_x": 30.0, "start_y": 34.0, "end_x": 45.0, "end_y": 34.0, "timestamp": 10.0},
-            {"type": "pass", "team": "home", "start_x": 45.0, "start_y": 34.0, "end_x": 60.0, "end_y": 34.0, "timestamp": 20.0},
-            {"type": "pass", "team": "away", "start_x": 60.0, "start_y": 34.0, "end_x": 45.0, "end_y": 34.0, "timestamp": 30.0},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 30.0,
+                "start_y": 34.0,
+                "end_x": 45.0,
+                "end_y": 34.0,
+                "timestamp": 10.0,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 45.0,
+                "start_y": 34.0,
+                "end_x": 60.0,
+                "end_y": 34.0,
+                "timestamp": 20.0,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "start_x": 60.0,
+                "start_y": 34.0,
+                "end_x": 45.0,
+                "end_y": 34.0,
+                "timestamp": 30.0,
+            },
         ]
         result = pla.compute_progressive_lane_changes(events)
         assert isinstance(result, dict)

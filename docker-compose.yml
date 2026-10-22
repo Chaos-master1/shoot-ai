@@ -6,7 +6,12 @@ services:
     environment:
       POSTGRES_DB: kawkab
       POSTGRES_USER: kawkab
-      POSTGRES_PASSWORD: ${KAWKAB_DB_PASSWORD:-changeme}
+      # No fallback default -- `${VAR:-changeme}` used to mean `docker
+      # compose up` with no .env file silently started Postgres with the
+      # well-known password "changeme", no error, no warning. `:?...`
+      # instead fails the compose invocation with a clear message if the
+      # variable isn't set.
+      POSTGRES_PASSWORD: ${KAWKAB_DB_PASSWORD:?Set KAWKAB_DB_PASSWORD in your .env file}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -25,7 +30,16 @@ services:
       - "8741:8741"
     environment:
       KAWKAB_JWT_SECRET: ${KAWKAB_JWT_SECRET}
-      KAWKAB_DB_URL: postgresql+asyncpg://kawkab:${KAWKAB_DB_PASSWORD:-changeme}@postgres:5432/kawkab
+      # Two bugs fixed on this line:
+      # 1. Same "changeme" fallback as POSTGRES_PASSWORD above -- if that's
+      #    unset compose now fails outright, so this one would never
+      #    actually be reached with the default; kept consistent anyway.
+      # 2. `postgresql+asyncpg://` is a SQLAlchemy dialect URL. cloud/
+      #    database.py passes KAWKAB_DB_URL straight to `asyncpg.connect()`,
+      #    which does not understand the `+asyncpg` suffix and rejects it --
+      #    the Postgres cloud path would not connect at all as shipped.
+      #    Plain `postgresql://` is what asyncpg actually expects.
+      KAWKAB_DB_URL: postgresql://kawkab:${KAWKAB_DB_PASSWORD:?Set KAWKAB_DB_PASSWORD in your .env file}@postgres:5432/kawkab
       KAWKAB_GOOGLE_CLIENT_ID: ${KAWKAB_GOOGLE_CLIENT_ID:-}
       KAWKAB_GOOGLE_CLIENT_SECRET: ${KAWKAB_GOOGLE_CLIENT_SECRET:-}
       KAWKAB_GITHUB_CLIENT_ID: ${KAWKAB_GITHUB_CLIENT_ID:-}

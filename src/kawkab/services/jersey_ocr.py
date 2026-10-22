@@ -6,7 +6,6 @@ Maps numbers to track IDs and optionally to known squad rosters.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import cv2
@@ -23,6 +22,7 @@ def _get_reader():
     global _ocr_reader
     if _ocr_reader is None:
         import easyocr
+
         _ocr_reader = easyocr.Reader(["en"], gpu=True)
     return _ocr_reader
 
@@ -66,7 +66,9 @@ class JerseyOCR:
         best = max(digits, key=lambda x: x[1])
         return best[0]
 
-    def read_number_from_torso(self, frame: np.ndarray, bbox: tuple[float, float, float, float]) -> int | None:
+    def read_number_from_torso(
+        self, frame: np.ndarray, bbox: tuple[float, float, float, float]
+    ) -> int | None:
         """Extract torso from frame and read jersey number.
 
         Args:
@@ -81,7 +83,12 @@ class JerseyOCR:
             return None
         return self.read_number_from_crop(torso)
 
-    def identify_track(self, frame: np.ndarray, bbox: tuple[float, float, float, float], team_name: str | None = None) -> dict[str, Any]:
+    def identify_track(
+        self,
+        frame: np.ndarray,
+        bbox: tuple[float, float, float, float],
+        team_name: str | None = None,
+    ) -> dict[str, Any]:
         """Identify a player by reading their jersey number.
 
         Args:
@@ -105,7 +112,9 @@ class JerseyOCR:
         return result
 
     @staticmethod
-    def _extract_jersey_region(frame: np.ndarray, bbox: tuple[float, float, float, float]) -> np.ndarray | None:
+    def _extract_jersey_region(
+        frame: np.ndarray, bbox: tuple[float, float, float, float]
+    ) -> np.ndarray | None:
         """Crop the jersey number region from a player bbox.
 
         Strategy: take the upper 30-70% of the bbox (chest/back area).

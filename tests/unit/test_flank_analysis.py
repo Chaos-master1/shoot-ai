@@ -3,13 +3,24 @@
 from kawkab.core.flank_analysis import FlankAnalyzer, classify_zone
 
 
-def _make_pass(team: str, start_x: float, start_y: float, end_x: float, end_y: float,
-               completed: bool = True, timestamp: float = 0) -> dict:
+def _make_pass(
+    team: str,
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+    completed: bool = True,
+    timestamp: float = 0,
+) -> dict:
     return {
-        "type": "pass", "team": team,
-        "start_x": start_x, "start_y": start_y,
-        "end_x": end_x, "end_y": end_y,
-        "completed": completed, "timestamp": timestamp,
+        "type": "pass",
+        "team": team,
+        "start_x": start_x,
+        "start_y": start_y,
+        "end_x": end_x,
+        "end_y": end_y,
+        "completed": completed,
+        "timestamp": timestamp,
     }
 
 
@@ -71,7 +82,14 @@ class TestComputeFlankEffectiveness:
         events = [
             _make_pass("home", 20, 10, 30, 10),
             _make_pass("home", 80, 50, 90, 55),
-            {"type": "shot", "team": "home", "start_x": 80, "start_y": 34, "xg": 0.2, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "home",
+                "start_x": 80,
+                "start_y": 34,
+                "xg": 0.2,
+                "is_goal": False,
+            },
         ]
         result = fa.compute_flank_effectiveness(events, "home")
         assert result["team"] == "home"

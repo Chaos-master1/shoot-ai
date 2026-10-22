@@ -20,13 +20,29 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
+        # Pinned tool versions (match pyproject [dev] extra + test.yml):
+        # an unpinned `pip install ruff mypy` floats to the latest release,
+        # which can flip the gate without any code change.
         run: |
           python -m pip install --upgrade pip
-          pip install ruff mypy
+          pip install ruff==0.16.6 mypy==2.3.1
       - name: ruff lint
         run: ruff check src/ tests/ --ignore E501
       - name: ruff format check
         run: ruff format --check src/ tests/
+
+  docs-truth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Docs-truth check (doc claims must match code-inventoried counts)
+        # The docs once claimed "500+ rules / 500+ drills" over a KB of 40
+        # rule files and 24 drills. This gate makes doc drift a CI failure,
+        # not a reputation problem discovered by a user.
+        run: python scripts/check_docs_truth.py
 
   unit:
     runs-on: ubuntu-latest
@@ -39,7 +55,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install system deps
-        run: sudo apt-get update && sudo apt-get install -y libportaudio2 libsndfile1 ffmpeg
+        # libegl1/libgl1: Qt (imported via kawkab.app by test_entrypoints)
+        # needs them at import time — their absence failed the unit job with
+        # ImportError: libEGL.so.1 (same fix test.yml's gui-e2e job uses).
+        run: sudo apt-get update && sudo apt-get install -y libportaudio2 libsndfile1 ffmpeg libegl1 libgl1
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
@@ -47,27 +66,27 @@ jobs:
       - name: Run unit tests (core analytical)
         env:
           KAWKAB_JWT_SECRET: ci-test-secret-do-not-use-in-production
+        # Previously ignored 20 files here. Verified against a clean
+        # `pip install -e ".[test,cloud]"` (this exact command, in an
+        # isolated venv) rather than trusting the ambient dev environment,
+        # which had extra packages installed that masked real gaps:
+        #   - test_audio_service.py: genuinely failing (stale test file,
+        #     source had moved on) -- fixed, see CLAUDE.md.
+        #   - test_easy_soccer_service.py: needed `playwright` (a
+        #     transitive import of EasySoccerData's Sofascore client) --
+        #     now declared in the `cloud` extra.
+        #   - test_norfair_tracker.py: needed a real norfair_tracker.py bbox
+        #     fix (norfair>=2.3 validates Detection points strictly as
+        #     (N,4)) plus a test-isolation fix (its norfair/cv2 stubs only
+        #     applied if not already imported, so a real install silently
+        #     defeated them) -- both fixed.
+        #   - the other 16: no discernible reason, passed cleanly.
+        # test_health_endpoints.py is the one remaining, legitimate
+        # exclusion: it's already run explicitly by the `server` job below
+        # with real Postgres + JWT env configured, so excluding it here
+        # avoids running it twice per push.
         run: |
           python -m pytest tests/unit/ \
-            --ignore=tests/unit/test_audio_service.py \
-            --ignore=tests/unit/test_cv_service_model_manager.py \
-            --ignore=tests/unit/test_kalman_and_match_type.py \
-            --ignore=tests/unit/test_professional_services.py \
-            --ignore=tests/unit/test_cv_service.py \
-            --ignore=tests/unit/test_enhancement_service.py \
-            --ignore=tests/unit/test_weather_image_classifier.py \
-            --ignore=tests/unit/test_batch_service.py \
-            --ignore=tests/unit/test_benchmark_service.py \
-            --ignore=tests/unit/test_api_services.py \
-            --ignore=tests/unit/test_easy_soccer_service.py \
-            --ignore=tests/unit/test_llm_service.py \
-            --ignore=tests/unit/test_reasoning_outside.py \
-            --ignore=tests/unit/test_reasoning_service.py \
-            --ignore=tests/unit/test_storage_service.py \
-            --ignore=tests/unit/test_bridge_handlers.py \
-            --ignore=tests/unit/test_api_external_services.py \
-            --ignore=tests/unit/test_core_missing.py \
-            --ignore=tests/unit/test_visualization_service.py \
             --ignore=tests/unit/test_health_endpoints.py \
             -v --tb=short -q
 

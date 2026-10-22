@@ -6,15 +6,15 @@ fatigue index, and per-team aggregates. All numpy-only.
 
 from __future__ import annotations
 
-import math
-from collections import defaultdict
 from typing import Any
 
 import numpy as np
 
 
 class VelocityAnalyzer:
-    def compute_player_velocity(self, player_trajectory: list[tuple[float, float, float]]) -> dict[str, Any]:
+    def compute_player_velocity(
+        self, player_trajectory: list[tuple[float, float, float]]
+    ) -> dict[str, Any]:
         if len(player_trajectory) < 2:
             return {"velocities": [], "accelerations": [], "avg_speed": 0.0, "max_speed": 0.0}
         ts = np.array([p[0] for p in player_trajectory])
@@ -24,13 +24,15 @@ class VelocityAnalyzer:
         dt = np.where(dt < 0.01, 0.01, dt)
         dx = np.diff(xs)
         dy = np.diff(ys)
-        speeds = np.sqrt(dx ** 2 + dy ** 2) / dt
+        speeds = np.sqrt(dx**2 + dy**2) / dt
         if len(speeds) >= 3:
             window = np.ones(3) / 3
             speeds_smooth = np.convolve(speeds, window, mode="same")
         else:
             speeds_smooth = speeds
-        accelerations = np.diff(speeds_smooth) / dt[1:] if len(speeds_smooth) > 1 else np.array([0.0])
+        accelerations = (
+            np.diff(speeds_smooth) / dt[1:] if len(speeds_smooth) > 1 else np.array([0.0])
+        )
         return {
             "velocities": [round(float(v), 2) for v in speeds_smooth],
             "accelerations": [round(float(a), 2) for a in accelerations],
@@ -38,9 +40,16 @@ class VelocityAnalyzer:
             "max_speed": round(float(np.max(speeds_smooth)), 2),
         }
 
-    def analyze_sprints(self, velocity_profile: list[float], threshold: float = 7.0) -> dict[str, Any]:
+    def analyze_sprints(
+        self, velocity_profile: list[float], threshold: float = 7.0
+    ) -> dict[str, Any]:
         if not velocity_profile:
-            return {"sprint_count": 0, "avg_duration_s": 0.0, "max_speed": 0.0, "distance_covered_m": 0.0}
+            return {
+                "sprint_count": 0,
+                "avg_duration_s": 0.0,
+                "max_speed": 0.0,
+                "distance_covered_m": 0.0,
+            }
         in_sprint = False
         sprint_start = 0
         sprints: list[float] = []
@@ -63,7 +72,9 @@ class VelocityAnalyzer:
             "distance_covered_m": round(sum(velocity_profile), 1),
         }
 
-    def compute_acceleration_zones(self, player_trajectory: list[tuple[float, float, float]]) -> dict[str, Any]:
+    def compute_acceleration_zones(
+        self, player_trajectory: list[tuple[float, float, float]]
+    ) -> dict[str, Any]:
         result = self.compute_player_velocity(player_trajectory)
         accels = result.get("accelerations", [])
         high = sum(1 for a in accels if a > 3.0)
@@ -71,15 +82,22 @@ class VelocityAnalyzer:
         low = sum(1 for a in accels if a < 1.0)
         return {"high_intensity": high, "moderate": moderate, "low": low, "total": len(accels)}
 
-    def analyze_team_velocity(self, players_trajectories: dict[str | int, list[tuple[float, float, float]]]) -> dict[str, Any]:
+    def analyze_team_velocity(
+        self, players_trajectories: dict[str | int, list[tuple[float, float, float]]]
+    ) -> dict[str, Any]:
         if not players_trajectories:
-            return {"avg_speed": 0.0, "max_speed": 0.0, "total_sprints": 0, "total_distance_m": 0.0,
-                    "acceleration_profile": {"high_intensity": 0, "moderate": 0, "low": 0}}
+            return {
+                "avg_speed": 0.0,
+                "max_speed": 0.0,
+                "total_sprints": 0,
+                "total_distance_m": 0.0,
+                "acceleration_profile": {"high_intensity": 0, "moderate": 0, "low": 0},
+            }
         all_speeds: list[float] = []
         total_sprints = 0
         total_distance = 0.0
         acc_profile: dict[str, int] = {"high_intensity": 0, "moderate": 0, "low": 0}
-        for pid, traj in players_trajectories.items():
+        for _pid, traj in players_trajectories.items():
             pv = self.compute_player_velocity(traj)
             all_speeds.extend(pv["velocities"])
             sprints = self.analyze_sprints(pv["velocities"])
@@ -98,17 +116,29 @@ class VelocityAnalyzer:
             "acceleration_profile": acc_profile,
         }
 
-    def compute_fatigue_index(self, velocity_profile: list[float], window_minutes: int = 5) -> dict[str, Any]:
+    def compute_fatigue_index(
+        self, velocity_profile: list[float], window_minutes: int = 5
+    ) -> dict[str, Any]:
         if len(velocity_profile) < 2:
-            return {"fatigue_index": 0.0, "peak_window_speed": 0.0, "final_window_speed": 0.0, "fatigue_level": "none"}
+            return {
+                "fatigue_index": 0.0,
+                "peak_window_speed": 0.0,
+                "final_window_speed": 0.0,
+                "fatigue_level": "none",
+            }
         window_size = max(window_minutes, 1)
         n = len(velocity_profile)
         window_avgs: list[float] = []
         for i in range(0, n, window_size):
-            chunk = velocity_profile[i:i + window_size]
+            chunk = velocity_profile[i : i + window_size]
             window_avgs.append(sum(chunk) / len(chunk))
         if len(window_avgs) < 2:
-            return {"fatigue_index": 0.0, "peak_window_speed": float(window_avgs[0]), "final_window_speed": float(window_avgs[0]), "fatigue_level": "none"}
+            return {
+                "fatigue_index": 0.0,
+                "peak_window_speed": float(window_avgs[0]),
+                "final_window_speed": float(window_avgs[0]),
+                "fatigue_level": "none",
+            }
         peak = max(window_avgs)
         final = window_avgs[-1]
         fatigue_index = ((peak - final) / peak * 100) if peak > 0 else 0.0
@@ -125,7 +155,9 @@ class VelocityAnalyzer:
             "fatigue_level": level,
         }
 
-    def generate_velocity_report(self, events: list[dict[str, Any]], tracking_data: dict[str, Any]) -> dict[str, Any]:
+    def generate_velocity_report(
+        self, events: list[dict[str, Any]], tracking_data: dict[str, Any]
+    ) -> dict[str, Any]:
         if not tracking_data:
             return {"error": "No tracking data provided"}
         players_traj: dict[int | str, list[tuple[float, float, float]]] = {}

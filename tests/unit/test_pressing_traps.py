@@ -1,12 +1,7 @@
 """Tests for pressing trap detection module — zone classification,
 trigger detection, and full pipeline."""
 
-import math
-
-import pytest
 from kawkab.core.pressing_traps import (
-    PITCH_LENGTH,
-    PITCH_WIDTH,
     PressingTrap,
     PressingTrapReport,
     _classify_trap_zone,
@@ -15,20 +10,19 @@ from kawkab.core.pressing_traps import (
     detect_pressing_traps,
 )
 
-
 # ── Constants ──────────────────────────────────────────────────────────────
 
 PL = 105.0
 PW = 68.0
 
 # Convenient boundaries
-DEF_MAX = PL * 0.33       # 34.65
+DEF_MAX = PL * 0.33  # 34.65
 MID_MIN = PL * 0.33
-MID_MAX = PL * 0.67       # 70.35
+MID_MAX = PL * 0.67  # 70.35
 ATT_MIN = PL * 0.67
 
-LEFT_MAX = PW * 0.25       # 17.0
-RIGHT_MIN = PW * 0.75      # 51.0
+LEFT_MAX = PW * 0.25  # 17.0
+RIGHT_MIN = PW * 0.75  # 51.0
 
 
 def _make_ev(etype, team, ts, x, y, **kw):
@@ -131,7 +125,7 @@ class TestComputeTrapRating:
         action_score = min(1.0, 20 / 20.0)
         funnel_score = min(1.0, 20 / 20 * 2.0)
         regain_rate = 20 / 20
-        regain_score = regain_rate ** 0.6
+        regain_score = regain_rate**0.6
         expected = round(0.25 * action_score + 0.30 * funnel_score + 0.45 * regain_score, 4)
         assert r == expected
 
@@ -149,7 +143,7 @@ class TestComputeTrapRating:
         action_score = min(1.0, 10 / 20.0)
         funnel_score = min(1.0, 5 / 10 * 2.0)
         regain_rate = 3 / 10
-        regain_score = regain_rate ** 0.6
+        regain_score = regain_rate**0.6
         expected = round(0.25 * action_score + 0.30 * funnel_score + 0.45 * regain_score, 4)
         assert r == expected
 
@@ -402,10 +396,16 @@ class TestDetectPressingTraps:
     def test_all_events_same_zone(self):
         events = []
         for i in range(10):
-            events.append(_make_ev("pass" if i % 2 == 0 else "tackle",
-                                   "home" if i % 2 == 0 else "home",
-                                   float(i), 50, 34,
-                                   **({"end_x": 50, "end_y": 34} if i % 2 == 0 else {})))
+            events.append(
+                _make_ev(
+                    "pass" if i % 2 == 0 else "tackle",
+                    "home" if i % 2 == 0 else "home",
+                    float(i),
+                    50,
+                    34,
+                    **({"end_x": 50, "end_y": 34} if i % 2 == 0 else {}),
+                )
+            )
         events.append(_make_ev("pass", "home", 10.0, 50, 34))
         report = detect_pressing_traps(events, "home")
         assert report.total_traps >= 1

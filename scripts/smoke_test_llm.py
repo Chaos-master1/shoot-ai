@@ -1,9 +1,10 @@
 """Smoke test for LLM service - verifies Ollama integration."""
+
 import asyncio
 import sys
 
-from kawkab.services.llm_service import LLMService, LLMConfig
 from kawkab.core.logging import setup_logging
+from kawkab.services.llm_service import LLMConfig, LLMService
 
 setup_logging(debug=False)
 

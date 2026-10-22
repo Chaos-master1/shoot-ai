@@ -80,16 +80,15 @@ class JerseyNumberService:
         if min(h, w) < 10:
             return torso
         lab = cv2.cvtColor(torso, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
+        lum, a_ch, b_ch = cv2.split(lab)
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4, 4))
-        l = clahe.apply(l)
-        enhanced = cv2.merge([l, a, b])
+        lum = clahe.apply(lum)
+        enhanced = cv2.merge([lum, a_ch, b_ch])
         enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
         enhanced = cv2.bilateralFilter(enhanced, 5, 50, 50)
         if max(h, w) < 60:
             scale = max(2.0, 60.0 / max(h, w))
-            enhanced = cv2.resize(enhanced, None, fx=scale, fy=scale,
-                                  interpolation=cv2.INTER_CUBIC)
+            enhanced = cv2.resize(enhanced, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
         return enhanced
 
     def _detect_ocr(self, torso: np.ndarray) -> dict[str, Any]:
@@ -98,19 +97,25 @@ class JerseyNumberService:
             if self._ocr_reader is None:
                 import easyocr
 
-                self._ocr_reader = easyocr.Reader(
-                    ["en"], gpu=self._gpu, verbose=False
-                )
+                self._ocr_reader = easyocr.Reader(["en"], gpu=self._gpu, verbose=False)
             processed = self._preprocess_for_ocr(torso)
             results = self._ocr_reader.readtext(processed, allowlist="0123456789")
             if not results:
-                return {"jersey_number": None, "confidence": 0.0,
-                        "candidates": [], "source": "none"}
+                return {
+                    "jersey_number": None,
+                    "confidence": 0.0,
+                    "candidates": [],
+                    "source": "none",
+                }
 
             digits = "".join(r[1] for r in results if r[2] > 0.2)
             if not digits:
-                return {"jersey_number": None, "confidence": 0.0,
-                        "candidates": [], "source": "none"}
+                return {
+                    "jersey_number": None,
+                    "confidence": 0.0,
+                    "candidates": [],
+                    "source": "none",
+                }
 
             try:
                 num = int(digits[:2])
@@ -129,8 +134,7 @@ class JerseyNumberService:
         except Exception as e:
             logger.debug(f"OCR failed: {e}")
 
-        return {"jersey_number": None, "confidence": 0.0,
-                "candidates": [], "source": "none"}
+        return {"jersey_number": None, "confidence": 0.0, "candidates": [], "source": "none"}
 
     # ------------------------------------------------------------------
     # Pixel-based fallback backend
@@ -146,7 +150,7 @@ class JerseyNumberService:
         estimated = int(1 + (ratio * 100) % 99)
         return {
             "jersey_number": estimated,
-            "confidence": round(min(ratio * 2, 0.5), 3),
+            "confidence": round(float(min(float(ratio) * 2, 0.5)), 3),
             "candidates": [(estimated, 1)],
             "source": "pixel",
         }
@@ -167,15 +171,18 @@ class JerseyNumberService:
         → Dense(128, relu) → Dropout(0.5) → Dense(10, softmax)
         """
         if self._cnn_model is None:
-            return {"jersey_number": None, "confidence": 0.0,
-                    "candidates": [], "source": "none"}
+            return {"jersey_number": None, "confidence": 0.0, "candidates": [], "source": "none"}
 
         try:
             # Isolate digits using contour detection (cnn-number-detection style)
             digits = self._isolate_digits(torso)
             if not digits:
-                return {"jersey_number": None, "confidence": 0.0,
-                        "candidates": [], "source": "none"}
+                return {
+                    "jersey_number": None,
+                    "confidence": 0.0,
+                    "candidates": [],
+                    "source": "none",
+                }
 
             # Classify each digit
             import torch
@@ -202,8 +209,12 @@ class JerseyNumberService:
                 confidences.append(conf)
 
             if not number_str:
-                return {"jersey_number": None, "confidence": 0.0,
-                        "candidates": [], "source": "none"}
+                return {
+                    "jersey_number": None,
+                    "confidence": 0.0,
+                    "candidates": [],
+                    "source": "none",
+                }
 
             num = int(number_str[:2])
             avg_conf = float(np.mean(confidences)) if confidences else 0.0
@@ -216,8 +227,7 @@ class JerseyNumberService:
         except Exception as e:
             logger.debug(f"CNN detection failed: {e}")
 
-        return {"jersey_number": None, "confidence": 0.0,
-                "candidates": [], "source": "none"}
+        return {"jersey_number": None, "confidence": 0.0, "candidates": [], "source": "none"}
 
     # ------------------------------------------------------------------
     # Digit isolation (from cnn-number-detection Isolator pattern)
@@ -246,17 +256,21 @@ class JerseyNumberService:
             aspect = w / max(h, 1)
             if aspect < 0.3 or aspect > 1.0:
                 continue
-            digit = img[y:y + h, x:x + w]
+            digit = img[y : y + h, x : x + w]
             digits.append(digit)
 
-        # Sort left-to-right
-        digits.sort(key=lambda d: cv2.boundingRect(cv2.findContours(
-            cv2.threshold(cv2.cvtColor(d, cv2.COLOR_BGR2GRAY), 0, 255,
-                          cv2.THRESH_BINARY)[1], cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE)[0])[0][0][0] if len(cv2.findContours(
-            cv2.threshold(cv2.cvtColor(d, cv2.COLOR_BGR2GRAY), 0, 255,
-                          cv2.THRESH_BINARY)[1], cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE)[0]) > 0 else 0)
+        # Sort left-to-right (key = leftmost contour x; the previous
+        # implementation re-ran threshold+findContours twice per element).
+        def _leftmost_x(patch: np.ndarray) -> float:
+            thresh = cv2.threshold(
+                cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY), 0, 255, cv2.THRESH_BINARY
+            )[1]
+            contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+            if not contours:
+                return 0.0
+            return float(cv2.boundingRect(contours[0])[0])
+
+        digits.sort(key=_leftmost_x)
 
         return digits[:3]  # max 3 digits
 

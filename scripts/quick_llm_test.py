@@ -1,10 +1,12 @@
 """Quick LLM test - just one English + one Arabic."""
+
 import asyncio
-import sys
 import os
+import sys
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
-from kawkab.services.llm_service import LLMService, LLMConfig
+from kawkab.services.llm_service import LLMConfig, LLMService
 
 
 async def main() -> int:

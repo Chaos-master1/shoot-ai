@@ -11,9 +11,8 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 
 @dataclass
@@ -31,8 +30,8 @@ class MarketplaceItem:
     data: str = ""  # JSON blob with the actual content
     preview_image: str = ""  # base64 or path
     source: Literal["local", "community"] = "local"
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 # Built-in sample items for the marketplace
@@ -42,20 +41,22 @@ SAMPLE_DRILLS = [
         "description": "Classic 4v2 rondo to improve quick passing, movement off the ball, and pressing in tight spaces.",
         "category": "possession",
         "tags": ["rondo", "possession", "passing", "pressing"],
-        "data": json.dumps({
-            "duration_min": 10,
-            "players": 6,
-            "area": "15x15m",
-            "equipment": ["cones", "bibs"],
-            "instructions": [
-                "Mark a 15x15m square with cones.",
-                "4 attackers position on the outside, 2 defenders in the middle.",
-                "Attackers pass the ball among themselves while defenders try to intercept.",
-                "If a defender wins the ball, switch roles.",
-                "Progress to 1-touch passing.",
-            ],
-            "variations": ["Limit to 2-touch", "Add neutral player", "Increase to 5v3"],
-        }),
+        "data": json.dumps(
+            {
+                "duration_min": 10,
+                "players": 6,
+                "area": "15x15m",
+                "equipment": ["cones", "bibs"],
+                "instructions": [
+                    "Mark a 15x15m square with cones.",
+                    "4 attackers position on the outside, 2 defenders in the middle.",
+                    "Attackers pass the ball among themselves while defenders try to intercept.",
+                    "If a defender wins the ball, switch roles.",
+                    "Progress to 1-touch passing.",
+                ],
+                "variations": ["Limit to 2-touch", "Add neutral player", "Increase to 5v3"],
+            }
+        ),
         "rating": 4.5,
     },
     {
@@ -63,20 +64,22 @@ SAMPLE_DRILLS = [
         "description": "High-intensity finishing drill combining passing combinations with a final shot under defensive pressure.",
         "category": "finishing",
         "tags": ["finishing", "shooting", "pressure", "combinations"],
-        "data": json.dumps({
-            "duration_min": 15,
-            "players": 8,
-            "area": "Penalty box + midfield",
-            "equipment": ["cones", "goals", "balls"],
-            "instructions": [
-                "Set up a passing circuit leading to the edge of the box.",
-                "Player A passes to B who lays off to C sprinting into the box.",
-                "C shoots first time at goal with a defender giving chase.",
-                "Rotate positions every 5 minutes.",
-                "Focus on one-touch finishing and composure.",
-            ],
-            "variations": ["Add goalkeeper", "Cross from wide instead of through middle"],
-        }),
+        "data": json.dumps(
+            {
+                "duration_min": 15,
+                "players": 8,
+                "area": "Penalty box + midfield",
+                "equipment": ["cones", "goals", "balls"],
+                "instructions": [
+                    "Set up a passing circuit leading to the edge of the box.",
+                    "Player A passes to B who lays off to C sprinting into the box.",
+                    "C shoots first time at goal with a defender giving chase.",
+                    "Rotate positions every 5 minutes.",
+                    "Focus on one-touch finishing and composure.",
+                ],
+                "variations": ["Add goalkeeper", "Cross from wide instead of through middle"],
+            }
+        ),
         "rating": 4.2,
     },
     {
@@ -84,20 +87,22 @@ SAMPLE_DRILLS = [
         "description": "Team defensive drill focusing on maintaining compact shape, cover, and balance during opposition build-up.",
         "category": "defense",
         "tags": ["defense", "shape", "compactness", "team"],
-        "data": json.dumps({
-            "duration_min": 20,
-            "players": 10,
-            "area": "Half pitch",
-            "equipment": ["cones", "bibs", "goals"],
-            "instructions": [
-                "Set up in a 4-4-2 defensive block on half pitch.",
-                "Attackers build up from the back with midfield support.",
-                "Defensive team must maintain compact shape (max 35m vertical, 40m horizontal).",
-                "Focus on shifting as a unit and closing passing lanes.",
-                "Coach calls 'press' trigger to execute coordinated press.",
-            ],
-            "variations": ["3-5-2 shape", "High press vs mid block"],
-        }),
+        "data": json.dumps(
+            {
+                "duration_min": 20,
+                "players": 10,
+                "area": "Half pitch",
+                "equipment": ["cones", "bibs", "goals"],
+                "instructions": [
+                    "Set up in a 4-4-2 defensive block on half pitch.",
+                    "Attackers build up from the back with midfield support.",
+                    "Defensive team must maintain compact shape (max 35m vertical, 40m horizontal).",
+                    "Focus on shifting as a unit and closing passing lanes.",
+                    "Coach calls 'press' trigger to execute coordinated press.",
+                ],
+                "variations": ["3-5-2 shape", "High press vs mid block"],
+            }
+        ),
         "rating": 4.7,
     },
     {
@@ -105,20 +110,22 @@ SAMPLE_DRILLS = [
         "description": "Drill for quick transition from defense to attack after winning possession, emphasizing vertical passes and forward runs.",
         "category": "transitions",
         "tags": ["transitions", "counter-attack", "speed", "forward runs"],
-        "data": json.dumps({
-            "duration_min": 15,
-            "players": 10,
-            "area": "Full pitch",
-            "equipment": ["cones", "bibs", "goals"],
-            "instructions": [
-                "Split into two teams of 5 with goalkeepers.",
-                "Team A attacks, Team B defends.",
-                "When Team B wins possession, they must transition within 3 passes to a shot on goal.",
-                "Team A must immediately transition to defend.",
-                "Emphasize forward passing and sprinting to support.",
-            ],
-            "variations": ["Limit to 2 touches", "Add neutral player"],
-        }),
+        "data": json.dumps(
+            {
+                "duration_min": 15,
+                "players": 10,
+                "area": "Full pitch",
+                "equipment": ["cones", "bibs", "goals"],
+                "instructions": [
+                    "Split into two teams of 5 with goalkeepers.",
+                    "Team A attacks, Team B defends.",
+                    "When Team B wins possession, they must transition within 3 passes to a shot on goal.",
+                    "Team A must immediately transition to defend.",
+                    "Emphasize forward passing and sprinting to support.",
+                ],
+                "variations": ["Limit to 2 touches", "Add neutral player"],
+            }
+        ),
         "rating": 4.4,
     },
     {
@@ -126,20 +133,22 @@ SAMPLE_DRILLS = [
         "description": "Develop wide attacking play with overlapping full-backs, quality crosses, and organized box finishing.",
         "category": "attack",
         "tags": ["wide play", "crossing", "overlap", "finishing"],
-        "data": json.dumps({
-            "duration_min": 20,
-            "players": 12,
-            "area": "Full pitch width, final third",
-            "equipment": ["cones", "bibs", "goals", "balls"],
-            "instructions": [
-                "Wide players start wide, full-backs deep.",
-                "Midfielder switches play to the winger.",
-                "Full-back overlaps, receives pass, and crosses into the box.",
-                "3 attackers make runs: near post, far post, edge of box.",
-                "Rotate sides after 5 reps.",
-            ],
-            "variations": ["Cut-back passes instead of crosses", "Add defenders"],
-        }),
+        "data": json.dumps(
+            {
+                "duration_min": 20,
+                "players": 12,
+                "area": "Full pitch width, final third",
+                "equipment": ["cones", "bibs", "goals", "balls"],
+                "instructions": [
+                    "Wide players start wide, full-backs deep.",
+                    "Midfielder switches play to the winger.",
+                    "Full-back overlaps, receives pass, and crosses into the box.",
+                    "3 attackers make runs: near post, far post, edge of box.",
+                    "Rotate sides after 5 reps.",
+                ],
+                "variations": ["Cut-back passes instead of crosses", "Add defenders"],
+            }
+        ),
         "rating": 4.0,
     },
 ]
@@ -150,25 +159,27 @@ SAMPLE_TEMPLATES = [
         "description": "Complete tactical template for build-up play in a 4-3-3 formation with player roles and movement patterns.",
         "category": "formation",
         "tags": ["4-3-3", "build-up", "possession", "tactical"],
-        "data": json.dumps({
-            "formation": "4-3-3",
-            "phases": {
-                "build_up": "CBs split wide, full-books push high, DM drops between CBs, CM create diamonds, wingers stretch the pitch.",
-                "midfield": "8 and 10 rotate positions, 6 dictates tempo, full-books provide width in final third.",
-                "final_third": "Wingers 1v1, full-books overlap, 8 arrives late at far post, 10 occupies half-spaces.",
-            },
-            "player_roles": {
-                "GK": "Sweeper keeper, comfortable with feet",
-                "CB": "Ball-playing, good passing range",
-                "FB": "High energy, good crossing, tactical discipline",
-                "DM": "Metronome, defensive screen, short passing",
-                "CM": "Box-to-box, arrives in box, pressing trigger",
-                "W": "1v1 specialist, dribbling, cut inside, crossing",
-                "CF": "Link-up play, dropping deep, finishing",
-            },
-            "strengths": ["Control of possession", "Overloads in midfield", "Width in attack"],
-            "weaknesses": ["Counter-attack vulnerable", "Requires high fitness from FBs"],
-        }),
+        "data": json.dumps(
+            {
+                "formation": "4-3-3",
+                "phases": {
+                    "build_up": "CBs split wide, full-books push high, DM drops between CBs, CM create diamonds, wingers stretch the pitch.",
+                    "midfield": "8 and 10 rotate positions, 6 dictates tempo, full-books provide width in final third.",
+                    "final_third": "Wingers 1v1, full-books overlap, 8 arrives late at far post, 10 occupies half-spaces.",
+                },
+                "player_roles": {
+                    "GK": "Sweeper keeper, comfortable with feet",
+                    "CB": "Ball-playing, good passing range",
+                    "FB": "High energy, good crossing, tactical discipline",
+                    "DM": "Metronome, defensive screen, short passing",
+                    "CM": "Box-to-box, arrives in box, pressing trigger",
+                    "W": "1v1 specialist, dribbling, cut inside, crossing",
+                    "CF": "Link-up play, dropping deep, finishing",
+                },
+                "strengths": ["Control of possession", "Overloads in midfield", "Width in attack"],
+                "weaknesses": ["Counter-attack vulnerable", "Requires high fitness from FBs"],
+            }
+        ),
         "rating": 4.8,
     },
     {
@@ -176,23 +187,29 @@ SAMPLE_TEMPLATES = [
         "description": "Compact 3-5-2 setup designed for quick transitions and counter-attacking football.",
         "category": "formation",
         "tags": ["3-5-2", "counter-attack", "compact", "transitions"],
-        "data": json.dumps({
-            "formation": "3-5-2",
-            "phases": {
-                "defensive": "Back 5 (3 CB + 2 WB) compact, midfield 3 screen, 2 forwards stay high.",
-                "transition": "Win ball → vertical pass to forward → support runner from midfield in 3 passes.",
-                "attack": "WBs provide width, 2 forwards combine, AM arrives late.",
-            },
-            "player_roles": {
-                "CB": "Strong 1v1, good passing, aggressive",
-                "WB": "Endless stamina, cross, defend, attack",
-                "CM": "Box-to-box, duel winner, simple passing",
-                "AM": "Creative, final pass, second striker",
-                "CF": "Hold-up play, pace, finishing",
-            },
-            "strengths": ["Defensive solidity", "Quick transitions", "Numerical advantage in midfield"],
-            "weaknesses": ["Vulnerable to wide overloads", "CBs isolated 1v1"],
-        }),
+        "data": json.dumps(
+            {
+                "formation": "3-5-2",
+                "phases": {
+                    "defensive": "Back 5 (3 CB + 2 WB) compact, midfield 3 screen, 2 forwards stay high.",
+                    "transition": "Win ball → vertical pass to forward → support runner from midfield in 3 passes.",
+                    "attack": "WBs provide width, 2 forwards combine, AM arrives late.",
+                },
+                "player_roles": {
+                    "CB": "Strong 1v1, good passing, aggressive",
+                    "WB": "Endless stamina, cross, defend, attack",
+                    "CM": "Box-to-box, duel winner, simple passing",
+                    "AM": "Creative, final pass, second striker",
+                    "CF": "Hold-up play, pace, finishing",
+                },
+                "strengths": [
+                    "Defensive solidity",
+                    "Quick transitions",
+                    "Numerical advantage in midfield",
+                ],
+                "weaknesses": ["Vulnerable to wide overloads", "CBs isolated 1v1"],
+            }
+        ),
         "rating": 4.3,
     },
 ]
@@ -240,12 +257,13 @@ class MarketplaceService:
         os.makedirs(os.path.dirname(self._data_file), exist_ok=True)
         try:
             if os.path.exists(self._data_file):
-                with open(self._data_file, "r", encoding="utf-8") as f:
+                with open(self._data_file, encoding="utf-8") as f:
                     data = json.load(f)
                 for item in data:
                     self._items[item["id"]] = MarketplaceItem(**item)
         except Exception as e:
             import logging
+
             logging.warning(f"Failed to load marketplace data: {e}")
 
     def _save_data(self) -> None:
@@ -255,57 +273,56 @@ class MarketplaceService:
 
     def _seed_samples(self) -> None:
         import uuid
+
         for sample in SAMPLE_DRILLS:
             name = sample["name"]
             exists = any(
-                item.name == name and item.item_type == "drill"
-                for item in self._items.values()
+                item.name == name and item.item_type == "drill" for item in self._items.values()
             )
             if not exists:
                 item = MarketplaceItem(
                     id=str(uuid.uuid4())[:8],
                     item_type="drill",
                     source="community",
-                    **{k: v for k, v in sample.items()},
+                    **dict(sample.items()),  # type: ignore[arg-type]
                 )
                 self._items[item.id] = item
 
         for sample in SAMPLE_TEMPLATES:
             name = sample["name"]
             exists = any(
-                item.name == name and item.item_type == "template"
-                for item in self._items.values()
+                item.name == name and item.item_type == "template" for item in self._items.values()
             )
             if not exists:
                 item = MarketplaceItem(
                     id=str(uuid.uuid4())[:8],
                     item_type="template",
                     source="community",
-                    **{k: v for k, v in sample.items()},
+                    **dict(sample.items()),  # type: ignore[arg-type]
                 )
                 self._items[item.id] = item
 
         for sample in SAMPLE_PLUGINS:
             name = sample["name"]
             exists = any(
-                item.name == name and item.item_type == "plugin"
-                for item in self._items.values()
+                item.name == name and item.item_type == "plugin" for item in self._items.values()
             )
             if not exists:
                 item = MarketplaceItem(
                     id=str(uuid.uuid4())[:8],
                     item_type="plugin",
                     source="community",
-                    **{k: v for k, v in sample.items()},
+                    **dict(sample.items()),  # type: ignore[arg-type]
                 )
                 self._items[item.id] = item
 
         self._save_data()
 
-    def list_items(self, item_type: str = "", category: str = "",
-                   query: str = "", source: str = "") -> list[dict]:
+    def list_items(
+        self, item_type: str = "", category: str = "", query: str = "", source: str = ""
+    ) -> list[dict]:
         query = query.lower().strip()
-        results = []
+        results: list[dict[str, Any]] = []
         for item in self._items.values():
             if item_type and item.item_type != item_type:
                 continue
@@ -315,20 +332,22 @@ class MarketplaceService:
                 continue
             if source and item.source != source:
                 continue
-            results.append({
-                "id": item.id,
-                "item_type": item.item_type,
-                "name": item.name,
-                "description": item.description[:120],
-                "author": item.author or "Community",
-                "version": item.version,
-                "category": item.category,
-                "tags": item.tags,
-                "rating": item.rating,
-                "download_count": item.download_count,
-                "source": item.source,
-                "created_at": item.created_at,
-            })
+            results.append(
+                {
+                    "id": item.id,
+                    "item_type": item.item_type,
+                    "name": item.name,
+                    "description": item.description[:120],
+                    "author": item.author or "Community",
+                    "version": item.version,
+                    "category": item.category,
+                    "tags": item.tags,
+                    "rating": item.rating,
+                    "download_count": item.download_count,
+                    "source": item.source,
+                    "created_at": item.created_at,
+                }
+            )
         results.sort(key=lambda x: x["rating"], reverse=True)
         return results
 
@@ -336,12 +355,21 @@ class MarketplaceService:
         item = self._items.get(item_id)
         if not item:
             return None
-        return {k: v for k, v in vars(item).items()}
+        return dict(vars(item).items())
 
-    def add_item(self, item_type: str, name: str, description: str = "",
-                 author: str = "", category: str = "", tags: list[str] | None = None,
-                 data: str = "", source: str = "local") -> dict:
+    def add_item(
+        self,
+        item_type: Literal["drill", "template", "plugin"],
+        name: str,
+        description: str = "",
+        author: str = "",
+        category: str = "",
+        tags: list[str] | None = None,
+        data: str = "",
+        source: Literal["local", "community"] = "local",
+    ) -> dict:
         import uuid
+
         item_id = str(uuid.uuid4())[:8]
         item = MarketplaceItem(
             id=item_id,

@@ -21,12 +21,18 @@ def _install_stubs():
     if hasattr(sys.modules.get("kawkab.services", None), "homography_service"):
         return
     import kawkab
+
     if not hasattr(kawkab, "services"):
         services_mod = types.ModuleType("kawkab.services")
         sys.modules["kawkab.services"] = services_mod
     cv_mod = types.ModuleType("kawkab.services.cv_service")
-    class FrameDetections: pass
-    class MatchTrackData: pass
+
+    class FrameDetections:
+        pass
+
+    class MatchTrackData:
+        pass
+
     cv_mod.FrameDetections = FrameDetections
     cv_mod.MatchTrackData = MatchTrackData
     sys.modules["kawkab.services.cv_service"] = cv_mod
@@ -68,7 +74,8 @@ class TestHomographyService:
             pixel_corners = [(100, 200), (500, 200), (500, 400), (100, 400)]
             matrix = hs.compute_homography_from_corners(
                 pixel_corners=pixel_corners,
-                pitch_length_m=105.0, pitch_width_m=68.0,
+                pitch_length_m=105.0,
+                pitch_width_m=68.0,
             )
             assert matrix is not None
             assert len(matrix.matrix) == 3
@@ -83,9 +90,11 @@ class TestHomographyService:
 
     def test_homography_matrix_min_corners(self):
         hs = HomographyService()
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             hs.compute_homography_from_corners(
-                pixel_corners=[(0, 0)], pitch_length_m=105.0, pitch_width_m=68.0,
+                pixel_corners=[(0, 0)],
+                pitch_length_m=105.0,
+                pitch_width_m=68.0,
             )
 
     def test_homography_negative_confidence(self):
@@ -99,24 +108,31 @@ class TestHomographyService:
 
     def test_compute_homography_empty_corners(self):
         hs = HomographyService()
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             hs.compute_homography_from_corners(
-                pixel_corners=[], pitch_length_m=105.0, pitch_width_m=68.0,
+                pixel_corners=[],
+                pitch_length_m=105.0,
+                pitch_width_m=68.0,
             )
 
     def test_bad_corner_format_three_points(self):
         hs = HomographyService()
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             hs.compute_homography_from_corners(
                 pixel_corners=[(0, 0), (1, 1), (2, 2)],
-                pitch_length_m=105.0, pitch_width_m=68.0,
+                pitch_length_m=105.0,
+                pitch_width_m=68.0,
             )
 
     def test_overwrite_calibration(self):
         hs = HomographyService()
-        m1 = HomographyMatrix(matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], confidence=0.5, error_px=2.0)
+        m1 = HomographyMatrix(
+            matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], confidence=0.5, error_px=2.0
+        )
         hs.save_calibration(1, m1)
-        m2 = HomographyMatrix(matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 1]], confidence=0.9, error_px=0.5)
+        m2 = HomographyMatrix(
+            matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 1]], confidence=0.9, error_px=0.5
+        )
         hs.save_calibration(1, m2)
         loaded = hs.load_calibration(1)
         assert loaded.confidence == 0.9
@@ -128,7 +144,9 @@ class TestHomographyService:
             hs = HomographyService()
             corners = [(0, 0), (640, 0), (640, 480), (0, 480)]
             matrix = hs.compute_homography_from_corners(
-                pixel_corners=corners, pitch_length_m=105.0, pitch_width_m=68.0,
+                pixel_corners=corners,
+                pitch_length_m=105.0,
+                pitch_width_m=68.0,
             )
             assert isinstance(matrix, HomographyMatrix)
             assert matrix.source == "manual"

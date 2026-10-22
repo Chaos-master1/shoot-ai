@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 
 @dataclass
@@ -19,7 +18,11 @@ class LeagueSimulationResult:
 def _poisson_goals(lambda_: float) -> int:
     if lambda_ <= 0:
         return 0
-    return random.poisson_variate(lambda_) if hasattr(random, "poisson_variate") else _poisson_knuth(lambda_)
+    return (
+        random.poisson_variate(lambda_)
+        if hasattr(random, "poisson_variate")
+        else _poisson_knuth(lambda_)
+    )
 
 
 def _poisson_knuth(lambda_: float) -> int:
@@ -125,15 +128,19 @@ def simulate_league(
         avg_pts = round(sum(pts_list) / len(pts_list), 1)
         positions_for_team = [sim.get(tid, len(all_teams)) for sim in per_sim_positions]
         positions_for_team.sort()
-        median_pos = float(positions_for_team[len(positions_for_team) // 2]) if positions_for_team else 0.0
-        standings.append({
-            "team_id": tid,
-            "avg_points": avg_pts,
-            "title_pct": round(title_count.get(tid, 0) / n_simulations * 100, 1),
-            "top4_pct": round(top4_count.get(tid, 0) / n_simulations * 100, 1),
-            "relegation_pct": round(relegation_count.get(tid, 0) / n_simulations * 100, 1),
-            "median_pos": median_pos,
-        })
+        median_pos = (
+            float(positions_for_team[len(positions_for_team) // 2]) if positions_for_team else 0.0
+        )
+        standings.append(
+            {
+                "team_id": tid,
+                "avg_points": avg_pts,
+                "title_pct": round(title_count.get(tid, 0) / n_simulations * 100, 1),
+                "top4_pct": round(top4_count.get(tid, 0) / n_simulations * 100, 1),
+                "relegation_pct": round(relegation_count.get(tid, 0) / n_simulations * 100, 1),
+                "median_pos": median_pos,
+            }
+        )
     standings.sort(key=lambda x: (-x["avg_points"], all_teams.index(x["team_id"])))
     for pos, row in enumerate(standings):
         row["position"] = pos + 1
@@ -145,7 +152,7 @@ def simulate_league(
         bin_counts: dict[int, int] = defaultdict(int)
         for p in pts_list:
             bin_counts[p] += 1
-        most_common_pts = max(bin_counts, key=bin_counts.get)
+        most_common_pts = max(bin_counts, key=bin_counts.get)  # type: ignore[arg-type,return-value]
         most_likely.append({"team_id": tid, "points": most_common_pts})
         point_distributions[tid] = pts_list
 
@@ -159,6 +166,3 @@ def simulate_league(
         most_likely_table=most_likely,
         point_distributions=point_distributions,
     )
-
-
-

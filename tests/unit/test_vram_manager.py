@@ -20,6 +20,7 @@ install_kawkab_stubs()
 # Torch stub (not available in test env)
 # ---------------------------------------------------------------------------
 
+
 def _install_torch_stub():
     if "torch" in sys.modules:
         return
@@ -32,6 +33,7 @@ def _install_torch_stub():
 
         class _DeviceProps:
             total_memory = 0
+
         get_device_properties = MagicMock(return_value=_DeviceProps())
         memory_allocated = MagicMock(return_value=0)
 
@@ -65,7 +67,9 @@ class TestVRAMStats:
         assert s.model_loaded is None
 
     def test_dataclass_with_model(self):
-        s = VRAMStats(total_gb=10.0, used_gb=3.0, free_gb=7.0, percent_used=30.0, model_loaded="yolo")
+        s = VRAMStats(
+            total_gb=10.0, used_gb=3.0, free_gb=7.0, percent_used=30.0, model_loaded="yolo"
+        )
         assert s.model_loaded == "yolo"
 
     def test_dataclass_asdict(self):
@@ -104,6 +108,7 @@ class TestGetStats:
 
     def test_with_cuda_available(self):
         import torch
+
         torch.cuda.is_available = MagicMock(return_value=True)
         torch.cuda.get_device_properties = MagicMock(return_value=MagicMock(total_memory=12e9))
         torch.cuda.memory_allocated = MagicMock(return_value=4e9)
@@ -117,6 +122,7 @@ class TestGetStats:
 
     def test_tracks_loaded_model(self):
         import torch
+
         torch.cuda.is_available = MagicMock(return_value=True)
         torch.cuda.get_device_properties = MagicMock(return_value=MagicMock(total_memory=12e9))
         torch.cuda.memory_allocated = MagicMock(return_value=4e9)
@@ -127,6 +133,7 @@ class TestGetStats:
 
     def test_get_stats_exception_returns_zero(self):
         import torch
+
         torch.cuda.is_available = MagicMock(side_effect=RuntimeError("CUDA error"))
         mgr = VRAMManager()
         stats = mgr.get_stats()
@@ -173,6 +180,7 @@ class TestFree:
 
     def test_free_clears_cuda_cache(self):
         import torch
+
         torch.cuda.is_available = MagicMock(return_value=True)
         torch.cuda.empty_cache = MagicMock()
         torch.cuda.synchronize = MagicMock()
@@ -281,8 +289,10 @@ class TestAllocationTransitions:
 
     def test_llm_frees_yolo(self):
         mgr = VRAMManager()
-        with patch.object(mgr, "has_room_for", return_value=True), \
-             patch.object(mgr, "get_stats", return_value=VRAMStats(12, 1, 11, 8.33, None)):
+        with (
+            patch.object(mgr, "has_room_for", return_value=True),
+            patch.object(mgr, "get_stats", return_value=VRAMStats(12, 1, 11, 8.33, None)),
+        ):
             mgr.allocate_for_yolo()
             mgr.allocate_for_llm()
         assert mgr._loaded_model == "llm"

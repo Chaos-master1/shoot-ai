@@ -1,0 +1,42 @@
+{
+  "status": "ok",
+  "generated_at": "2026-09-16T08:57:59.423144+00:00",
+  "provenance": {
+    "ground_truth": "SoccerNet tracking-2023, game=soccernet, half=0, frames 1..750",
+    "model": "yolo11s.pt",
+    "detector_conf": 0.25,
+    "stride": 1,
+    "frames_processed": 750,
+    "tracker": "kawkab.services.norfair_tracker.NorfairTracker (production)",
+    "metrics": "kawkab.core.mot_metrics.compute_mot_metrics (CLEAR MOT)",
+    "match_threshold_px": 40.0,
+    "ball_tracking": "excluded (SoccerNet gt.txt has no ball channel)"
+  },
+  "rows": [
+    {
+      "row": "e2e_players",
+      "elapsed_s": 129.64,
+      "frames_processed": 750,
+      "video_fps": 25.0,
+      "n_pred_tracks": 31,
+      "n_gt_players": 26,
+      "fragmentation": {
+        "n_pred_tracks": 31.0,
+        "mean_track_length": 429.2903225806452,
+        "median_track_length": 483
+      },
+      "mota": 0.7824,
+      "motp": 5.01,
+      "idf1": 0.8965,
+      "id_precision": 0.9043,
+      "id_recall": 0.8888,
+      "false_positives": 1274,
+      "false_negatives": 1506,
+      "id_switches": 166,
+      "fragments": 87,
+      "total_gt_detections": 13540,
+      "total_pred_detections": 13308,
+      "total_matches": 12034
+    }
+  ]
+}

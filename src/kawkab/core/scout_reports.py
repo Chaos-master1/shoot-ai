@@ -145,13 +145,11 @@ def generate_scout_report(
         )
     elif avg_percentile > 50.0:
         recommendation = (
-            "Recommended target with development potential — "
-            "core metrics are above average."
+            "Recommended target with development potential — core metrics are above average."
         )
     elif avg_percentile > 30.0:
         recommendation = (
-            "Squad player with specific tactical utility — "
-            "may excel in a defined system or role."
+            "Squad player with specific tactical utility — may excel in a defined system or role."
         )
     else:
         recommendation = (

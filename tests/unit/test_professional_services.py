@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import pytest
-
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
 
-from kawkab.services.player_profile_service import PlayerProfileService, PlayerProfile
-from kawkab.services.multi_match_analysis_service import MultiMatchAnalysisService
-from kawkab.services.data_export_service import DataExportService
+from kawkab.services.analysis_service import MatchAnalysis, PlayerStats, TeamStats
 from kawkab.services.anomaly_detection_service import AnomalyDetectionService
-from kawkab.services.quality_scoring_service import QualityScoringService
-from kawkab.services.analysis_service import AnalysisService, PlayerStats, TeamStats, MatchAnalysis
 from kawkab.services.cv_service import Detection, FrameDetections, MatchTrackData
+from kawkab.services.data_export_service import DataExportService
+from kawkab.services.multi_match_analysis_service import MultiMatchAnalysisService
+from kawkab.services.player_profile_service import PlayerProfileService
+from kawkab.services.quality_scoring_service import QualityScoringService
 
 
 def make_detection(track_id, class_name, x, y, w=20.0, h=40.0, confidence=0.9):
@@ -123,8 +122,12 @@ async def test_quality_scoring_computes_scores() -> None:
     svc = QualityScoringService()
 
     track_data = MatchTrackData(
-        match_id=1, fps=30, total_frames=100, duration_seconds=10,
-        frames=[], track_registry={},
+        match_id=1,
+        fps=30,
+        total_frames=100,
+        duration_seconds=10,
+        frames=[],
+        track_registry={},
         tracking_metrics={
             "validated_player_tracks": 22,
             "raw_tracks_detected": 25,
@@ -171,7 +174,7 @@ async def test_anomaly_quality_report_generation() -> None:
     """AnomalyDetectionService generates quality report correctly."""
     svc = AnomalyDetectionService()
 
-    anomalies = [
+    _ = [
         svc._check_physical_stats.__self__,  # Can't easily construct, test with empty
     ]
     # Test with empty anomalies
@@ -180,15 +183,19 @@ async def test_anomaly_quality_report_generation() -> None:
     assert report["passes"] is True
 
     # Test with critical anomaly
-    anomaly = type("obj", (object,), {
-        "category": "physical",
-        "severity": "critical",
-        "metric": "max_speed",
-        "expected_range": "<= 40",
-        "actual_value": "45",
-        "description": "Too fast",
-        "recommendation": "Fix it",
-    })()
+    anomaly = type(
+        "obj",
+        (object,),
+        {
+            "category": "physical",
+            "severity": "critical",
+            "metric": "max_speed",
+            "expected_range": "<= 40",
+            "actual_value": "45",
+            "description": "Too fast",
+            "recommendation": "Fix it",
+        },
+    )()
     report = await svc.generate_quality_report([anomaly])
     assert report["overall_score"] < 1.0
     assert report["critical"] == 1

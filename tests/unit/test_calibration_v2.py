@@ -10,7 +10,14 @@ import re
 import subprocess
 from pathlib import Path
 
-JS_PATH = Path(__file__).resolve().parent.parent.parent / "src" / "kawkab" / "web" / "js" / "calibration_v2.js"
+JS_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "src"
+    / "kawkab"
+    / "web"
+    / "js"
+    / "calibration_v2.js"
+)
 
 
 def test_file_exists() -> None:
@@ -31,6 +38,7 @@ def test_js_syntax_with_node() -> None:
         )
     except FileNotFoundError:
         import pytest
+
         pytest.skip("node not installed")
     assert result.returncode == 0, f"JS syntax error: {result.stderr}"
 

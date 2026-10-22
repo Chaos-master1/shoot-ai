@@ -13,14 +13,16 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from kawkab.services.collaboration_service import CollaborationService, CollabUser, Comment, Mention, ActivityEntry
-
+from kawkab.services.collaboration_service import (
+    CollaborationService,
+)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def svc():
@@ -30,6 +32,7 @@ def svc():
 # ═══════════════════════════════════════════════════════════════════════════
 # Deliverable 1: Timestamp-Linked Event Comments (6 tests)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestEventLinkedComments:
     def test_add_comment_with_event_id(self, svc):
@@ -69,6 +72,7 @@ class TestEventLinkedComments:
 # ═══════════════════════════════════════════════════════════════════════════
 # Deliverable 2: Activity Feed in Sidebar (6 tests)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestActivityFeed:
     def test_activity_feed_returns_activities(self, svc):
@@ -110,6 +114,7 @@ class TestActivityFeed:
 # ═══════════════════════════════════════════════════════════════════════════
 # Deliverable 3: @Mention Notifications (6 tests)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestMentionNotifications:
     def test_mention_created_when_username_mentioned(self, svc):
@@ -156,6 +161,7 @@ class TestMentionNotifications:
 # Deliverable 4: @Mention Detection (6 tests)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestMentionDetection:
     def test_detect_single_mention(self):
         result = CollaborationService._detect_mentions("Hello @user1")
@@ -187,6 +193,7 @@ class TestMentionDetection:
 # Deliverable 5: DB Persistence (6 tests)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestDBPersistence:
     @pytest.fixture
     def mock_storage(self):
@@ -203,6 +210,7 @@ class TestDBPersistence:
                 def __init__(self, **kw):
                     for k, v in kw.items():
                         setattr(self, k, v)
+
                 def __getitem__(self, key):
                     if key == "id":
                         return 0
@@ -225,6 +233,7 @@ class TestDBPersistence:
                     if key == "read":
                         return 0
                     return None
+
             return None
 
         mock_cursor.execute.side_effect = side_effect_execute

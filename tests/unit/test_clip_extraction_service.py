@@ -11,10 +11,10 @@ Tests clip extraction, playlist creation, and storage integration.
 
 from __future__ import annotations
 
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
 from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
@@ -22,7 +22,6 @@ install_kawkab_stubs()
 from kawkab.services.clip_extraction_service import (
     ClipLibraryService,
     VideoClip,
-    ClipPlaylist,
 )
 from kawkab.services.storage_service import StorageService
 
@@ -33,7 +32,7 @@ class TestClipLibraryService:
     def test_init_creates_output_dir(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir) / "clips"
-            svc = ClipLibraryService(output_dir=output_dir)
+            _ = ClipLibraryService(output_dir=output_dir)
             assert output_dir.exists()
 
     def test_get_clip_path(self):
@@ -82,7 +81,9 @@ class TestClipLibraryService:
             await storage.initialize()
 
             svc = ClipLibraryService(storage_service=storage)
-            playlist = await svc.create_playlist("Best Goals", [1, 2, 3], "Top goals from the match")
+            playlist = await svc.create_playlist(
+                "Best Goals", [1, 2, 3], "Top goals from the match"
+            )
             assert playlist is not None
             assert playlist.name == "Best Goals"
             assert playlist.clip_ids == [1, 2, 3]
@@ -98,18 +99,20 @@ class TestClipLibraryService:
             storage._db_path = db_path
             await storage.initialize()
 
-            clip_id = await storage.save_clip({
-                "match_id": 1,
-                "event_type": "goal",
-                "start_seconds": 55.0,
-                "end_seconds": 65.0,
-                "duration_seconds": 10.0,
-                "source_video_path": "/match.mp4",
-                "output_path": "/clips/goal_1.mp4",
-                "thumbnail_path": "/clips/thumb_1.jpg",
-                "player_id": 7,
-                "description": "Amazing goal",
-            })
+            clip_id = await storage.save_clip(
+                {
+                    "match_id": 1,
+                    "event_type": "goal",
+                    "start_seconds": 55.0,
+                    "end_seconds": 65.0,
+                    "duration_seconds": 10.0,
+                    "source_video_path": "/match.mp4",
+                    "output_path": "/clips/goal_1.mp4",
+                    "thumbnail_path": "/clips/thumb_1.jpg",
+                    "player_id": 7,
+                    "description": "Amazing goal",
+                }
+            )
             assert clip_id > 0
 
             clips = await storage.get_clips_for_match(1)

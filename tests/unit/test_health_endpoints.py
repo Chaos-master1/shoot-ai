@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import os
+
 os.environ["KAWKAB_RATE_LIMIT_DISABLE"] = "1"
-os.environ.setdefault("KAWKAB_JWT_SECRET", "test-secret-for-health-tests")
+os.environ.setdefault("KAWKAB_JWT_SECRET", "test-secret-for-health-tests-32chars-min")
 
 from fastapi.testclient import TestClient
+
 from kawkab.cloud.server import app
-from kawkab.cloud.auth import _jwt_secret as auth_jwt_secret
 
 client = TestClient(app)
 
 
 def test_health_endpoint():
-    auth_jwt_secret = None  # clear cache so env var is picked up
     resp = client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
@@ -47,8 +47,6 @@ def test_metrics_endpoint():
 
 
 def test_metrics_values_are_reasonable():
-    from kawkab.cloud.server import _start_time
-    import time
     resp = client.get("/metrics")
     data = resp.json()
     assert data["uptime_s"] >= 0

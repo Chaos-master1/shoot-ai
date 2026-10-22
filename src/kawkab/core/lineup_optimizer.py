@@ -4,16 +4,14 @@ player roles, and opponent analysis.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from typing import Any
-
-import numpy as np
 
 from kawkab.core.game_constants import GAME
 
 try:
     from ortools.sat.python import cp_model
+
     _ORTOOLS_AVAILABLE = True
 except ImportError:
     _ORTOOLS_AVAILABLE = False
@@ -28,48 +26,93 @@ PITCH_WIDTH = GAME.PITCH_WIDTH_M
 FORMATION_TEMPLATES: dict[str, list[tuple[str, float, float]]] = {
     "4-4-2": [
         ("GK", 0.05, 0.5),
-        ("LB", 0.25, 0.15), ("CB", 0.25, 0.38), ("CB", 0.25, 0.62), ("RB", 0.25, 0.85),
-        ("LM", 0.50, 0.15), ("CM", 0.50, 0.38), ("CM", 0.50, 0.62), ("RM", 0.50, 0.85),
-        ("ST", 0.75, 0.35), ("ST", 0.75, 0.65),
+        ("LB", 0.25, 0.15),
+        ("CB", 0.25, 0.38),
+        ("CB", 0.25, 0.62),
+        ("RB", 0.25, 0.85),
+        ("LM", 0.50, 0.15),
+        ("CM", 0.50, 0.38),
+        ("CM", 0.50, 0.62),
+        ("RM", 0.50, 0.85),
+        ("ST", 0.75, 0.35),
+        ("ST", 0.75, 0.65),
     ],
     "4-3-3": [
         ("GK", 0.05, 0.5),
-        ("LB", 0.25, 0.15), ("CB", 0.25, 0.38), ("CB", 0.25, 0.62), ("RB", 0.25, 0.85),
-        ("CM", 0.55, 0.25), ("CDM", 0.45, 0.5), ("CM", 0.55, 0.75),
-        ("LW", 0.80, 0.15), ("ST", 0.80, 0.5), ("RW", 0.80, 0.85),
+        ("LB", 0.25, 0.15),
+        ("CB", 0.25, 0.38),
+        ("CB", 0.25, 0.62),
+        ("RB", 0.25, 0.85),
+        ("CM", 0.55, 0.25),
+        ("CDM", 0.45, 0.5),
+        ("CM", 0.55, 0.75),
+        ("LW", 0.80, 0.15),
+        ("ST", 0.80, 0.5),
+        ("RW", 0.80, 0.85),
     ],
     "3-5-2": [
         ("GK", 0.05, 0.5),
-        ("CB", 0.20, 0.25), ("CB", 0.20, 0.5), ("CB", 0.20, 0.75),
-        ("LWB", 0.45, 0.08), ("CM", 0.50, 0.3), ("CDM", 0.45, 0.5),
-        ("CM", 0.50, 0.7), ("RWB", 0.45, 0.92),
-        ("ST", 0.75, 0.35), ("ST", 0.75, 0.65),
+        ("CB", 0.20, 0.25),
+        ("CB", 0.20, 0.5),
+        ("CB", 0.20, 0.75),
+        ("LWB", 0.45, 0.08),
+        ("CM", 0.50, 0.3),
+        ("CDM", 0.45, 0.5),
+        ("CM", 0.50, 0.7),
+        ("RWB", 0.45, 0.92),
+        ("ST", 0.75, 0.35),
+        ("ST", 0.75, 0.65),
     ],
     "4-2-3-1": [
         ("GK", 0.05, 0.5),
-        ("LB", 0.25, 0.15), ("CB", 0.25, 0.38), ("CB", 0.25, 0.62), ("RB", 0.25, 0.85),
-        ("CDM", 0.40, 0.35), ("CDM", 0.40, 0.65),
-        ("LW", 0.70, 0.15), ("CAM", 0.65, 0.5), ("RW", 0.70, 0.85),
+        ("LB", 0.25, 0.15),
+        ("CB", 0.25, 0.38),
+        ("CB", 0.25, 0.62),
+        ("RB", 0.25, 0.85),
+        ("CDM", 0.40, 0.35),
+        ("CDM", 0.40, 0.65),
+        ("LW", 0.70, 0.15),
+        ("CAM", 0.65, 0.5),
+        ("RW", 0.70, 0.85),
         ("ST", 0.80, 0.5),
     ],
     "3-4-3": [
         ("GK", 0.05, 0.5),
-        ("CB", 0.20, 0.3), ("CB", 0.20, 0.5), ("CB", 0.20, 0.7),
-        ("LM", 0.50, 0.12), ("CM", 0.50, 0.35), ("CM", 0.50, 0.65), ("RM", 0.50, 0.88),
-        ("LW", 0.80, 0.15), ("ST", 0.80, 0.5), ("RW", 0.80, 0.85),
+        ("CB", 0.20, 0.3),
+        ("CB", 0.20, 0.5),
+        ("CB", 0.20, 0.7),
+        ("LM", 0.50, 0.12),
+        ("CM", 0.50, 0.35),
+        ("CM", 0.50, 0.65),
+        ("RM", 0.50, 0.88),
+        ("LW", 0.80, 0.15),
+        ("ST", 0.80, 0.5),
+        ("RW", 0.80, 0.85),
     ],
     "5-3-2": [
         ("GK", 0.05, 0.5),
-        ("CB", 0.18, 0.15), ("CB", 0.18, 0.38), ("CB", 0.18, 0.5),
-        ("CB", 0.18, 0.62), ("CB", 0.18, 0.85),
-        ("CM", 0.45, 0.25), ("CM", 0.45, 0.5), ("CM", 0.45, 0.75),
-        ("ST", 0.75, 0.35), ("ST", 0.75, 0.65),
+        ("CB", 0.18, 0.15),
+        ("CB", 0.18, 0.38),
+        ("CB", 0.18, 0.5),
+        ("CB", 0.18, 0.62),
+        ("CB", 0.18, 0.85),
+        ("CM", 0.45, 0.25),
+        ("CM", 0.45, 0.5),
+        ("CM", 0.45, 0.75),
+        ("ST", 0.75, 0.35),
+        ("ST", 0.75, 0.65),
     ],
     "4-1-4-1": [
         ("GK", 0.05, 0.5),
-        ("LB", 0.25, 0.15), ("CB", 0.25, 0.38), ("CB", 0.25, 0.62), ("RB", 0.25, 0.85),
+        ("LB", 0.25, 0.15),
+        ("CB", 0.25, 0.38),
+        ("CB", 0.25, 0.62),
+        ("RB", 0.25, 0.85),
         ("CDM", 0.40, 0.5),
-        ("LM", 0.60, 0.12), ("CM", 0.60, 0.35), ("CM", 0.60, 0.65), ("RM", 0.60, 0.88),
+        ("LM", 0.60, 0.12),
+        ("CM", 0.60, 0.35),
+        ("CM", 0.60, 0.65),
+        ("RM", 0.60, 0.88),
         ("ST", 0.85, 0.5),
     ],
 }
@@ -101,7 +144,12 @@ class PlayerSlot:
     role: str = ""
 
     def to_dict(self) -> dict[str, Any]:
-        return {"position": self.position_name, "x": round(self.x, 1), "y": round(self.y, 1), "role": self.role}
+        return {
+            "position": self.position_name,
+            "x": round(self.x, 1),
+            "y": round(self.y, 1),
+            "role": self.role,
+        }
 
 
 @dataclass
@@ -199,7 +247,9 @@ class LineupOptimizer:
                     if milp_assigned is not None:
                         slots = milp_assigned
                     else:
-                        slots = self._assign_players_to_slots(slots, players, pitch_length, pitch_width)
+                        slots = self._assign_players_to_slots(
+                            slots, players, pitch_length, pitch_width
+                        )
                 except Exception:
                     slots = self._assign_players_to_slots(slots, players, pitch_length, pitch_width)
             else:
@@ -252,7 +302,9 @@ class LineupOptimizer:
                 var = model.NewBoolVar(f"x_{p_idx}_{s_idx}")
                 x[p_idx, s_idx] = var
 
-                match_score = self._role_match_score(slot.position_name, role) * (1.0 + 0.1 * rating)
+                match_score = self._role_match_score(slot.position_name, role) * (
+                    1.0 + 0.1 * rating
+                )
                 int_coeff = max(1, int(round(match_score * 10000)))
                 score_terms.append(var * int_coeff)
 
@@ -289,30 +341,36 @@ class LineupOptimizer:
                 p = players[slot_to_player[s_idx]]
                 pid = p.get("track_id", -1)
                 pname = p.get("name", p.get("display_name", f"Player {pid}"))
-                enriched.append(PlayerSlot(
-                    position_name=slot.position_name,
-                    x=slot.x,
-                    y=slot.y,
-                    role=pname,
-                ))
+                enriched.append(
+                    PlayerSlot(
+                        position_name=slot.position_name,
+                        x=slot.x,
+                        y=slot.y,
+                        role=pname,
+                    )
+                )
             else:
-                enriched.append(PlayerSlot(
-                    position_name=slot.position_name,
-                    x=slot.x,
-                    y=slot.y,
-                    role=slot.position_name,
-                ))
+                enriched.append(
+                    PlayerSlot(
+                        position_name=slot.position_name,
+                        x=slot.x,
+                        y=slot.y,
+                        role=slot.position_name,
+                    )
+                )
 
         for p_idx, player in enumerate(players):
             if p_idx not in assigned_players:
                 pid = player.get("track_id", -1)
                 pname = player.get("name", player.get("display_name", f"Player {pid}"))
-                enriched.append(PlayerSlot(
-                    position_name="SUB",
-                    x=0.0,
-                    y=0.0,
-                    role=pname,
-                ))
+                enriched.append(
+                    PlayerSlot(
+                        position_name="SUB",
+                        x=0.0,
+                        y=0.0,
+                        role=pname,
+                    )
+                )
 
         return enriched
 
@@ -344,12 +402,14 @@ class LineupOptimizer:
                 PlayerSlot(position_name=pos, x=xr * self.PITCH_LENGTH, y=yr * self.PITCH_WIDTH)
                 for pos, xr, yr in template
             ]
-            suggestions.append(LineupSuggestion(
-                formation=fm,
-                slots=slots,
-                description=desc,
-                confidence=confidence,
-            ))
+            suggestions.append(
+                LineupSuggestion(
+                    formation=fm,
+                    slots=slots,
+                    description=desc,
+                    confidence=confidence,
+                )
+            )
 
         suggestions.sort(key=lambda s: s.confidence, reverse=True)
         best = suggestions[0]
@@ -359,9 +419,7 @@ class LineupOptimizer:
             best_confidence=best.confidence,
         )
 
-    def _formation_strength_vs(
-        self, formation: str, opponent: str
-    ) -> tuple[float, float]:
+    def _formation_strength_vs(self, formation: str, opponent: str) -> tuple[float, float]:
         """Return (defensive_strength, attacking_strength) vs opponent.
 
         Uses a simple geometric heuristic:
@@ -370,20 +428,25 @@ class LineupOptimizer:
         - Attacking strength: number of attacking players (ST, W, CAM)
           relative to opponent defenders.
         """
+
         def _count_positions(fm: str, categories: dict[str, set[str]]) -> float:
             template = self._templates.get(fm, [])
             count = 0.0
             for pos_name, _, _ in template:
-                for cat, members in categories.items():
+                for _cat, members in categories.items():
                     if pos_name in members:
                         count += 1.0
                         break
             return count
 
-        defensive_roles = {"defenders": {"GK", "CB", "LB", "RB", "LWB", "RWB"},
-                           "midfield_def": {"CDM"}}
-        attacking_roles = {"attackers": {"ST", "LW", "RW", "CAM"},
-                           "midfield_att": {"CM", "LM", "RM"}}
+        defensive_roles = {
+            "defenders": {"GK", "CB", "LB", "RB", "LWB", "RWB"},
+            "midfield_def": {"CDM"},
+        }
+        attacking_roles = {
+            "attackers": {"ST", "LW", "RW", "CAM"},
+            "midfield_att": {"CM", "LM", "RM"},
+        }
 
         own_def_count = _count_positions(formation, defensive_roles)
         opp_att_count = _count_positions(opponent, attacking_roles)
@@ -440,31 +503,37 @@ class LineupOptimizer:
                 pid = best_player.get("track_id", -1)
                 assigned_players.add(pid)
                 pname = best_player.get("name", best_player.get("display_name", f"Player {pid}"))
-                enriched.append(PlayerSlot(
-                    position_name=slot.position_name,
-                    x=slot.x,
-                    y=slot.y,
-                    role=pname,
-                ))
+                enriched.append(
+                    PlayerSlot(
+                        position_name=slot.position_name,
+                        x=slot.x,
+                        y=slot.y,
+                        role=pname,
+                    )
+                )
             else:
-                enriched.append(PlayerSlot(
-                    position_name=slot.position_name,
-                    x=slot.x,
-                    y=slot.y,
-                    role=slot.position_name,
-                ))
+                enriched.append(
+                    PlayerSlot(
+                        position_name=slot.position_name,
+                        x=slot.x,
+                        y=slot.y,
+                        role=slot.position_name,
+                    )
+                )
 
         # Append any unassigned players
         for p in players:
             pid = p.get("track_id", -1)
             if pid >= 0 and pid not in assigned_players:
                 pname = p.get("name", p.get("display_name", f"Player {pid}"))
-                enriched.append(PlayerSlot(
-                    position_name="SUB",
-                    x=0.0,
-                    y=0.0,
-                    role=pname,
-                ))
+                enriched.append(
+                    PlayerSlot(
+                        position_name="SUB",
+                        x=0.0,
+                        y=0.0,
+                        role=pname,
+                    )
+                )
 
         return enriched
 
@@ -486,9 +555,8 @@ class LineupOptimizer:
                 for alias in aliases:
                     if alias.lower() in player_role or player_role in alias.lower():
                         return 0.7
-            if canonical := _canonical_role(player_role):
-                if canonical == canon:
-                    return 0.85
+            if (canonical := _canonical_role(player_role)) and canonical == canon:
+                return 0.85
 
         # Partial fuzzy
         slot_lower = slot_pos.lower()

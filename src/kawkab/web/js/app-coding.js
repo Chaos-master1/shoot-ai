@@ -224,6 +224,26 @@
         });
     }
 
+    // WCAG relative luminance -> pick black or white text so a coach's
+    // custom (or the shipped default) event-color palette stays readable.
+    // Several shipped defaults (e.g. #a3e635, #a5f3fc, #fca5a5) are light
+    // enough that the fixed white button text this replaces dropped to
+    // ~1.2-1.9:1 contrast, far under the 3:1 floor for bold UI text.
+    function contrastTextColor(hex) {
+        var m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(hex || '');
+        if (!m) return '#fff';
+        var h = m[1];
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        var r = parseInt(h.substr(0, 2), 16) / 255;
+        var g = parseInt(h.substr(2, 2), 16) / 255;
+        var b = parseInt(h.substr(4, 2), 16) / 255;
+        function lin(c) { return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+        var luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+        var contrastWithWhite = 1.05 / (luminance + 0.05);
+        var contrastWithBlack = (luminance + 0.05) / 0.05;
+        return contrastWithWhite >= contrastWithBlack ? '#fff' : '#000';
+    }
+
     function renderCodingMatrix(templates) {
         var container = document.getElementById('coding-matrix');
         if (!container) return;
@@ -231,13 +251,15 @@
         (templates.categories || []).forEach(function(cat) {
             var catEl = document.createElement('div');
             catEl.className = 'coding-matrix-category';
-            catEl.innerHTML = '<div class="coding-category-label" style="color:' + (cat.color || '#fff') + '">' + escapeHtml(cat.label) + '</div>';
+            catEl.innerHTML = '<div class="coding-category-label" style="color:' + escapeHtml(cat.color || '#fff') + '">' + escapeHtml(cat.label) + '</div>';
             var grid = document.createElement('div');
             grid.className = 'coding-button-grid';
             (cat.buttons || []).forEach(function(btn) {
                 var btnEl = document.createElement('button');
                 btnEl.className = 'coding-matrix-btn';
-                btnEl.style.background = btn.color || '#555';
+                var btnColor = btn.color || '#555';
+                btnEl.style.background = btnColor;
+                btnEl.style.color = contrastTextColor(btnColor);
                 btnEl.dataset.eventType = btn.id;
                 btnEl.dataset.shortcut = btn.shortcut || '';
                 btnEl.innerHTML = escapeHtml(btn.label) + (btn.shortcut ? '<span class="shortcut-hint">' + escapeHtml(btn.shortcut) + '</span>' : '');

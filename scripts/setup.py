@@ -8,6 +8,7 @@ Usage:
     python scripts/setup.py --auto           # Automatic (skip prompts)
     python scripts/setup.py --minimal        # Minimal install (CPU-only deps)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -91,6 +92,7 @@ def main():
 
     # Step 7: Create cache directories
     from kawkab.core.paths import get_paths
+
     paths = get_paths()
     paths.cache.mkdir(parents=True, exist_ok=True)
     (paths.cache / "models").mkdir(parents=True, exist_ok=True)
@@ -100,8 +102,13 @@ def main():
     if not args.minimal:
         logger.info("Validating CUDA...")
         result = subprocess.run(
-            [python_cmd, "-c", "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'no cuda')"],
-            capture_output=True, text=True,
+            [
+                python_cmd,
+                "-c",
+                "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'no cuda')",
+            ],
+            capture_output=True,
+            text=True,
         )
         cuda_available = result.stdout.strip().split("\n")[0] == "True"
         if cuda_available:
@@ -112,7 +119,11 @@ def main():
 
     # Step 9: Download model weights
     logger.info("Downloading model weights...")
-    run([python_cmd, "-c", """
+    run(
+        [
+            python_cmd,
+            "-c",
+            """
 from kawkab.core.model_manager import ModelManager
 mm = ModelManager()
 for model in ['yolo11m', 'osnet_x1_0']:
@@ -121,7 +132,9 @@ for model in ['yolo11m', 'osnet_x1_0']:
         print(f'  Downloaded {model}')
     except Exception as e:
         print(f'  Failed: {model}: {e}')
-"""])
+""",
+        ]
+    )
 
     logger.info("=" * 60)
     logger.info("  Setup complete!")

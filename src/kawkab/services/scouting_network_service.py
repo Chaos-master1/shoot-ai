@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any
+from datetime import UTC, datetime
 
+from kawkab.core import paths as kawkab_paths
 from kawkab.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -30,25 +30,28 @@ class NetworkPlayer:
     tags: list[str] = field(default_factory=list)
     submitted_by: str = ""
     contact_info: str = ""
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 class ScoutingNetworkService:
     """Community-driven scouting network — share and discover player profiles."""
 
-    def __init__(self) -> None:
+    def __init__(self, data_file: str | None = None) -> None:
         self._players: dict[str, NetworkPlayer] = {}
-        self._data_file = os.path.join(
-            os.path.dirname(__file__), "..", "..", "data", "scouting_network.json"
-        )
+        # Per-user app-data file, NOT the source tree (same reason as
+        # OpponentDatabaseService: runtime user data used to land inside
+        # the repo under src/data/).
+        if data_file is None:
+            data_file = str(kawkab_paths.get_paths().appdata / "data" / "scouting_network.json")
+        self._data_file = data_file
         self._load_data()
 
     def _load_data(self) -> None:
         os.makedirs(os.path.dirname(self._data_file), exist_ok=True)
         try:
             if os.path.exists(self._data_file):
-                with open(self._data_file, "r", encoding="utf-8") as f:
+                with open(self._data_file, encoding="utf-8") as f:
                     data = json.load(f)
                 for p in data:
                     self._players[p["id"]] = NetworkPlayer(**p)
@@ -60,9 +63,15 @@ class ScoutingNetworkService:
         with open(self._data_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False, default=str)
 
-    def search_players(self, query: str = "", position: str = "",
-                       min_age: int = 0, max_age: int = 99,
-                       league: str = "", min_rating: float = 0.0) -> list[dict]:
+    def search_players(
+        self,
+        query: str = "",
+        position: str = "",
+        min_age: int = 0,
+        max_age: int = 99,
+        league: str = "",
+        min_rating: float = 0.0,
+    ) -> list[dict]:
         query = query.lower().strip()
         results = []
         for p in self._players.values():
@@ -76,21 +85,23 @@ class ScoutingNetworkService:
                 continue
             if p.rating < min_rating:
                 continue
-            results.append({
-                "id": p.id,
-                "name": p.name,
-                "position": p.position,
-                "age": p.age,
-                "club": p.club,
-                "league": p.league,
-                "nationality": p.nationality,
-                "estimated_value": p.estimated_value,
-                "rating": p.rating,
-                "tags": p.tags,
-                "strengths": p.strengths[:3],
-                "scout_notes": p.scout_notes[:100] if p.scout_notes else "",
-            })
-        results.sort(key=lambda x: x["rating"], reverse=True)
+            results.append(
+                {
+                    "id": p.id,
+                    "name": p.name,
+                    "position": p.position,
+                    "age": p.age,
+                    "club": p.club,
+                    "league": p.league,
+                    "nationality": p.nationality,
+                    "estimated_value": p.estimated_value,
+                    "rating": p.rating,
+                    "tags": p.tags,
+                    "strengths": p.strengths[:3],
+                    "scout_notes": p.scout_notes[:100] if p.scout_notes else "",
+                }
+            )
+        results.sort(key=lambda x: float(x["rating"]), reverse=True)  # type: ignore[arg-type,return-value]
         return results
 
     def get_player(self, player_id: str) -> dict | None:
@@ -114,19 +125,34 @@ class ScoutingNetworkService:
             "submitted_by": p.submitted_by,
         }
 
-    def add_player(self, name: str, position: str = "", club: str = "",
-                   league: str = "", rating: float = 0.0,
-                   strengths: list[str] | None = None,
-                   weaknesses: list[str] | None = None,
-                   scout_notes: str = "",
-                   submitted_by: str = "",
-                   tags: list[str] | None = None) -> dict:
+    def add_player(
+        self,
+        name: str,
+        position: str = "",
+        club: str = "",
+        league: str = "",
+        rating: float = 0.0,
+        strengths: list[str] | None = None,
+        weaknesses: list[str] | None = None,
+        scout_notes: str = "",
+        submitted_by: str = "",
+        tags: list[str] | None = None,
+    ) -> dict:
         import uuid
+
         pid = str(uuid.uuid4())[:8]
         player = NetworkPlayer(
-            id=pid, name=name, position=position, club=club, league=league,
-            rating=rating, strengths=strengths or [], weaknesses=weaknesses or [],
-            scout_notes=scout_notes, submitted_by=submitted_by, tags=tags or [],
+            id=pid,
+            name=name,
+            position=position,
+            club=club,
+            league=league,
+            rating=rating,
+            strengths=strengths or [],
+            weaknesses=weaknesses or [],
+            scout_notes=scout_notes,
+            submitted_by=submitted_by,
+            tags=tags or [],
         )
         self._players[pid] = player
         self._save_data()

@@ -19,13 +19,13 @@
 
 .skip-link:focus {
     top: 6px;
-    outline: 3px solid #ffd700;
+    outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
 }
 
 /* Visible focus ring for keyboard users */
 *:focus-visible {
-    outline: 3px solid #ffd700;
+    outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: 2px;
 }
@@ -35,7 +35,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-    outline: 3px solid #ffd700;
+    outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
 }
 
@@ -186,6 +186,6 @@ textarea:valid {
 
 /* Focus trap marker for modal dialogs */
 [data-focus-trap] {
-    outline: 2px dashed #ffd700;
+    outline: 2px dashed var(--focus-ring);
     outline-offset: 4px;
 }

@@ -1,14 +1,10 @@
 """Tests for trap → transition linkage."""
 
-import math
-
-import pytest
 from kawkab.core.pressing_traps import PressingTrap
 from kawkab.core.transitions import PhaseTransition
-
 from kawkab.core.trap_transition_linkage import (
-    TrapTransitionLink,
     TrapTransitionAnalysis,
+    TrapTransitionLink,
     analyze_trap_transitions,
     summarize_trap_transition,
 )
@@ -249,9 +245,12 @@ class TestSummarizeTrapTransition:
             successful_traps=3,
             transitions_from_traps=[
                 TrapTransitionLink(
-                    trap_index=0, transition_index=0,
-                    time_delta=1.5, spatial_distance=8.0,
-                    goal_scored=False, shot_created=True,
+                    trap_index=0,
+                    transition_index=0,
+                    time_delta=1.5,
+                    spatial_distance=8.0,
+                    goal_scored=False,
+                    shot_created=True,
                 ),
             ],
             conversion_rate=0.333,

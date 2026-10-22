@@ -5,34 +5,105 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-
 SRC_DIR = Path(__file__).resolve().parent.parent.parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from kawkab.core.player_search import (
     SearchCriteria,
-    SearchResult,
     search_players,
 )
 
-
 SAMPLE_DB = [
-    {"player_id": "p1", "name": "Young Star", "age": 19, "position": "FWD", "league": "PL", "team": "Team A",
-     "nationality": "England", "preferred_foot": "right", "height_cm": 180,
-     "stats": {"xg_per_90": 0.45, "xa_per_90": 0.20, "pass_completion_pct": 82.0, "tackles_per_90": 0.5, "rating_per_90": 7.2}},
-    {"player_id": "p2", "name": "Veteran Mid", "age": 32, "position": "MID", "league": "La Liga", "team": "Team B",
-     "nationality": "Spain", "preferred_foot": "left", "height_cm": 175,
-     "stats": {"xg_per_90": 0.12, "xa_per_90": 0.25, "pass_completion_pct": 88.0, "tackles_per_90": 2.5, "rating_per_90": 7.0}},
-    {"player_id": "p3", "name": "Prime Defender", "age": 26, "position": "DEF", "league": "PL", "team": "Team C",
-     "nationality": "Brazil", "preferred_foot": "right", "height_cm": 188,
-     "stats": {"xg_per_90": 0.05, "xa_per_90": 0.03, "pass_completion_pct": 90.0, "tackles_per_90": 4.0, "rating_per_90": 7.5}},
-    {"player_id": "p4", "name": "Young Keeper", "age": 21, "position": "GK", "league": "Bundesliga", "team": "Team D",
-     "nationality": "Germany", "preferred_foot": "right", "height_cm": 195,
-     "stats": {"xg_per_90": 0.0, "xa_per_90": 0.0, "pass_completion_pct": 75.0, "tackles_per_90": 0.1, "rating_per_90": 6.8}},
-    {"player_id": "p5", "name": "Winger Prospect", "age": 17, "position": "FWD/MID", "league": "PL", "team": "Team E",
-     "nationality": "England", "preferred_foot": "left", "height_cm": 168,
-     "stats": {"xg_per_90": 0.30, "xa_per_90": 0.35, "pass_completion_pct": 79.0, "tackles_per_90": 0.8, "rating_per_90": 6.9}},
+    {
+        "player_id": "p1",
+        "name": "Young Star",
+        "age": 19,
+        "position": "FWD",
+        "league": "PL",
+        "team": "Team A",
+        "nationality": "England",
+        "preferred_foot": "right",
+        "height_cm": 180,
+        "stats": {
+            "xg_per_90": 0.45,
+            "xa_per_90": 0.20,
+            "pass_completion_pct": 82.0,
+            "tackles_per_90": 0.5,
+            "rating_per_90": 7.2,
+        },
+    },
+    {
+        "player_id": "p2",
+        "name": "Veteran Mid",
+        "age": 32,
+        "position": "MID",
+        "league": "La Liga",
+        "team": "Team B",
+        "nationality": "Spain",
+        "preferred_foot": "left",
+        "height_cm": 175,
+        "stats": {
+            "xg_per_90": 0.12,
+            "xa_per_90": 0.25,
+            "pass_completion_pct": 88.0,
+            "tackles_per_90": 2.5,
+            "rating_per_90": 7.0,
+        },
+    },
+    {
+        "player_id": "p3",
+        "name": "Prime Defender",
+        "age": 26,
+        "position": "DEF",
+        "league": "PL",
+        "team": "Team C",
+        "nationality": "Brazil",
+        "preferred_foot": "right",
+        "height_cm": 188,
+        "stats": {
+            "xg_per_90": 0.05,
+            "xa_per_90": 0.03,
+            "pass_completion_pct": 90.0,
+            "tackles_per_90": 4.0,
+            "rating_per_90": 7.5,
+        },
+    },
+    {
+        "player_id": "p4",
+        "name": "Young Keeper",
+        "age": 21,
+        "position": "GK",
+        "league": "Bundesliga",
+        "team": "Team D",
+        "nationality": "Germany",
+        "preferred_foot": "right",
+        "height_cm": 195,
+        "stats": {
+            "xg_per_90": 0.0,
+            "xa_per_90": 0.0,
+            "pass_completion_pct": 75.0,
+            "tackles_per_90": 0.1,
+            "rating_per_90": 6.8,
+        },
+    },
+    {
+        "player_id": "p5",
+        "name": "Winger Prospect",
+        "age": 17,
+        "position": "FWD/MID",
+        "league": "PL",
+        "team": "Team E",
+        "nationality": "England",
+        "preferred_foot": "left",
+        "height_cm": 168,
+        "stats": {
+            "xg_per_90": 0.30,
+            "xa_per_90": 0.35,
+            "pass_completion_pct": 79.0,
+            "tackles_per_90": 0.8,
+            "rating_per_90": 6.9,
+        },
+    },
 ]
 
 
@@ -113,7 +184,7 @@ class TestMatchScore:
         assert results[0].match_score == 100.0
 
     def test_better_match_higher_score(self) -> None:
-        criteria = SearchCriteria(age_min=18, age_max=18)
+        _ = SearchCriteria(age_min=18, age_max=18)
         pass
 
 

@@ -1,11 +1,11 @@
 """Tests for Finishing Analysis — shot quality tiers, streaks, placement."""
 
 from kawkab.core.finishing_analysis import (
-    analyze_finishing,
-    _tier_for_xg,
-    _detect_streaks,
-    _compute_placement_skill,
     DEFAULT_TIER_THRESHOLDS,
+    _compute_placement_skill,
+    _detect_streaks,
+    _tier_for_xg,
+    analyze_finishing,
 )
 
 
@@ -117,7 +117,9 @@ class TestAnalyzeFinishing:
         assert r.shot_tiers["low_chance"]["shots"] == 1
 
     def test_conversion_rate(self):
-        shots = [{"xG": 0.3, "goal": True, "distance": 10, "angle": 15}] * 2 + [{"xG": 0.3, "goal": False, "distance": 10, "angle": 15}] * 2
+        shots = [{"xG": 0.3, "goal": True, "distance": 10, "angle": 15}] * 2 + [
+            {"xG": 0.3, "goal": False, "distance": 10, "angle": 15}
+        ] * 2
         r = analyze_finishing("p1", shots)
         assert r.conversion_rate == 0.5
 

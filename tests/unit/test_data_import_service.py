@@ -46,12 +46,16 @@ def _csv_content(rows: list[tuple]) -> str:
 
 class TestDataImportService:
     def test_import_csv_valid_events(self, service):
-        content = _csv_content([
-            ("pass", "home", "Player A", 50, 30, 70, 40, 120.5, "", "", ""),
-            ("shot", "home", "Player B", 95, 40, "", "", 245.0, 0.25, "", ""),
-            ("goal", "home", "Player C", 90, 35, "", "", 300.0, 0.45, "", ""),
-        ])
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        content = _csv_content(
+            [
+                ("pass", "home", "Player A", 50, 30, 70, 40, 120.5, "", "", ""),
+                ("shot", "home", "Player B", 95, 40, "", "", 245.0, 0.25, "", ""),
+                ("goal", "home", "Player C", 90, 35, "", "", 300.0, 0.45, "", ""),
+            ]
+        )
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(content)
             f.flush()
             path = f.name
@@ -63,11 +67,15 @@ class TestDataImportService:
             os.unlink(path)
 
     def test_import_csv_malformed_row_tracks_error(self, service):
-        content = _csv_content([
-            ("pass", "home", "Player A", 50, 30, 70, 40, 120.5, "", "", ""),
-            ("bad_row", "", "", "", "", "", "", "not_a_number", "", "", ""),
-        ])
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        content = _csv_content(
+            [
+                ("pass", "home", "Player A", 50, 30, 70, 40, 120.5, "", "", ""),
+                ("bad_row", "", "", "", "", "", "", "not_a_number", "", "", ""),
+            ]
+        )
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(content)
             f.flush()
             path = f.name
@@ -79,7 +87,9 @@ class TestDataImportService:
             os.unlink(path)
 
     def test_import_empty_csv(self, service):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write("type,team,player_name,x,y,end_x,end_y,timestamp,xg,xa,xt\n")
             f.flush()
             path = f.name
@@ -96,7 +106,9 @@ class TestDataImportService:
             {"type": "shot", "timestamp": 20.0, "team": "home", "x": 90.0, "y": 40.0, "xg": 0.35},
             {"type": "goal", "timestamp": 30.0, "team": "home", "x": 95.0, "y": 35.0},
         ]
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
             json.dump(events, f)
             f.flush()
             path = f.name
@@ -130,7 +142,9 @@ class TestDataImportService:
                 },
             ]
         }
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
             json.dump(data, f)
             f.flush()
             path = f.name
@@ -144,7 +158,9 @@ class TestDataImportService:
     def test_detect_csv_format_by_content(self):
         s = DataImportService()
         content = _csv_content([("pass", "home", "A", 50, 30, 70, 40, 120.5, "", "", "")])
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(content)
             f.flush()
             path = f.name
@@ -157,7 +173,9 @@ class TestDataImportService:
     def test_detect_statsbomb_format_by_structure(self):
         s = DataImportService()
         data = {"events": [{"type": {"name": "Pass"}, "location": [0, 0]}]}
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
             json.dump(data, f)
             f.flush()
             path = f.name
@@ -168,7 +186,9 @@ class TestDataImportService:
             os.unlink(path)
 
     def test_unsupported_extension_raises_value_error(self, service):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".xml", delete=False, encoding="utf-8"
+        ) as f:
             f.write("<events></events>")
             f.flush()
             path = f.name
@@ -183,10 +203,14 @@ class TestDataImportService:
             service.import_file("C:/nonexistent_file_xyz.json", match_id="m1")
 
     def test_coordinate_validator_clamps_out_of_bounds(self, service, validator_mock):
-        content = _csv_content([
-            ("pass", "home", "A", -10, 200, 150, -20, 100.0, "", "", ""),
-        ])
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        content = _csv_content(
+            [
+                ("pass", "home", "A", -10, 200, 150, -20, 100.0, "", "", ""),
+            ]
+        )
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(content)
             f.flush()
             path = f.name
@@ -199,8 +223,19 @@ class TestDataImportService:
         assert validator_mock.clamp_y.call_count >= 2
 
     def test_import_json_with_statsbomb_data_key(self, service):
-        data = {"data": [{"type": {"name": "Pass"}, "location": [50, 30], "team": {"name": "away"}, "player": {"id": 1}}]}
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        data = {
+            "data": [
+                {
+                    "type": {"name": "Pass"},
+                    "location": [50, 30],
+                    "team": {"name": "away"},
+                    "player": {"id": 1},
+                }
+            ]
+        }
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
             json.dump(data, f)
             f.flush()
             path = f.name
@@ -213,7 +248,9 @@ class TestDataImportService:
     def test_detect_generic_json_format(self):
         s = DataImportService()
         data = [{"type": "pass", "timestamp": 1.0}]
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as f:
             json.dump(data, f)
             f.flush()
             path = f.name
@@ -226,7 +263,9 @@ class TestDataImportService:
     def test_csv_missing_type_skips_row(self, service):
         content = "type,team,player_name,x,y,end_x,end_y,timestamp,xg,xa,xt\n"
         content += ",".join(["", "home", "A", "50", "30", "70", "40", "100", "", "", ""])
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(content)
             f.flush()
             path = f.name
@@ -239,7 +278,9 @@ class TestDataImportService:
     def test_no_storage_returns_zero_imported(self, validator_mock):
         s = DataImportService(storage_service=None, coordinate_validator=validator_mock)
         content = _csv_content([("pass", "home", "A", 50, 30, 70, 40, 100, "", "", "")])
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
             f.write(content)
             f.flush()
             path = f.name

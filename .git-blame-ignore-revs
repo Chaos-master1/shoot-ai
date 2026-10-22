@@ -1,0 +1,18 @@
+# git-blame-ignore-revs
+#
+# List of commit SHAs that `git blame` should skip. These are bulk
+# mechanical commits (formatting, mass autofixes) whose diffs would
+# otherwise attribute every touched line to the bot that ran the tool
+# instead of the human who last changed the code's meaning.
+#
+# One SHA per line. Lines starting with # are comments.
+#
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub blames respect this file automatically when present at repo root.
+
+# 2026-09-17: `ruff format` (ruff 0.16.6) applied across src/ tests/ scripts/
+# -- pure reformatting of 555 files, zero semantic changes. Details in the
+# commit message.
+98211898405ed3797601e9c4b171de9bef94a0f4

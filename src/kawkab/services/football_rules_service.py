@@ -118,9 +118,7 @@ class FootballRulesService:
             with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             self._laws = {
-                int(law["number"]): law
-                for law in data.get("laws", [])
-                if "number" in law
+                int(law["number"]): law for law in data.get("laws", []) if "number" in law
             }
             logger.info(f"Loaded {len(self._laws)} laws from {path}")
         except Exception as e:
@@ -130,23 +128,91 @@ class FootballRulesService:
     def _embedded_defaults(self) -> dict[int, dict[str, Any]]:
         """Minimal law summaries used when YAML is missing."""
         return {
-            1: {"number": 1, "name": "The Field of Play", "summary": "Rectangular pitch, 100-110m x 64-75m"},
-            2: {"number": 2, "name": "The Ball", "summary": "Spherical, 68-70cm circumference, 410-450g"},
-            3: {"number": 3, "name": "The Players", "summary": "11 per team, match may not start/end with fewer than 7"},
-            4: {"number": 4, "name": "The Players' Equipment", "summary": "Kit, boots, shin guards, no jewelry"},
-            5: {"number": 5, "name": "The Referee", "summary": "Enforces Laws, controls match, has final decision"},
-            6: {"number": 6, "name": "The Other Match Officials", "summary": "Two assistant referees, fourth official, VAR"},
-            7: {"number": 7, "name": "The Duration of the Match", "summary": "Two 45-min halves, 15-min break"},
-            8: {"number": 8, "name": "The Start and Restart of Play", "summary": "Kick-off at center, dropped ball for stoppages"},
-            9: {"number": 9, "name": "The Ball In and Out of Play", "summary": "Out when fully over goal line or touchline"},
-            10: {"number": 10, "name": "Determining the Outcome", "summary": "Goal when ball fully crosses goal line"},
-            11: {"number": 11, "name": "Offside", "summary": "Offside if nearer to opponents' goal line than ball and second-last opponent"},
-            12: {"number": 12, "name": "Fouls and Misconduct", "summary": "Direct free kick + caution for careless, reckless, excessive force tackles"},
-            13: {"number": 13, "name": "Free Kicks", "summary": "Direct (can score) and indirect (need second touch)"},
-            14: {"number": 14, "name": "The Penalty Kick", "summary": "Awarded for fouls in penalty area; from 11m spot"},
-            15: {"number": 15, "name": "The Throw-In", "summary": "Restart when ball crosses touchline; both hands from behind head"},
-            16: {"number": 16, "name": "The Goal Kick", "summary": "Restart when ball crosses goal line last touched by attacker"},
-            17: {"number": 17, "name": "The Corner Kick", "summary": "Restart when ball crosses goal line last touched by defender"},
+            1: {
+                "number": 1,
+                "name": "The Field of Play",
+                "summary": "Rectangular pitch, 100-110m x 64-75m",
+            },
+            2: {
+                "number": 2,
+                "name": "The Ball",
+                "summary": "Spherical, 68-70cm circumference, 410-450g",
+            },
+            3: {
+                "number": 3,
+                "name": "The Players",
+                "summary": "11 per team, match may not start/end with fewer than 7",
+            },
+            4: {
+                "number": 4,
+                "name": "The Players' Equipment",
+                "summary": "Kit, boots, shin guards, no jewelry",
+            },
+            5: {
+                "number": 5,
+                "name": "The Referee",
+                "summary": "Enforces Laws, controls match, has final decision",
+            },
+            6: {
+                "number": 6,
+                "name": "The Other Match Officials",
+                "summary": "Two assistant referees, fourth official, VAR",
+            },
+            7: {
+                "number": 7,
+                "name": "The Duration of the Match",
+                "summary": "Two 45-min halves, 15-min break",
+            },
+            8: {
+                "number": 8,
+                "name": "The Start and Restart of Play",
+                "summary": "Kick-off at center, dropped ball for stoppages",
+            },
+            9: {
+                "number": 9,
+                "name": "The Ball In and Out of Play",
+                "summary": "Out when fully over goal line or touchline",
+            },
+            10: {
+                "number": 10,
+                "name": "Determining the Outcome",
+                "summary": "Goal when ball fully crosses goal line",
+            },
+            11: {
+                "number": 11,
+                "name": "Offside",
+                "summary": "Offside if nearer to opponents' goal line than ball and second-last opponent",
+            },
+            12: {
+                "number": 12,
+                "name": "Fouls and Misconduct",
+                "summary": "Direct free kick + caution for careless, reckless, excessive force tackles",
+            },
+            13: {
+                "number": 13,
+                "name": "Free Kicks",
+                "summary": "Direct (can score) and indirect (need second touch)",
+            },
+            14: {
+                "number": 14,
+                "name": "The Penalty Kick",
+                "summary": "Awarded for fouls in penalty area; from 11m spot",
+            },
+            15: {
+                "number": 15,
+                "name": "The Throw-In",
+                "summary": "Restart when ball crosses touchline; both hands from behind head",
+            },
+            16: {
+                "number": 16,
+                "name": "The Goal Kick",
+                "summary": "Restart when ball crosses goal line last touched by attacker",
+            },
+            17: {
+                "number": 17,
+                "name": "The Corner Kick",
+                "summary": "Restart when ball crosses goal line last touched by defender",
+            },
         }
 
     @property
@@ -185,28 +251,29 @@ class FootballRulesService:
             return self._classify_handball(location_x, location_y, side, pitch_length)
         if et == "offside":
             return RuleReference(
-                law=11, law_name="Offside",
+                law=11,
+                law_name="Offside",
                 restart=RestartType.INDIRECT_FREE_KICK,
                 description="Offside offense results in indirect free kick for opposing team from where offense occurred.",
                 card_likely="yellow",
             )
         if et in {"goal", "score"}:
             return RuleReference(
-                law=10, law_name="Determining the Outcome",
+                law=10,
+                law_name="Determining the Outcome",
                 restart=None,
                 description="Goal scored when whole ball crosses goal line between posts and under crossbar.",
                 card_likely="",
             )
         return RuleReference(
-            law=0, law_name="Unknown",
+            law=0,
+            law_name="Unknown",
             restart=None,
             description=f"Event type '{event_type}' not classified by rules service.",
             card_likely="",
         )
 
-    def _classify_foul(
-        self, x: float, y: float, side: str, pitch_length: float
-    ) -> RuleReference:
+    def _classify_foul(self, x: float, y: float, side: str, pitch_length: float) -> RuleReference:
         if side == "home":
             penalty_x = pitch_length - self.PENALTY_AREA_DEPTH
         else:
@@ -214,13 +281,15 @@ class FootballRulesService:
         in_penalty_area = abs(x - penalty_x) < self.PENALTY_AREA_DEPTH
         if in_penalty_area:
             return RuleReference(
-                law=14, law_name="The Penalty Kick",
+                law=14,
+                law_name="The Penalty Kick",
                 restart=RestartType.PENALTY_KICK,
                 description=f"Foul by {('defending' if in_penalty_area else 'attacking')} team inside penalty area → penalty kick.",
                 card_likely="yellow_or_red",
             )
         return RuleReference(
-            law=12, law_name="Fouls and Misconduct",
+            law=12,
+            law_name="Fouls and Misconduct",
             restart=RestartType.DIRECT_FREE_KICK,
             description="Direct free kick awarded for foul outside penalty area.",
             card_likely="yellow",
@@ -234,7 +303,8 @@ class FootballRulesService:
         on_goal_line = x < margin or x > pitch_length - margin
         if on_touchline:
             return RuleReference(
-                law=15, law_name="The Throw-In",
+                law=15,
+                law_name="The Throw-In",
                 restart=RestartType.THROW_IN,
                 description="Ball out over touchline → throw-in to opposing team from where it crossed.",
                 card_likely="",
@@ -243,19 +313,22 @@ class FootballRulesService:
             last_touch = side
             if last_touch == "away":
                 return RuleReference(
-                    law=16, law_name="The Goal Kick",
+                    law=16,
+                    law_name="The Goal Kick",
                     restart=RestartType.GOAL_KICK,
                     description="Ball out over home goal line last touched by away team → goal kick for home.",
                     card_likely="",
                 )
             return RuleReference(
-                law=17, law_name="The Corner Kick",
+                law=17,
+                law_name="The Corner Kick",
                 restart=RestartType.CORNER_KICK,
                 description="Ball out over home goal line last touched by home team → corner kick for away.",
                 card_likely="",
             )
         return RuleReference(
-            law=9, law_name="The Ball In and Out of Play",
+            law=9,
+            law_name="The Ball In and Out of Play",
             restart=None,
             description="Ball position ambiguous; not clearly over a line.",
             card_likely="",
@@ -271,13 +344,15 @@ class FootballRulesService:
         in_penalty_area = abs(x - penalty_x) < self.PENALTY_AREA_DEPTH
         if in_penalty_area:
             return RuleReference(
-                law=14, law_name="The Penalty Kick",
+                law=14,
+                law_name="The Penalty Kick",
                 restart=RestartType.PENALTY_KICK,
                 description="Deliberate handball in own penalty area → penalty kick + caution for offender.",
                 card_likely="yellow_or_red",
             )
         return RuleReference(
-            law=12, law_name="Fouls and Misconduct",
+            law=12,
+            law_name="Fouls and Misconduct",
             restart=RestartType.DIRECT_FREE_KICK,
             description="Deliberate handball → direct free kick for opposing team.",
             card_likely="yellow",

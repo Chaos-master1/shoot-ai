@@ -4,19 +4,23 @@ PSxG measures the probability a shot on target is saved, based on
 shot placement relative to the goal frame, shot speed, and angle.
 This enables goalkeeper performance evaluation (goals conceded vs PSxG).
 
-Uses a logistic regression model calibrated to public shot data.
+Since 2026-09-07 the coefficients are *fitted* from 2,768 StatsBomb
+open-data on-target shots (match-level train/val split; Brier 0.165,
+AUC 0.759, ECE 0.051 on 549 held-out shots — see
+docs/validation/psxg_training_report.json). The hand-tuned values below
+remain only as the fallback when trained weights are absent.
 """
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-
-# Logistic regression coefficients for PSxG (save probability)
-# Positive coefficient = harder to save (higher PSxG = more likely goal)
-# Calibrated to approximate StatsBomb/Opta PSxG distributions
+# Hand-tuned fallback coefficients (superseded by fitted weights when
+# trained_psxg_coefficients.json exists — auto-loaded below).
 PSXG_COEFFICIENTS: dict[str, float] = {
     "intercept": 0.8,
     "distance_m": -0.04,
@@ -26,6 +30,73 @@ PSXG_COEFFICIENTS: dict[str, float] = {
     "is_header": 0.5,
     "height_center_distance": -0.6,
 }
+
+# Fitted coefficients — the ACTIVE model (see validation.train_psxg).
+PSXG_FEATURE_NAMES = [
+    "intercept",
+    "distance_m",
+    "distance_m_sq",
+    "angle_opening_deg",
+    "placement_height",
+    "placement_lateral_abs",
+    "lateral_height_interaction",
+    "is_header",
+    "is_free_kick",
+]
+
+TRAINED_PSXG_COEFFICIENTS: dict[str, float] = {}
+_PSXG_TRAINED_PATH = Path(__file__).parent / "trained_psxg_coefficients.json"
+_PSXG_TRAINED_LOADED = False
+if _PSXG_TRAINED_PATH.exists():
+    try:
+        with open(_PSXG_TRAINED_PATH) as _f:
+            _raw = json.load(_f)
+        _clean = {
+            k: float(v)
+            for k, v in _raw.items()
+            if isinstance(v, (int, float)) and not k.startswith("_")
+        }
+        if _clean:
+            TRAINED_PSXG_COEFFICIENTS = _clean
+            _PSXG_TRAINED_LOADED = True
+    except Exception:
+        pass
+
+
+def psxg_model_available() -> bool:
+    """True when fitted PSxG weights (not hand-tuned) are active."""
+    return _PSXG_TRAINED_LOADED
+
+
+def _compute_psxg_trained(
+    distance_m: float,
+    angle_deg: float,
+    placement_x: float,
+    placement_y: float,
+    is_header: bool,
+    is_free_kick: bool,
+) -> float:
+    """Fitted-model PSxG for an on-target shot.
+
+    placement_x here follows the legacy 0..1 convention (0=left post,
+    1=right post) — converted to meters from goal center; placement_y
+    is 0=ground..1=top. Angle uses the opening-angle convention (deg,
+    ~90 for close central, small for far/wide).
+    """
+    c = TRAINED_PSXG_COEFFICIENTS
+    lateral_m = (placement_x - 0.5) * 7.32
+    height_m = placement_y * 2.44
+    logit = c["intercept"]
+    logit += c["distance_m"] * max(distance_m, 0.5)
+    logit += c["distance_m_sq"] * (distance_m**2)
+    logit += c["angle_opening_deg"] * angle_deg
+    logit += c["placement_height"] * height_m
+    logit += c["placement_lateral_abs"] * abs(lateral_m)
+    logit += c["lateral_height_interaction"] * (abs(lateral_m) * height_m)
+    logit += c["is_header"] * (1.0 if is_header else 0.0)
+    logit += c["is_free_kick"] * (1.0 if is_free_kick else 0.0)
+    psxg = 1.0 / (1.0 + math.exp(-max(-30.0, min(30.0, logit))))
+    return max(0.01, min(0.98, psxg))
 
 
 @dataclass
@@ -94,8 +165,32 @@ def compute_psxg(
         PSxGResult with save probability and shot quality.
     """
     if not on_target:
-        return PSxGResult(psxg=0.0, save_probability=0.0, shot_quality=0.0,
-                          placement_x=placement_x, placement_y=placement_y)
+        return PSxGResult(
+            psxg=0.0,
+            save_probability=0.0,
+            shot_quality=0.0,
+            placement_x=placement_x,
+            placement_y=placement_y,
+        )
+
+    # Trained model (fitted from StatsBomb on-target shots) takes priority;
+    # the hand-tuned heuristic below is the no-weights fallback.
+    if _PSXG_TRAINED_LOADED:
+        psxg = _compute_psxg_trained(
+            distance_m=distance_m,
+            angle_deg=angle_deg,
+            placement_x=placement_x,
+            placement_y=placement_y,
+            is_header=(body_part == "head"),
+            is_free_kick=False,
+        )
+        return PSxGResult(
+            psxg=psxg,
+            save_probability=1.0 - psxg,
+            shot_quality=psxg,
+            placement_x=placement_x,
+            placement_y=placement_y,
+        )
 
     coef = PSXG_COEFFICIENTS
     logit = coef["intercept"]
@@ -175,13 +270,15 @@ def compute_match_psxg(events: list[dict[str, Any]]) -> PSxGMatchReport:
             if is_goal:
                 home_conceded += 1
 
-        details.append({
-            "timestamp": ev.get("timestamp", 0),
-            "team_shooting": team,
-            "psxg": round(result.psxg, 4),
-            "shot_quality": round(result.shot_quality, 3),
-            "is_goal": is_goal,
-        })
+        details.append(
+            {
+                "timestamp": ev.get("timestamp", 0),
+                "team_shooting": team,
+                "psxg": round(result.psxg, 4),
+                "shot_quality": round(result.shot_quality, 3),
+                "is_goal": is_goal,
+            }
+        )
 
     return PSxGMatchReport(
         home_psxg=home_psxg,

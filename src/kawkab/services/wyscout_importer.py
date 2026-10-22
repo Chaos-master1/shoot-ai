@@ -3,9 +3,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from kawkab.core.logging import get_logger
 
@@ -56,14 +54,22 @@ class WyscoutImporter:
             if wait > 0:
                 logger.info(f"Rate limit reached, waiting {wait:.1f}s")
                 time.sleep(wait)
-                self._request_window = [t for t in self._request_window if time.monotonic() - t < 60.0]
+                self._request_window = [
+                    t for t in self._request_window if time.monotonic() - t < 60.0
+                ]
         self._request_window.append(time.monotonic())
 
-    def import_match(self, match_id: str) -> tuple[WyscoutMatch | None, list[WyscoutEvent], list[dict]]:
-        raise NotImplementedError("Wyscout API key required for live data — use import_local(path) for offline files")
+    def import_match(
+        self, match_id: str
+    ) -> tuple[WyscoutMatch | None, list[WyscoutEvent], list[dict]]:
+        raise NotImplementedError(
+            "Wyscout API key required for live data — use import_local(path) for offline files"
+        )
 
     def import_competition(self, competition_id: str, season_id: str) -> list[WyscoutMatch]:
-        raise NotImplementedError("Wyscout API key required for live data — use import_local(path) for offline files")
+        raise NotImplementedError(
+            "Wyscout API key required for live data — use import_local(path) for offline files"
+        )
 
     def _parse_events(self, raw_json: dict) -> list[WyscoutEvent]:
         if not raw_json or not isinstance(raw_json, dict):
@@ -104,25 +110,33 @@ class WyscoutImporter:
                 players = []
                 for p in entry.get("players", []):
                     if isinstance(p, dict):
-                        players.append({
-                            "player_id": str(p.get("playerId", "")),
-                            "name": str(p.get("name", "")),
-                            "shirt_number": int(p.get("shirtNumber", 0)) if p.get("shirtNumber") is not None else 0,
-                            "position": str(p.get("position", "")),
-                        })
-                lineups.append({
-                    "team_id": team_id,
-                    "team_name": str(entry.get("teamName", "")),
-                    "formation": str(entry.get("formation", "")),
-                    "players": players,
-                })
+                        players.append(
+                            {
+                                "player_id": str(p.get("playerId", "")),
+                                "name": str(p.get("name", "")),
+                                "shirt_number": int(p.get("shirtNumber", 0))
+                                if p.get("shirtNumber") is not None
+                                else 0,
+                                "position": str(p.get("position", "")),
+                            }
+                        )
+                lineups.append(
+                    {
+                        "team_id": team_id,
+                        "team_name": str(entry.get("teamName", "")),
+                        "formation": str(entry.get("formation", "")),
+                        "players": players,
+                    }
+                )
             except Exception as exc:
                 logger.warning(f"Skipping Wyscout lineup due to parse error: {exc}")
         return lineups
 
-    def import_local(self, path: str | Path) -> tuple[WyscoutMatch | None, list[WyscoutEvent], list[dict]]:
+    def import_local(
+        self, path: str | Path
+    ) -> tuple[WyscoutMatch | None, list[WyscoutEvent], list[dict]]:
         try:
-            with open(str(path), "r", encoding="utf-8") as f:
+            with open(str(path), encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as exc:
             logger.error(f"Failed to read Wyscout file {path}: {exc}")
@@ -144,10 +158,12 @@ class WyscoutImporter:
                 match_id=str(match_data.get("matchId", match_data.get("id", ""))),
                 competition_id=str(match_data.get("competitionId", "")),
                 season_id=str(match_data.get("seasonId", "")),
-                home_team=str(match_data.get("home", match_data.get("homeTeam", {}))
-                              .get("name", "")),
-                away_team=str(match_data.get("away", match_data.get("awayTeam", {}))
-                              .get("name", "")),
+                home_team=str(
+                    match_data.get("home", match_data.get("homeTeam", {})).get("name", "")
+                ),
+                away_team=str(
+                    match_data.get("away", match_data.get("awayTeam", {})).get("name", "")
+                ),
                 home_score=self._safe_int(match_data, "homeScore"),
                 away_score=self._safe_int(match_data, "awayScore"),
                 match_date=str(match_data.get("date", match_data.get("matchDate", ""))),

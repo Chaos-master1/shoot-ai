@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 
 class GamePlanGenerator:
     def generate(self, events: list[dict], opponent: str = "") -> dict:
-        total_events = len(events)
+        _ = len(events)
         shots = [e for e in events if e.get("type") == "shot"]
-        goals = [e for e in shots if e.get("is_goal")]
+        _ = [e for e in shots if e.get("is_goal")]
         set_pieces = [e for e in events if e.get("type") in ("free_kick", "corner", "throw_in")]
 
         avg_shots_per_game = len(shots) if shots else 0

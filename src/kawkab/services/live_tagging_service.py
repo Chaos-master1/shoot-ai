@@ -4,20 +4,34 @@ import json
 import time
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Optional
 
 from kawkab.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 DEFAULT_HOTKEYS = {
-    "1": "goal", "2": "shot", "3": "pass", "4": "tackle",
-    "5": "foul", "6": "corner", "7": "save", "8": "substitution",
-    "9": "offside", "0": "card_yellow",
-    "q": "throw_in", "w": "free_kick", "e": "cross", "r": "dribble",
-    "t": "clearance", "z": "card_red", "x": "interception",
-    "c": "foul_drawn", "v": "possession_change", "b": "missed_shot",
-    "n": "blocked_shot", "m": "counter_attack",
+    "1": "goal",
+    "2": "shot",
+    "3": "pass",
+    "4": "tackle",
+    "5": "foul",
+    "6": "corner",
+    "7": "save",
+    "8": "substitution",
+    "9": "offside",
+    "0": "card_yellow",
+    "q": "throw_in",
+    "w": "free_kick",
+    "e": "cross",
+    "r": "dribble",
+    "t": "clearance",
+    "z": "card_red",
+    "x": "interception",
+    "c": "foul_drawn",
+    "v": "possession_change",
+    "b": "missed_shot",
+    "n": "blocked_shot",
+    "m": "counter_attack",
 }
 
 
@@ -29,8 +43,8 @@ class LiveTag:
     team: str = ""
     player_track_id: int = 0
     period: int = 1
-    x: Optional[float] = None
-    y: Optional[float] = None
+    x: float | None = None
+    y: float | None = None
     notes: str = ""
 
     def to_dict(self):
@@ -102,12 +116,26 @@ class LiveTaggingService:
         try:
             self._session_active = False
             total_tags = len(self._tags)
-            return json.dumps({"ok": True, "total_tags": total_tags, "message": f"Session stopped. {total_tags} tags recorded."})
+            return json.dumps(
+                {
+                    "ok": True,
+                    "total_tags": total_tags,
+                    "message": f"Session stopped. {total_tags} tags recorded.",
+                }
+            )
         except Exception as e:
             logger.error(f"stop_session failed: {e}")
             return json.dumps({"error": str(e)})
 
-    def tag_event(self, event_type: str, team: str = "", player_id: int = 0, notes: str = "", x: float = None, y: float = None) -> str:
+    def tag_event(
+        self,
+        event_type: str,
+        team: str = "",
+        player_id: int = 0,
+        notes: str = "",
+        x: float | None = None,
+        y: float | None = None,
+    ) -> str:
         try:
             if not self._session_active:
                 return json.dumps({"error": "No active session"})
@@ -118,7 +146,8 @@ class LiveTaggingService:
                 team=team,
                 player_track_id=player_id,
                 period=self._current_period,
-                x=x, y=y,
+                x=x,
+                y=y,
                 notes=notes,
             )
             self._next_id += 1
@@ -178,13 +207,15 @@ class LiveTaggingService:
 
     def export_tags(self) -> str:
         try:
-            return json.dumps({
-                "tags": [t.to_dict() for t in self._tags],
-                "stats": self._stats.to_dict(),
-                "home_team": self._home_team,
-                "away_team": self._away_team,
-                "total": len(self._tags),
-            })
+            return json.dumps(
+                {
+                    "tags": [t.to_dict() for t in self._tags],
+                    "stats": self._stats.to_dict(),
+                    "home_team": self._home_team,
+                    "away_team": self._away_team,
+                    "total": len(self._tags),
+                }
+            )
         except Exception as e:
             logger.error(f"export_tags failed: {e}")
             return json.dumps({"error": str(e)})

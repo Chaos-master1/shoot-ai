@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpy as np
 
 
@@ -74,6 +72,7 @@ def compute_team_influence_map(
     Returns:
         Dict with "home" and "away" influence grids.
     """
+
     def _merge(team_positions):
         if not team_positions:
             return [[0.0] * grid_cols for _ in range(grid_rows)]
@@ -82,9 +81,7 @@ def compute_team_influence_map(
             all_pos.extend(pos_list)
         if not all_pos:
             return [[0.0] * grid_cols for _ in range(grid_rows)]
-        return compute_player_influence(
-            all_pos, pitch_length, pitch_width, grid_rows, grid_cols
-        )
+        return compute_player_influence(all_pos, pitch_length, pitch_width, grid_rows, grid_cols)
 
     return {
         "home": _merge(home_positions),

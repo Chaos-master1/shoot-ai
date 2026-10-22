@@ -10,7 +10,7 @@ from conftest import install_kawkab_stubs
 
 install_kawkab_stubs()
 
-from kawkab.core.coordinate_validator import CoordinateValidator, ValidationResult
+from kawkab.core.coordinate_validator import CoordinateValidator
 
 
 class TestCoordinateValidator:

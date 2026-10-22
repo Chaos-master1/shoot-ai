@@ -1,6 +1,6 @@
 """Tests for pass flow analysis."""
 
-from kawkab.core.pass_flow import compute_pass_flow, PassFlowLink
+from kawkab.core.pass_flow import PassFlowLink, compute_pass_flow
 
 
 class TestPassFlow:
@@ -10,8 +10,16 @@ class TestPassFlow:
 
     def test_single_pass(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 10, "start_y": 34,
-             "end_x": 50, "end_y": 40, "completed": True, "timestamp": 10},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 10,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 40,
+                "completed": True,
+                "timestamp": 10,
+            },
         ]
         result = compute_pass_flow(events, "home")
         assert len(result) == 1
@@ -20,18 +28,42 @@ class TestPassFlow:
 
     def test_filters_other_team(self):
         events = [
-            {"type": "pass", "team": "away", "start_x": 10, "start_y": 34,
-             "end_x": 50, "end_y": 40, "completed": True, "timestamp": 10},
+            {
+                "type": "pass",
+                "team": "away",
+                "start_x": 10,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 40,
+                "completed": True,
+                "timestamp": 10,
+            },
         ]
         result = compute_pass_flow(events, "home")
         assert result == []
 
     def test_aggregates_same_zone(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 12, "start_y": 34,
-             "end_x": 52, "end_y": 40, "completed": True, "timestamp": 10},
-            {"type": "pass", "team": "home", "start_x": 13, "start_y": 33,
-             "end_x": 53, "end_y": 39, "completed": False, "timestamp": 20},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 12,
+                "start_y": 34,
+                "end_x": 52,
+                "end_y": 40,
+                "completed": True,
+                "timestamp": 10,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 13,
+                "start_y": 33,
+                "end_x": 53,
+                "end_y": 39,
+                "completed": False,
+                "timestamp": 20,
+            },
         ]
         result = compute_pass_flow(events, "home", grid_cells=5)
         assert len(result) >= 1

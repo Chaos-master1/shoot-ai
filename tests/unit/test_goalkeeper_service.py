@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import sys
 from pathlib import Path
 
@@ -83,9 +82,15 @@ class TestStatsBasic:
 
     def test_action_breakdown(self, svc: GoalkeeperService) -> None:
         actions = [
-            GoalkeeperAction(action_type="save_cross", minute=10, second=0, team="home", outcome="complete"),
-            GoalkeeperAction(action_type="save_cross", minute=20, second=0, team="home", outcome="complete"),
-            GoalkeeperAction(action_type="sweep", minute=30, second=0, team="home", outcome="complete"),
+            GoalkeeperAction(
+                action_type="save_cross", minute=10, second=0, team="home", outcome="complete"
+            ),
+            GoalkeeperAction(
+                action_type="save_cross", minute=20, second=0, team="home", outcome="complete"
+            ),
+            GoalkeeperAction(
+                action_type="sweep", minute=30, second=0, team="home", outcome="complete"
+            ),
         ]
         stats = svc.compute_stats("home", actions, [])
         assert stats.crosses_claimed == 2
@@ -93,9 +98,15 @@ class TestStatsBasic:
 
     def test_distribution_accuracy(self, svc: GoalkeeperService) -> None:
         actions = [
-            GoalkeeperAction(action_type="short_dist", minute=10, second=0, team="home", outcome="complete"),
-            GoalkeeperAction(action_type="short_dist", minute=20, second=0, team="home", outcome="failed"),
-            GoalkeeperAction(action_type="long_dist", minute=30, second=0, team="home", outcome="complete"),
+            GoalkeeperAction(
+                action_type="short_dist", minute=10, second=0, team="home", outcome="complete"
+            ),
+            GoalkeeperAction(
+                action_type="short_dist", minute=20, second=0, team="home", outcome="failed"
+            ),
+            GoalkeeperAction(
+                action_type="long_dist", minute=30, second=0, team="home", outcome="complete"
+            ),
         ]
         stats = svc.compute_stats("home", actions, [])
         assert stats.short_distribution_attempts == 2

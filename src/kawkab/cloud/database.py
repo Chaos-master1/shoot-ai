@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Any, Optional
 
 CLOUD_DB_PATH = os.environ.get("KAWKAB_CLOUD_DB", str(Path.home() / ".kawkab" / "cloud.db"))
 
 
 class _ResultRow(dict):
     """A row that supports both dict access and attribute-style access like sqlite3.Row."""
+
     __slots__ = ()
+
     def __getitem__(self, key):
         if isinstance(key, int):
             keys = list(self.keys())
@@ -22,7 +24,8 @@ class _ResultRow(dict):
 
 class _PostgresCursor:
     """Sync cursor wrapper around asyncpg result, mimicking sqlite3.Cursor."""
-    def __init__(self, rows: Optional[list[dict]] = None, lastrowid: int = 0):
+
+    def __init__(self, rows: list[dict] | None = None, lastrowid: int = 0):
         self._rows = rows or []
         self._idx = 0
         self._lastrowid = lastrowid
@@ -31,7 +34,7 @@ class _PostgresCursor:
     def lastrowid(self) -> int:
         return self._lastrowid
 
-    def fetchone(self) -> Optional[_ResultRow]:
+    def fetchone(self) -> _ResultRow | None:
         if self._idx >= len(self._rows):
             return None
         row = _ResultRow(self._rows[self._idx])
@@ -39,7 +42,7 @@ class _PostgresCursor:
         return row
 
     def fetchall(self) -> list[_ResultRow]:
-        result = [_ResultRow(r) for r in self._rows[self._idx:]]
+        result = [_ResultRow(r) for r in self._rows[self._idx :]]
         self._idx = len(self._rows)
         return result
 
@@ -53,18 +56,20 @@ class _PostgresCursor:
 
 class _PostgresConnection:
     """Sync PostgreSQL connection that mimics sqlite3.Connection interface.
-    
+
     Uses asyncpg with asyncio.run() internally, safe for sync FastAPI routes.
     """
+
     def __init__(self, dsn: str):
         self._dsn = dsn
         self.row_factory = None
 
     def _run(self, coro):
         try:
-            loop = asyncio.get_running_loop()
+            _ = asyncio.get_running_loop()
             # Already inside an event loop (e.g. TestClient) — schedule & wait
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 fut = pool.submit(asyncio.run, coro)
                 return fut.result()
@@ -74,12 +79,14 @@ class _PostgresConnection:
     def _with_conn(self, callback):
         """Create a fresh connection, run callback, close it."""
         import asyncpg
+
         async def _impl():
             conn = await asyncpg.connect(self._dsn)
             try:
                 return await callback(conn)
             finally:
                 await conn.close()
+
         return self._run(_impl())
 
     @staticmethod
@@ -96,7 +103,7 @@ class _PostgresConnection:
                     if parts[j] == "'" and (j + 1 >= len(parts) or parts[j + 1] != "'"):
                         break
                     j += 1
-                result.append(query[i:j + 1])
+                result.append(query[i : j + 1])
                 i = j + 1
             elif c == "?":
                 result.append(f"${idx}")
@@ -109,6 +116,7 @@ class _PostgresConnection:
 
     def execute(self, query: str, parameters: tuple = ()) -> _PostgresCursor:
         pg_query = self._convert_placeholders(query) if "?" in query else query
+
         def _do_exec(conn):
             async def _exec():
                 q = pg_query.strip()
@@ -122,7 +130,9 @@ class _PostgresConnection:
                 else:
                     await conn.execute(pg_query, *parameters)
                     return [], 0
+
             return _exec()
+
         rows, lastid = self._with_conn(_do_exec)
         return _PostgresCursor(rows, lastrowid=lastid)
 
@@ -130,12 +140,15 @@ class _PostgresConnection:
         statements = [s.strip() for s in script.split(";") if s.strip()]
         if not statements:
             return
+
         def _do_script(conn):
             async def _exec():
                 for stmt in statements:
                     if stmt:
                         await conn.execute(stmt)
+
             return _exec()
+
         self._with_conn(_do_script)
 
     def commit(self) -> None:
@@ -150,6 +163,7 @@ class _PostgresConnection:
 
 class _SqliteConnection:
     """Thin wrapper exposing a sqlite3.Connection through the same interface as _PostgresConnection."""
+
     def __init__(self, path: str):
         self._conn = sqlite3.connect(path)
         self._conn.row_factory = sqlite3.Row
@@ -181,9 +195,9 @@ def _get_cloud_db_impl() -> _SqliteConnection | _PostgresConnection:
         return conn
     path = CLOUD_DB_PATH
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = _SqliteConnection(path)
-    _sqlite_migrate(conn)
-    return conn
+    conn_sqlite = _SqliteConnection(path)
+    _sqlite_migrate(conn_sqlite)
+    return conn_sqlite
 
 
 _local = threading.local()
@@ -318,6 +332,18 @@ def _sqlite_migrate(db: _SqliteConnection) -> None:
     except Exception:
         db.rollback()
 
+    # Migration 5: token_version column -- JWTs carry a "tv" claim checked
+    # against this on every request (see cloud/auth.py get_current_user).
+    # Bumping it (e.g. on password change) instantly invalidates every
+    # previously-issued token for that user without needing a shared
+    # denylist -- 30-day JWTs previously had no revocation path at all.
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0")
+        db.execute("INSERT OR IGNORE INTO schema_version VALUES (5)")
+        db.commit()
+    except Exception:
+        db.rollback()
+
 
 PG_CLOUD_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -331,6 +357,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name TEXT DEFAULT '',
     is_active BOOLEAN DEFAULT TRUE,
     role TEXT DEFAULT 'analyst',
+    token_version INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -413,3 +440,11 @@ CREATE TABLE IF NOT EXISTS api_keys (
 def _pg_migrate(db: _PostgresConnection) -> None:
     """Create auth tables in PostgreSQL with idempotent migrations."""
     db.executescript(PG_CLOUD_SCHEMA)
+    # PG_CLOUD_SCHEMA's users table is CREATE TABLE IF NOT EXISTS, which is
+    # a no-op against a database that already has a users table from
+    # before token_version existed -- ADD COLUMN IF NOT EXISTS (Postgres-
+    # only syntax, unlike SQLite) covers that upgrade path too.
+    with contextlib.suppress(Exception):
+        db.execute(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0"
+        )

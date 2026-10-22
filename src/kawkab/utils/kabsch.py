@@ -20,7 +20,7 @@ import numpy as np
 
 def kabsch_rotation(
     source: np.ndarray, target: np.ndarray
-) -> tuple[np.ndarray, np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Find the optimal rotation that aligns source to target.
 
     Both inputs must have the same shape (N, 3) and N >= 3 (non-collinear).
@@ -56,9 +56,7 @@ def kabsch_rotation(
     return rotation, centroid_source, centroid_target
 
 
-def kabsch_align(
-    source: np.ndarray, target: np.ndarray
-) -> tuple[np.ndarray, np.ndarray, float]:
+def kabsch_align(source: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
     """Find optimal rigid transform (R, t) that maps source onto target.
 
     Args:
@@ -120,4 +118,4 @@ def apply_rigid_transform(
         transformed: same shape as points
     """
     points = np.asarray(points, dtype=np.float64)
-    return (rotation @ points.T).T + translation
+    return np.asarray((rotation @ points.T).T + translation, dtype=np.float64)

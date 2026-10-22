@@ -1,8 +1,8 @@
 """Tests for Fixture Difficulty — opponent strength, stretches, density."""
 
 from kawkab.core.fixture_difficulty import (
-    analyze_fixture_difficulty,
     _difficulty_color,
+    analyze_fixture_difficulty,
 )
 
 

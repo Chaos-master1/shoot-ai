@@ -6,19 +6,14 @@ existing test files exercise. Each class targets one module.
 
 from __future__ import annotations
 
-import math
 import platform
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 
 # ── Module 1: fatigue_model ────────────────────────────────────────────────
-
 from kawkab.core.fatigue_model import (
     PlayerFatigueProfile,
-    SubstitutionImpact,
-    FatigueReport,
     compute_fatigue,
 )
 
@@ -28,10 +23,26 @@ class TestFatigueModelExtras:
 
     def test_player_id_fallback(self):
         events = [
-            {"type": "pass", "team": "home", "player_id": 10,
-             "start_x": 0, "start_y": 34, "end_x": 40, "end_y": 34, "timestamp": 0},
-            {"type": "pass", "team": "home", "player_id": 10,
-             "start_x": 40, "start_y": 34, "end_x": 70, "end_y": 34, "timestamp": 300},
+            {
+                "type": "pass",
+                "team": "home",
+                "player_id": 10,
+                "start_x": 0,
+                "start_y": 34,
+                "end_x": 40,
+                "end_y": 34,
+                "timestamp": 0,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "player_id": 10,
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "timestamp": 300,
+            },
         ]
         report = compute_fatigue(events, 90)
         assert len(report.home_fatigue) == 1
@@ -39,10 +50,24 @@ class TestFatigueModelExtras:
 
     def test_skips_none_track(self):
         events = [
-            {"type": "pass", "team": "home",
-             "start_x": 0, "start_y": 34, "end_x": 40, "end_y": 34, "timestamp": 0},
-            {"type": "run", "team": "home",
-             "start_x": 40, "start_y": 34, "end_x": 70, "end_y": 34, "timestamp": 300},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 0,
+                "start_y": 34,
+                "end_x": 40,
+                "end_y": 34,
+                "timestamp": 0,
+            },
+            {
+                "type": "run",
+                "team": "home",
+                "start_x": 40,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "timestamp": 300,
+            },
         ]
         report = compute_fatigue(events, 90)
         assert len(report.home_fatigue) == 0
@@ -50,8 +75,16 @@ class TestFatigueModelExtras:
 
     def test_zero_distance_not_high_intensity(self):
         events = [
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 50, "end_y": 34, "timestamp": 0},
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+                "timestamp": 0,
+            },
         ]
         report = compute_fatigue(events, 90)
         assert report.home_fatigue[0]["high_intensity_actions"] == 0
@@ -64,19 +97,48 @@ class TestFatigueModelExtras:
         assert d["fatigue_index"] == 1.5  # stored as-is; compute clamps
         # Actually test compute clamping via extreme values
         events = [
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 0, "start_y": 34, "end_x": 100, "end_y": 34,
-             "timestamp": 0},
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 100, "start_y": 34, "end_x": 0, "end_y": 34,
-             "timestamp": 5400},
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 0,
+                "start_y": 34,
+                "end_x": 100,
+                "end_y": 34,
+                "timestamp": 0,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 100,
+                "start_y": 34,
+                "end_x": 0,
+                "end_y": 34,
+                "timestamp": 5400,
+            },
             # Many high-intensity actions
-            {"type": "shot", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 50, "end_y": 34,
-             "timestamp": 60, "is_goal": True},
-            {"type": "tackle", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 50, "end_y": 34,
-             "timestamp": 120},
+            {
+                "type": "shot",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+                "timestamp": 60,
+                "is_goal": True,
+            },
+            {
+                "type": "tackle",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+                "timestamp": 120,
+            },
         ]
         report = compute_fatigue(events, 90)
         fi = report.home_fatigue[0]["fatigue_index"]
@@ -84,8 +146,16 @@ class TestFatigueModelExtras:
 
     def test_carry_type_adds_distance(self):
         events = [
-            {"type": "carry", "team": "away", "track_id": 5,
-             "start_x": 30, "start_y": 34, "end_x": 80, "end_y": 34, "timestamp": 10},
+            {
+                "type": "carry",
+                "team": "away",
+                "track_id": 5,
+                "start_x": 30,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "timestamp": 10,
+            },
         ]
         report = compute_fatigue(events, 90)
         assert len(report.away_fatigue) == 1
@@ -93,8 +163,13 @@ class TestFatigueModelExtras:
 
     def test_substitution_with_track_id(self):
         events = [
-            {"type": "substitution", "team": "away",
-             "track_id": 22, "player_out": 7, "timestamp": 1800},
+            {
+                "type": "substitution",
+                "team": "away",
+                "track_id": 22,
+                "player_out": 7,
+                "timestamp": 1800,
+            },
         ]
         report = compute_fatigue(events, 90)
         assert len(report.substitutions) == 1
@@ -102,12 +177,27 @@ class TestFatigueModelExtras:
 
     def test_multiple_substitutions(self):
         events = [
-            {"type": "substitution", "team": "home",
-             "player_in": 11, "player_out": 7, "timestamp": 2700},
-            {"type": "substitution", "team": "home",
-             "player_in": 15, "player_out": 9, "timestamp": 3600},
-            {"type": "substitution", "team": "away",
-             "player_in": 20, "player_out": 3, "timestamp": 1800},
+            {
+                "type": "substitution",
+                "team": "home",
+                "player_in": 11,
+                "player_out": 7,
+                "timestamp": 2700,
+            },
+            {
+                "type": "substitution",
+                "team": "home",
+                "player_in": 15,
+                "player_out": 9,
+                "timestamp": 3600,
+            },
+            {
+                "type": "substitution",
+                "team": "away",
+                "player_in": 20,
+                "player_out": 3,
+                "timestamp": 1800,
+            },
         ]
         report = compute_fatigue(events, 90)
         assert len(report.substitutions) == 3
@@ -115,7 +205,7 @@ class TestFatigueModelExtras:
 
 # ── Module 2: game_state ──────────────────────────────────────────────────
 
-from kawkab.core.game_state import analyze_game_state, GameStateReport, GameStateMetrics
+from kawkab.core.game_state import GameStateMetrics, analyze_game_state
 
 
 class TestGameStateExtras:
@@ -124,7 +214,12 @@ class TestGameStateExtras:
     def test_possession_and_nonpossession_frames(self):
         events = [{"type": "pass", "timestamp": 5.0, "team": "home", "completed": True}]
         frames = [
-            {"timestamp": t, "possession": t < 5, "home_positions": [(50, 34)], "away_positions": [(70, 34)]}
+            {
+                "timestamp": t,
+                "possession": t < 5,
+                "home_positions": [(50, 34)],
+                "away_positions": [(70, 34)],
+            }
             for t in range(10)
         ]
         result = analyze_game_state(events, frames)
@@ -136,7 +231,12 @@ class TestGameStateExtras:
             {"type": "pass", "timestamp": 15.0, "team": "FC Barcelona", "completed": True},
         ]
         frames = [
-            {"timestamp": t, "possession": t < 15, "home_positions": [(50, 34)], "away_positions": [(70, 34)]}
+            {
+                "timestamp": t,
+                "possession": t < 15,
+                "home_positions": [(50, 34)],
+                "away_positions": [(70, 34)],
+            }
             for t in range(0, 20)
         ]
         result = analyze_game_state(events, frames, home_team_name="FC Barcelona")
@@ -146,7 +246,12 @@ class TestGameStateExtras:
     def test_missing_completed_default_true(self):
         events = [{"type": "pass", "timestamp": 5.0, "team": "home"}]
         frames = [
-            {"timestamp": t, "possession": True, "home_positions": [(50, 34)], "away_positions": [(70, 34)]}
+            {
+                "timestamp": t,
+                "possession": True,
+                "home_positions": [(50, 34)],
+                "away_positions": [(70, 34)],
+            }
             for t in range(10)
         ]
         result = analyze_game_state(events, frames)
@@ -154,7 +259,9 @@ class TestGameStateExtras:
 
     def test_empty_home_positions(self):
         events = [{"type": "pass", "timestamp": 5.0, "team": "home", "completed": True}]
-        frames = [{"timestamp": 5.0, "possession": True, "home_positions": [], "away_positions": []}]
+        frames = [
+            {"timestamp": 5.0, "possession": True, "home_positions": [], "away_positions": []}
+        ]
         result = analyze_game_state(events, frames)
         assert result.drawing.defensive_line_height_m == 0.0
 
@@ -204,7 +311,7 @@ class TestLoggingExtras:
 
 # ── Module 4: match_timeline ──────────────────────────────────────────────
 
-from kawkab.core.match_timeline import compute_xg_timeline, XGFlowReport, TimelinePoint
+from kawkab.core.match_timeline import compute_xg_timeline
 
 
 class TestMatchTimelineExtras:
@@ -259,8 +366,7 @@ class TestMatchTimelineExtras:
 
 # ── Module 5: pass_flow ────────────────────────────────────────────────────
 
-from kawkab.core.pass_flow import compute_pass_flow, PassFlowLink
-from kawkab.core.coords import STANDARD_PITCH
+from kawkab.core.pass_flow import compute_pass_flow
 
 
 class TestPassFlowExtras:
@@ -268,18 +374,42 @@ class TestPassFlowExtras:
 
     def test_away_team_filter(self):
         events = [
-            {"type": "pass", "team": "away", "start_x": 10, "start_y": 34,
-             "end_x": 50, "end_y": 40, "completed": True, "timestamp": 10},
+            {
+                "type": "pass",
+                "team": "away",
+                "start_x": 10,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 40,
+                "completed": True,
+                "timestamp": 10,
+            },
         ]
         result = compute_pass_flow(events, "away")
         assert len(result) == 1
 
     def test_grid_cells_one(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 5, "start_y": 5,
-             "end_x": 100, "end_y": 60, "completed": True, "timestamp": 10},
-            {"type": "pass", "team": "home", "start_x": 20, "start_y": 30,
-             "end_x": 80, "end_y": 40, "completed": False, "timestamp": 20},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 5,
+                "start_y": 5,
+                "end_x": 100,
+                "end_y": 60,
+                "completed": True,
+                "timestamp": 10,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 20,
+                "start_y": 30,
+                "end_x": 80,
+                "end_y": 40,
+                "completed": False,
+                "timestamp": 20,
+            },
         ]
         result = compute_pass_flow(events, "home", grid_cells=1)
         assert len(result) == 1
@@ -287,8 +417,14 @@ class TestPassFlowExtras:
 
     def test_default_coords_when_missing(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 10, "end_x": 50,
-             "completed": True, "timestamp": 5},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 10,
+                "end_x": 50,
+                "completed": True,
+                "timestamp": 5,
+            },
         ]
         result = compute_pass_flow(events, "home")
         assert len(result) >= 1
@@ -296,20 +432,52 @@ class TestPassFlowExtras:
 
     def test_sort_by_count_descending(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 10, "start_y": 10,
-             "end_x": 50, "end_y": 10, "completed": True, "timestamp": 1},
-            {"type": "pass", "team": "home", "start_x": 10, "start_y": 10,
-             "end_x": 50, "end_y": 10, "completed": True, "timestamp": 2},
-            {"type": "pass", "team": "home", "start_x": 60, "start_y": 50,
-             "end_x": 90, "end_y": 50, "completed": False, "timestamp": 3},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 10,
+                "start_y": 10,
+                "end_x": 50,
+                "end_y": 10,
+                "completed": True,
+                "timestamp": 1,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 10,
+                "start_y": 10,
+                "end_x": 50,
+                "end_y": 10,
+                "completed": True,
+                "timestamp": 2,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 60,
+                "start_y": 50,
+                "end_x": 90,
+                "end_y": 50,
+                "completed": False,
+                "timestamp": 3,
+            },
         ]
         result = compute_pass_flow(events, "home")
         assert result[0]["count"] >= result[-1]["count"]
 
     def test_avg_progress_computed(self):
         events = [
-            {"type": "pass", "team": "home", "start_x": 10, "start_y": 34,
-             "end_x": 50, "end_y": 34, "completed": True, "timestamp": 5},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 10,
+                "start_y": 34,
+                "end_x": 50,
+                "end_y": 34,
+                "completed": True,
+                "timestamp": 5,
+            },
         ]
         result = compute_pass_flow(events, "home")
         assert result[0]["avg_progress"] == 40.0
@@ -317,7 +485,7 @@ class TestPassFlowExtras:
 
 # ── Module 6: pass_sonars ──────────────────────────────────────────────────
 
-from kawkab.core.pass_sonars import compute_pass_sonars, PassSonarSector
+from kawkab.core.pass_sonars import compute_pass_sonars
 
 
 class TestPassSonarsExtras:
@@ -325,8 +493,15 @@ class TestPassSonarsExtras:
 
     def test_none_track_id_uses_question_mark(self):
         events = [
-            {"type": "pass", "team": "home",
-             "start_x": 50, "start_y": 34, "end_x": 70, "end_y": 40, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 40,
+                "completed": True,
+            },
         ]
         result = compute_pass_sonars(events)
         assert len(result) == 1
@@ -334,10 +509,26 @@ class TestPassSonarsExtras:
 
     def test_fewer_sectors(self):
         events = [
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 70, "end_y": 34, "completed": True},
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 30, "end_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 30,
+                "end_y": 34,
+                "completed": True,
+            },
         ]
         result = compute_pass_sonars(events, sectors=4)
         assert len(result) == 1
@@ -345,26 +536,56 @@ class TestPassSonarsExtras:
 
     def test_team_preserved_in_output(self):
         events = [
-            {"type": "pass", "team": "away", "track_id": 5,
-             "start_x": 50, "start_y": 34, "end_x": 70, "end_y": 40, "completed": True},
+            {
+                "type": "pass",
+                "team": "away",
+                "track_id": 5,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 40,
+                "completed": True,
+            },
         ]
         result = compute_pass_sonars(events)
         assert result[0]["team"] == "away"
 
     def test_default_end_coords(self):
         events = [
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "completed": True},
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "completed": True,
+            },
         ]
         result = compute_pass_sonars(events)
         assert len(result) == 1
 
     def test_sector_avg_distance_accuracy(self):
         events = [
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 70, "end_y": 34, "completed": True},
-            {"type": "pass", "team": "home", "track_id": 1,
-             "start_x": 50, "start_y": 34, "end_x": 70, "end_y": 34, "completed": False},
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "completed": True,
+            },
+            {
+                "type": "pass",
+                "team": "home",
+                "track_id": 1,
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 70,
+                "end_y": 34,
+                "completed": False,
+            },
         ]
         result = compute_pass_sonars(events, sectors=12)
         # both passes go right (angle ~0°), sector 0
@@ -376,7 +597,25 @@ class TestPassSonarsExtras:
 
 # ── Module 7: paths ────────────────────────────────────────────────────────
 
+import importlib.util as _iu
+
 import kawkab.core.paths as _paths_mod
+
+# conftest may have stubbed kawkab.core.paths — load real module attrs
+_src_pkg = Path(__file__).resolve().parent.parent.parent / "src"
+_src_paths = _src_pkg / "kawkab" / "core" / "paths.py"
+_spec = _iu.spec_from_file_location("kawkab.core.paths.real", str(_src_paths))
+_real_paths = _iu.module_from_spec(_spec)
+_spec.loader.exec_module(_real_paths)
+# Copy real functions into the module reference used here
+for _attr in (
+    "_get_appdata_dir",
+    "_get_localappdata_dir",
+    "_get_documents_dir",
+    "Paths",
+    "get_paths",
+):
+    setattr(_paths_mod, _attr, getattr(_real_paths, _attr))
 
 
 class TestPathsExtras:
@@ -430,13 +669,13 @@ class TestPathsExtras:
 from kawkab.core.pressing_traps import PressingTrap
 from kawkab.core.transitions import PhaseTransition
 from kawkab.core.trap_transition_linkage import (
-    TrapTransitionLink,
     TrapTransitionAnalysis,
+    TrapTransitionLink,
+    _find_trap_recovery_events,
+    _infer_team_for_trap,
+    _zone_midpoint,
     analyze_trap_transitions,
     summarize_trap_transition,
-    _infer_team_for_trap,
-    _find_trap_recovery_events,
-    _zone_midpoint,
 )
 
 
@@ -463,9 +702,15 @@ def _trap(zone_name, x_range, y_range, regains=0):
 
 def _trans(team, ts, sx, sy):
     return PhaseTransition(
-        timestamp=ts, team=team, transition_type="counter_attack",
-        start_x=sx, start_y=sy, duration_s=3.0, speed_mps=8.0,
-        outcome="shot", ended_in_final_third=True,
+        timestamp=ts,
+        team=team,
+        transition_type="counter_attack",
+        start_x=sx,
+        start_y=sy,
+        duration_s=3.0,
+        speed_mps=8.0,
+        outcome="shot",
+        ended_in_final_third=True,
     )
 
 
@@ -513,11 +758,13 @@ class TestTrapTransitionLinkageExtras:
 
     def test_summarize_full_conversion(self):
         analysis = TrapTransitionAnalysis(
-            total_traps=3, successful_traps=3,
+            total_traps=3,
+            successful_traps=3,
             transitions_from_traps=[
                 TrapTransitionLink(0, 0, 1.0, 5.0, True, True),
             ],
-            conversion_rate=1.0, goal_conversion_rate=0.333,
+            conversion_rate=1.0,
+            goal_conversion_rate=0.333,
             avg_transition_time=1.0,
         )
         summary = summarize_trap_transition(analysis)
@@ -548,9 +795,12 @@ class TestTrapTransitionLinkageExtras:
 
     def test_trap_transition_link_dataclass(self):
         link = TrapTransitionLink(
-            trap_index=0, transition_index=1,
-            time_delta=2.5, spatial_distance=12.0,
-            goal_scored=False, shot_created=True,
+            trap_index=0,
+            transition_index=1,
+            time_delta=2.5,
+            spatial_distance=12.0,
+            goal_scored=False,
+            shot_created=True,
         )
         assert link.trap_index == 0
         assert link.transition_index == 1

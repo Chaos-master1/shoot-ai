@@ -56,16 +56,17 @@ class WeatherImageClassifier:
     """
 
     def __init__(self, model_path: str | None = None) -> None:
-        self._cnn_model = None
+        self._cnn_model: Any = None
         self._cnn_available = False
         self._model_path = model_path
-        self._torch = None
+        self._torch: Any = None
         self._try_load_cnn()
 
     def _try_load_cnn(self) -> None:
         try:
             import torch
             import torch.nn as nn
+
             self._torch = torch
             self._nn = nn
             if self._model_path and self._model_path != "":
@@ -88,6 +89,7 @@ class WeatherImageClassifier:
         nn = self._nn
         try:
             import torchvision.models as tvm
+
             backbone = tvm.mobilenet_v3_small(weights=None)
             backbone.classifier = nn.Sequential(
                 nn.Linear(576, 128),
@@ -117,8 +119,7 @@ class WeatherImageClassifier:
         """Classify weather from a single video frame."""
         if frame is None or frame.size == 0:
             return WeatherClassification(
-                "sunny", 0.0, {c: 0.2 for c in WEATHER_CLASSES},
-                0.0, 0.0, 0.0, "feature_based"
+                "sunny", 0.0, dict.fromkeys(WEATHER_CLASSES, 0.2), 0.0, 0.0, 0.0, "feature_based"
             )
         if self._cnn_available:
             try:
@@ -131,22 +132,20 @@ class WeatherImageClassifier:
         """Classify weather across multiple frames; majority vote on class."""
         if not frames:
             return WeatherClassification(
-                "sunny", 0.0, {c: 0.2 for c in WEATHER_CLASSES},
-                0.0, 0.0, 0.0, "feature_based"
+                "sunny", 0.0, dict.fromkeys(WEATHER_CLASSES, 0.2), 0.0, 0.0, 0.0, "feature_based"
             )
         results = [self.classify(f) for f in frames if f is not None and f.size > 0]
         if not results:
             return WeatherClassification(
-                "sunny", 0.0, {c: 0.2 for c in WEATHER_CLASSES},
-                0.0, 0.0, 0.0, "feature_based"
+                "sunny", 0.0, dict.fromkeys(WEATHER_CLASSES, 0.2), 0.0, 0.0, 0.0, "feature_based"
             )
         votes: dict[str, int] = {}
-        avg_probs: dict[str, float] = {c: 0.0 for c in WEATHER_CLASSES}
+        avg_probs: dict[str, float] = dict.fromkeys(WEATHER_CLASSES, 0.0)
         for r in results:
             votes[r.predicted_class] = votes.get(r.predicted_class, 0) + 1
             for c, p in r.class_probabilities.items():
                 avg_probs[c] += p / len(results)
-        winner = max(votes, key=votes.get)
+        winner = max(votes, key=votes.get)  # type: ignore[arg-type]
         return WeatherClassification(
             predicted_class=winner,
             confidence=avg_probs[winner],
@@ -171,7 +170,7 @@ class WeatherImageClassifier:
         return WeatherClassification(
             predicted_class=WEATHER_CLASSES[int(np.argmax(probs))],
             confidence=float(np.max(probs)),
-            class_probabilities={c: float(p) for c, p in zip(WEATHER_CLASSES, probs)},
+            class_probabilities={c: float(p) for c, p in zip(WEATHER_CLASSES, probs, strict=False)},
             brightness=brightness,
             edge_density=edge_density,
             blue_dominance=blue_dom,
@@ -181,7 +180,7 @@ class WeatherImageClassifier:
     def _classify_features(self, frame: np.ndarray) -> WeatherClassification:
         """Feature-based weather classification (no ML model needed)."""
         brightness, edge_density, blue_dom = compute_features(frame)
-        scores = {c: 0.0 for c in WEATHER_CLASSES}
+        scores = dict.fromkeys(WEATHER_CLASSES, 0.0)
         if brightness < 90:
             scores["rainy"] += 0.3
             scores["snowy"] += 0.2
@@ -206,7 +205,7 @@ class WeatherImageClassifier:
         if total > 0:
             for c in scores:
                 scores[c] /= total
-        predicted = max(scores, key=scores.get)
+        predicted = max(scores, key=scores.get)  # type: ignore[arg-type]
         return WeatherClassification(
             predicted_class=predicted,
             confidence=scores[predicted],
@@ -224,10 +223,7 @@ def compute_features(frame: np.ndarray) -> tuple[float, float, float]:
     Returns (brightness 0-255, edge_density 0-1, blue_dominance).
     """
     try:
-        if frame.ndim == 3:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = frame
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
         brightness = float(gray.mean())
         edges = cv2.Canny(gray, 80, 200)
         edge_density = float(edges.mean()) / 255.0
@@ -252,6 +248,7 @@ def torchvision_normalize():
             std=[0.229, 0.224, 0.225],
         )
     except Exception:
+
         class _Identity:
             def __call__(self, x):
                 return x

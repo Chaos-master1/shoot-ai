@@ -1,11 +1,19 @@
 """Tests for pitch coordinate utilities."""
 
 import pytest
+
 from kawkab.core.coords import (
-    PitchConfig, STANDARD_PITCH, FINAL_THIRD_X,
-    is_normalized, norm_to_meters, clamp_pitch,
-    pitch_third, half_space, zone_label,
-    euclidean_distance_m, meters_to_pixel_fraction,
+    FINAL_THIRD_X,
+    STANDARD_PITCH,
+    PitchConfig,
+    clamp_pitch,
+    euclidean_distance_m,
+    half_space,
+    is_normalized,
+    meters_to_pixel_fraction,
+    norm_to_meters,
+    pitch_third,
+    zone_label,
 )
 
 
@@ -20,7 +28,7 @@ class TestPitchConfig:
     def test_custom_pitch(self):
         p = PitchConfig(length_m=90, width_m=60)
         assert p.half_length == 45.0
-        assert p.diagonal_m == pytest.approx((90**2 + 60**2)**0.5)
+        assert p.diagonal_m == pytest.approx((90**2 + 60**2) ** 0.5)
 
     def test_third_x(self):
         p = PitchConfig()

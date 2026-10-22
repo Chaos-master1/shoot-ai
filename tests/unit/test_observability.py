@@ -1,6 +1,5 @@
 """Tests for metrics observability (Counter, Gauge, Histogram, MetricsCollector)."""
 
-import math
 from kawkab.core.observability import Counter, Gauge, Histogram, MetricsCollector, _fmt_labels
 
 

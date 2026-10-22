@@ -8,16 +8,17 @@ Tracks accuracy metrics over time to measure improvement.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-import json
 
-from kawkab.core.logging import get_logger
 from kawkab.core.coordinate_validator import CoordinateValidator
+from kawkab.core.logging import get_logger
 
 try:
-    import pandas as pd
+    import pandas as pd  # noqa: F401  (availability probe)
+
     _HAS_PANDAS = True
 except ImportError:
     _HAS_PANDAS = False
@@ -119,30 +120,34 @@ class ValidationService:
         if path.suffix.lower() == ".json":
             data = json.loads(path.read_text(encoding="utf-8"))
             for item in data:
-                events.append(EventGroundTruth(
-                    event_type=item.get("event_type", "unknown"),
-                    timestamp=item.get("timestamp", 0.0),
-                    team=item.get("team", "unknown"),
-                    player_id=item.get("player_id"),
-                    position=(item.get("x"), item.get("y")) if "x" in item else None,
-                    metadata=item.get("metadata", {}),
-                ))
+                events.append(
+                    EventGroundTruth(
+                        event_type=item.get("event_type", "unknown"),
+                        timestamp=item.get("timestamp", 0.0),
+                        team=item.get("team", "unknown"),
+                        player_id=item.get("player_id"),
+                        position=(item.get("x"), item.get("y")) if "x" in item else None,
+                        metadata=item.get("metadata", {}),
+                    )
+                )
         elif path.suffix.lower() in (".csv", ".txt"):
             lines = path.read_text(encoding="utf-8").strip().split("\n")
             if not lines:
                 return []
-            header = lines[0].split(",")
+            _ = lines[0].split(",")
             for line in lines[1:]:
                 parts = line.split(",")
                 if len(parts) < 3:
                     continue
-                events.append(EventGroundTruth(
-                    event_type=parts[0],
-                    timestamp=float(parts[1]),
-                    team=parts[2] if len(parts) > 2 else "unknown",
-                    player_id=int(parts[3]) if len(parts) > 3 and parts[3] else None,
-                    position=(float(parts[4]), float(parts[5])) if len(parts) > 5 else None,
-                ))
+                events.append(
+                    EventGroundTruth(
+                        event_type=parts[0],
+                        timestamp=float(parts[1]),
+                        team=parts[2] if len(parts) > 2 else "unknown",
+                        player_id=int(parts[3]) if len(parts) > 3 and parts[3] else None,
+                        position=(float(parts[4]), float(parts[5])) if len(parts) > 5 else None,
+                    )
+                )
         else:
             raise ValueError(f"Unsupported ground truth format: {path.suffix}")
 
@@ -207,8 +212,8 @@ class ValidationService:
             gt_by_type.setdefault(e.event_type, []).append(e)
 
         comp_by_type: dict[str, list[dict]] = {}
-        for e in computed_events:
-            comp_by_type.setdefault(e.get("type", "unknown"), []).append(e)
+        for computed in computed_events:
+            comp_by_type.setdefault(computed.get("type", "unknown"), []).append(computed)
 
         # Validate each event type we have ground truth for
         all_types = set(gt_by_type.keys()) | set(comp_by_type.keys())
@@ -239,38 +244,44 @@ class ValidationService:
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
-            results.append(ValidationResult(
-                category="events",
-                metric_name=f"{event_type}_f1",
-                computed_value=f1,
-                ground_truth_value=1.0,
-                absolute_error=1.0 - f1,
-                relative_error_pct=(1.0 - f1) * 100,
-                accuracy_score=f1,
-                sample_count=len(gt_list),
-            ))
+            results.append(
+                ValidationResult(
+                    category="events",
+                    metric_name=f"{event_type}_f1",
+                    computed_value=f1,
+                    ground_truth_value=1.0,
+                    absolute_error=1.0 - f1,
+                    relative_error_pct=(1.0 - f1) * 100,
+                    accuracy_score=f1,
+                    sample_count=len(gt_list),
+                )
+            )
 
-            results.append(ValidationResult(
-                category="events",
-                metric_name=f"{event_type}_precision",
-                computed_value=precision,
-                ground_truth_value=1.0,
-                absolute_error=1.0 - precision,
-                relative_error_pct=(1.0 - precision) * 100,
-                accuracy_score=precision,
-                sample_count=len(gt_list),
-            ))
+            results.append(
+                ValidationResult(
+                    category="events",
+                    metric_name=f"{event_type}_precision",
+                    computed_value=precision,
+                    ground_truth_value=1.0,
+                    absolute_error=1.0 - precision,
+                    relative_error_pct=(1.0 - precision) * 100,
+                    accuracy_score=precision,
+                    sample_count=len(gt_list),
+                )
+            )
 
-            results.append(ValidationResult(
-                category="events",
-                metric_name=f"{event_type}_recall",
-                computed_value=recall,
-                ground_truth_value=1.0,
-                absolute_error=1.0 - recall,
-                relative_error_pct=(1.0 - recall) * 100,
-                accuracy_score=recall,
-                sample_count=len(gt_list),
-            ))
+            results.append(
+                ValidationResult(
+                    category="events",
+                    metric_name=f"{event_type}_recall",
+                    computed_value=recall,
+                    ground_truth_value=1.0,
+                    absolute_error=1.0 - recall,
+                    relative_error_pct=(1.0 - recall) * 100,
+                    accuracy_score=recall,
+                    sample_count=len(gt_list),
+                )
+            )
 
         return results
 
@@ -288,7 +299,9 @@ class ValidationService:
             computed_value=computed_possession_pct,
             ground_truth_value=ground_truth_possession_pct,
             absolute_error=error,
-            relative_error_pct=(error / ground_truth_possession_pct * 100) if ground_truth_possession_pct > 0 else 0.0,
+            relative_error_pct=(error / ground_truth_possession_pct * 100)
+            if ground_truth_possession_pct > 0
+            else 0.0,
             accuracy_score=accuracy,
             sample_count=1,
         )
@@ -318,7 +331,8 @@ class ValidationService:
             )
 
         correct = sum(
-            1 for tid, team in ground_truth_assignments.items()
+            1
+            for tid, team in ground_truth_assignments.items()
             if computed_assignments.get(tid) == team
         )
         accuracy = correct / total
@@ -384,20 +398,14 @@ class ValidationService:
         results: list[ValidationResult],
     ) -> ValidationReport:
         """Build a complete validation report from individual results."""
-        if results:
-            overall = sum(r.accuracy_score for r in results) / len(results)
-        else:
-            overall = 0.0
+        overall = sum(r.accuracy_score for r in results) / len(results) if results else 0.0
 
         # Group by category for summary
         by_category: dict[str, list[float]] = {}
         for r in results:
             by_category.setdefault(r.category, []).append(r.accuracy_score)
 
-        summary = {
-            cat: round(sum(scores) / len(scores), 3)
-            for cat, scores in by_category.items()
-        }
+        summary = {cat: round(sum(scores) / len(scores), 3) for cat, scores in by_category.items()}
 
         return ValidationReport(
             match_id=match_id,
@@ -429,17 +437,21 @@ class ValidationService:
                 lines = csv_path.read_text(encoding="utf-8").strip().split("\n")
                 if len(lines) < 2:
                     continue
-                header = [h.strip().lower() for h in lines[0].split(",")]
+                _ = [h.strip().lower() for h in lines[0].split(",")]
                 for line in lines[1:]:
                     parts = line.split(",")
                     if len(parts) < 3:
                         continue
-                    events.append(EventGroundTruth(
-                        event_type="tracking_sample",
-                        timestamp=float(parts[1]) if len(parts) > 1 else 0.0,
-                        team=parts[3] if len(parts) > 3 else "unknown",
-                        player_id=int(parts[4]) if len(parts) > 4 and parts[4].strip().isdigit() else None,
-                    ))
+                    events.append(
+                        EventGroundTruth(
+                            event_type="tracking_sample",
+                            timestamp=float(parts[1]) if len(parts) > 1 else 0.0,
+                            team=parts[3] if len(parts) > 3 else "unknown",
+                            player_id=int(parts[4])
+                            if len(parts) > 4 and parts[4].strip().isdigit()
+                            else None,
+                        )
+                    )
             except Exception as e:
                 logger.debug(f"Error reading {csv_path}: {e}")
                 continue
@@ -451,7 +463,9 @@ class ValidationService:
     # Metrica Sports sample-data ground truth loader
     # ------------------------------------------------------------------
 
-    def load_metrica_events(self, data_dir: Path | str, match_id: str = "Sample_Game_1") -> list[EventGroundTruth]:
+    def load_metrica_events(
+        self, data_dir: Path | str, match_id: str = "Sample_Game_1"
+    ) -> list[EventGroundTruth]:
         """Load Metrica Sports event data as ground truth.
 
         Metrica format: JSON with event types (pass, shot, tackle, etc.)
@@ -475,13 +489,15 @@ class ValidationService:
                 player_id = player.get("id") if isinstance(player, dict) else None
                 x = item.get("StartX")
                 y = item.get("StartY")
-                events.append(EventGroundTruth(
-                    event_type=ev_type,
-                    timestamp=float(ts),
-                    team=team,
-                    player_id=int(player_id) if player_id else None,
-                    position=(float(x), float(y)) if x is not None else None,
-                ))
+                events.append(
+                    EventGroundTruth(
+                        event_type=ev_type,
+                        timestamp=float(ts),
+                        team=team,
+                        player_id=int(player_id) if player_id else None,
+                        position=(float(x), float(y)) if x is not None else None,
+                    )
+                )
             logger.info(f"Loaded {len(events)} Metrica events from {events_path}")
             return events
         except Exception as e:
@@ -504,12 +520,16 @@ class ValidationService:
                     parts = line.split(",")
                     if len(parts) < 3:
                         continue
-                    events.append(EventGroundTruth(
-                        event_type="tracking_sample",
-                        timestamp=float(parts[1]) if len(parts) > 1 else 0.0,
-                        team="home" if "Home" in suffix else "away",
-                        player_id=int(parts[2]) if len(parts) > 2 and parts[2].strip().lstrip("-").isdigit() else None,
-                    ))
+                    events.append(
+                        EventGroundTruth(
+                            event_type="tracking_sample",
+                            timestamp=float(parts[1]) if len(parts) > 1 else 0.0,
+                            team="home" if "Home" in suffix else "away",
+                            player_id=int(parts[2])
+                            if len(parts) > 2 and parts[2].strip().lstrip("-").isdigit()
+                            else None,
+                        )
+                    )
             except Exception:
                 continue
         logger.info(f"Loaded {len(events)} Metrica tracking samples (legacy)")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -48,6 +47,7 @@ def mock_ffmpeg():
 # Init
 # ===================================================================
 
+
 class TestInit:
     def test_defaults(self):
         s = EnhancementService()
@@ -78,6 +78,7 @@ class TestInit:
 # ===================================================================
 # PreprocessVideo
 # ===================================================================
+
 
 class TestPreprocessVideo:
     @pytest.mark.asyncio
@@ -152,6 +153,7 @@ class TestPreprocessVideo:
 # UpscaleVideo
 # ===================================================================
 
+
 class TestUpscaleVideo:
     @pytest.mark.asyncio
     async def test_returns_input_when_disabled(self, fake_input, fake_output):
@@ -169,6 +171,7 @@ class TestUpscaleVideo:
 # ===================================================================
 # InterpolateVideo
 # ===================================================================
+
 
 class TestInterpolateVideo:
     @pytest.mark.asyncio
@@ -188,13 +191,13 @@ class TestInterpolateVideo:
 # Error handling
 # ===================================================================
 
+
 class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_ffmpeg_not_installed(self, fake_input, fake_output):
         s = EnhancementService(False, False, False)
-        with patch.dict("sys.modules", {"ffmpeg": None}):
-            with pytest.raises(ModuleNotFoundError):
-                await s.preprocess_video(fake_input, fake_output)
+        with patch.dict("sys.modules", {"ffmpeg": None}), pytest.raises(ModuleNotFoundError):
+            await s.preprocess_video(fake_input, fake_output)
 
     @pytest.mark.asyncio
     async def test_upscale_scales_on_cpu_when_no_cuda(self, fake_input, fake_output):

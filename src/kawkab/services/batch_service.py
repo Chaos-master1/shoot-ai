@@ -6,19 +6,17 @@ Useful for processing weekend matches overnight or season-wide analysis.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Any
 import json
-import asyncio
+from dataclasses import dataclass, field
+from enum import StrEnum
+from typing import Any
 
 from kawkab.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-class BatchStatus(str, Enum):
+class BatchStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -241,7 +239,9 @@ class BatchService:
         self._running = False
         self._cancelled = False
         self._current_job = None
-        logger.info(f"Batch job {job_id} finished: {job.completed_matches}/{job.total_matches} matches")
+        logger.info(
+            f"Batch job {job_id} finished: {job.completed_matches}/{job.total_matches} matches"
+        )
         return job
 
     def cancel(self) -> None:

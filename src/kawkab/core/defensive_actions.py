@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from kawkab.core.coords import FINAL_THIRD_X, STANDARD_PITCH, PitchConfig
-from kawkab.core.game_constants import GAME
 
 
 @dataclass
@@ -78,14 +77,16 @@ def extract_defensive_actions(
         if mapped is None:
             continue
 
-        actions.append(DefensiveAction(
-            timestamp=ev.get("timestamp", 0),
-            team=team,
-            action_type=mapped,
-            x=ev.get("start_x", 52.5),
-            y=ev.get("start_y", 34.0),
-            success=ev.get("completed", False),
-        ))
+        actions.append(
+            DefensiveAction(
+                timestamp=ev.get("timestamp", 0),
+                team=team,
+                action_type=mapped,
+                x=ev.get("start_x", 52.5),
+                y=ev.get("start_y", 34.0),
+                success=ev.get("completed", False),
+            )
+        )
 
     return actions
 
@@ -112,11 +113,15 @@ def build_defensive_heatmap(
         DefensiveHeatmap with normalized density grid.
     """
     if not actions:
-        return DefensiveHeatmap(team="", grid=[
-            [0.0] * grid_cols for _ in range(grid_rows)
-        ], grid_rows=grid_rows, grid_cols=grid_cols)
+        return DefensiveHeatmap(
+            team="",
+            grid=[[0.0] * grid_cols for _ in range(grid_rows)],
+            grid_rows=grid_rows,
+            grid_cols=grid_cols,
+        )
 
     import numpy as np
+
     gx = (np.arange(grid_cols) + 0.5) * pitch.length_m / grid_cols
     gy = (np.arange(grid_rows) + 0.5) * pitch.width_m / grid_rows
 
@@ -126,7 +131,7 @@ def build_defensive_heatmap(
     dx = gx[np.newaxis, :, np.newaxis] - positions[np.newaxis, np.newaxis, :, 0]
     dy = gy[:, np.newaxis, np.newaxis] - positions[np.newaxis, np.newaxis, :, 1]
     dist_sq = dx * dx + dy * dy
-    density = np.exp(-dist_sq / (2.0 * 4.0 ** 2))  # sigma = 4m
+    density = np.exp(-dist_sq / (2.0 * 4.0**2))  # sigma = 4m
     grid_vals = np.sum(density, axis=2)
 
     max_val = float(np.max(grid_vals))
@@ -248,14 +253,16 @@ def analyze_final_third_entries(
                 if succeeded:
                     away_success += 1
 
-            entries.append(FinalThirdEntry(
-                timestamp=ev.get("timestamp", 0),
-                team=team,
-                entry_type=entry_type,
-                x=end_x,
-                y=ev.get("end_y", 34.0),
-                succeeded=succeeded,
-            ).to_dict())
+            entries.append(
+                FinalThirdEntry(
+                    timestamp=ev.get("timestamp", 0),
+                    team=team,
+                    entry_type=entry_type,
+                    x=end_x,
+                    y=ev.get("end_y", 34.0),
+                    succeeded=succeeded,
+                ).to_dict()
+            )
 
     return FinalThirdReport(
         home_entries=home_entries,

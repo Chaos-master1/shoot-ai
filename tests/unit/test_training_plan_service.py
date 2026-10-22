@@ -6,7 +6,7 @@ import sys
 import types
 from dataclasses import dataclass, field
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,6 +26,7 @@ if "kawkab.services" not in sys.modules:
 # ---------------------------------------------------------------------------
 # Stub analysis_service — needed because reasoning_service imports it
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _TeamStats:
@@ -60,16 +61,12 @@ if "kawkab.services.analysis_service" not in sys.modules:
 # Load knowledge_service and reasoning_service with proper dotted names
 # ---------------------------------------------------------------------------
 if "kawkab.services.knowledge_service" not in sys.modules:
-    _kmod = load_service_module(
-        "kawkab.services.knowledge_service", "knowledge_service.py"
-    )
+    _kmod = load_service_module("kawkab.services.knowledge_service", "knowledge_service.py")
 else:
     _kmod = sys.modules["kawkab.services.knowledge_service"]
 
 if "kawkab.services.reasoning_service" not in sys.modules:
-    _rmod = load_service_module(
-        "kawkab.services.reasoning_service", "reasoning_service.py"
-    )
+    _rmod = load_service_module("kawkab.services.reasoning_service", "reasoning_service.py")
 else:
     _rmod = sys.modules["kawkab.services.reasoning_service"]
 
@@ -96,12 +93,22 @@ DrillSession = _mod.DrillSession
 # ===========================================================================
 
 
-def _make_diagnosis(rule_id: str, name: str, confidence: float = 0.8,
-                    severity: str = "medium", drills: list[str] | None = None):
+def _make_diagnosis(
+    rule_id: str,
+    name: str,
+    confidence: float = 0.8,
+    severity: str = "medium",
+    drills: list[str] | None = None,
+):
     return Diagnosis(
-        rule_id=rule_id, rule_name=name, rule_name_ar=f"اسم {name}",
-        category="defensive", severity=severity, confidence=confidence,
-        evidence={"key": "value"}, explanation=f"Explanation for {name}",
+        rule_id=rule_id,
+        rule_name=name,
+        rule_name_ar=f"اسم {name}",
+        category="defensive",
+        severity=severity,
+        confidence=confidence,
+        evidence={"key": "value"},
+        explanation=f"Explanation for {name}",
         explanation_ar=f"شرح لـ {name}",
         recommended_drills=drills or ["D001"],
     )
@@ -124,15 +131,24 @@ def _make_diagnosis_report(match_id: int = 1, diagnoses: list | None = None):
     )
 
 
-def _make_drill(drill_id: str = "D001", name: str = "Test Drill",
-                duration: int = 15):
+def _make_drill(drill_id: str = "D001", name: str = "Test Drill", duration: int = 15):
     return Drill(
-        drill_id=drill_id, name=name, category="technical",
-        targets=["accuracy"], duration_min=duration,
-        players_required=6, intensity="medium", equipment=[],
-        space="half_pitch", setup="Set up cones", rules=["Rule 1"],
-        progressions=[], regressions=[], coaching_points=[],
-        addresses_problems=[], source="test",
+        drill_id=drill_id,
+        name=name,
+        category="technical",
+        targets=["accuracy"],
+        duration_min=duration,
+        players_required=6,
+        intensity="medium",
+        equipment=[],
+        space="half_pitch",
+        setup="Set up cones",
+        rules=["Rule 1"],
+        progressions=[],
+        regressions=[],
+        coaching_points=[],
+        addresses_problems=[],
+        source="test",
     )
 
 
@@ -332,8 +348,10 @@ class TestExportToDict:
         kb = _make_kb_mock()
         gen = TrainingPlanGenerator(kb)
         import json
+
         report = _make_diagnosis_report()
         import asyncio
+
         plan = asyncio.run(gen.generate_plan(report))
         d = gen.export_to_dict(plan)
         assert d["plan_id"] == plan.plan_id
@@ -350,9 +368,14 @@ class TestExportToDict:
         kb = _make_kb_mock()
         gen = TrainingPlanGenerator(kb)
         plan = TrainingPlan(
-            plan_id="test", match_id=0, created_at="now",
-            duration_weeks=1, weeks=[], total_drills=0,
-            weekly_schedule={}, priority_addressed=[],
+            plan_id="test",
+            match_id=0,
+            created_at="now",
+            duration_weeks=1,
+            weeks=[],
+            total_drills=0,
+            weekly_schedule={},
+            priority_addressed=[],
             expected_overall_improvement="",
         )
         d = gen.export_to_dict(plan)

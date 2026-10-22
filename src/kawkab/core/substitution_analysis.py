@@ -7,7 +7,6 @@ and possession changes before vs after each substitution.
 
 from __future__ import annotations
 
-import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
@@ -116,9 +115,7 @@ class SubstitutionAnalyzer:
         subs: list[dict[str, Any]] = sorted(substitutions, key=lambda s: s.get("minute", 0))
 
         if minute_by_minute_stats:
-            stat_by_minute = {
-                s["minute"]: s for s in minute_by_minute_stats
-            }
+            stat_by_minute = {s["minute"]: s for s in minute_by_minute_stats}
         else:
             stat_by_minute = {}
             if events:
@@ -129,10 +126,22 @@ class SubstitutionAnalyzer:
 
                 for m in range(int(match_duration) + 1):
                     mevs = events_by_minute.get(m, [])
-                    home_shots = sum(1 for e in mevs if e.get("type") == "shot" and e.get("team") == "home")
-                    away_shots = sum(1 for e in mevs if e.get("type") == "shot" and e.get("team") == "away")
-                    home_xg = sum(float(e.get("xg", 0)) for e in mevs if e.get("team") == "home" and e.get("type") == "shot")
-                    away_xg = sum(float(e.get("xg", 0)) for e in mevs if e.get("team") == "away" and e.get("type") == "shot")
+                    home_shots = sum(
+                        1 for e in mevs if e.get("type") == "shot" and e.get("team") == "home"
+                    )
+                    away_shots = sum(
+                        1 for e in mevs if e.get("type") == "shot" and e.get("team") == "away"
+                    )
+                    home_xg = sum(
+                        float(e.get("xg", 0))
+                        for e in mevs
+                        if e.get("team") == "home" and e.get("type") == "shot"
+                    )
+                    away_xg = sum(
+                        float(e.get("xg", 0))
+                        for e in mevs
+                        if e.get("team") == "away" and e.get("type") == "shot"
+                    )
                     stat_by_minute[m] = {
                         "minute": m,
                         "home_xg": home_xg,

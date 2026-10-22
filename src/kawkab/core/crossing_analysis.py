@@ -131,7 +131,13 @@ class CrossingAnalysis:
         cx = float(cross_event.get("end_x", cross_event.get("start_x", PITCH_LENGTH / 2)))
         cy = float(cross_event.get("end_y", cross_event.get("start_y", PITCH_WIDTH / 2)))
 
-        type_weights = {"pulled_back": 0.9, "early": 0.7, "byline": 0.8, "driven": 0.5, "floated": 0.4}
+        type_weights = {
+            "pulled_back": 0.9,
+            "early": 0.7,
+            "byline": 0.8,
+            "driven": 0.5,
+            "floated": 0.4,
+        }
         type_w = type_weights.get(cross_type, 0.5)
 
         prox = (cx / PITCH_LENGTH) * 0.4
@@ -214,9 +220,7 @@ class CrossingAnalysis:
             crosses=results,
         )
 
-    def compute_cross_zone_heatmap(
-        self, events: list[dict[str, Any]]
-    ) -> dict[str, int]:
+    def compute_cross_zone_heatmap(self, events: list[dict[str, Any]]) -> dict[str, int]:
         hm: dict[str, int] = defaultdict(int)
         for e in events:
             if e.get("type") != "cross":

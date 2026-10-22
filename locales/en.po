@@ -241,3 +241,121 @@ msgstr "Saved"
 
 msgid "msg_loaded"
 msgstr "Loaded"
+
+# Match Week loop (app-matchweek.js)
+msgid "navMatchWeek"
+msgstr "Match Week"
+
+msgid "mwTitle"
+msgstr "Match Week"
+
+msgid "mwRefresh"
+msgstr "Refresh"
+
+msgid "mwDiagnose"
+msgstr "Diagnose"
+
+msgid "mwPlan"
+msgstr "Plan"
+
+msgid "mwRecheck"
+msgstr "Re-check"
+
+msgid "mwGenerate"
+msgstr "Generate this week's plan"
+
+msgid "mwGenerating"
+msgstr "Generating…"
+
+msgid "mwPlanGenerated"
+msgstr "Training plan generated"
+
+msgid "mwNoDiagnoses"
+msgstr "No diagnosis is stored yet. Generating a plan runs the reasoning engine and saves its diagnoses."
+
+msgid "mwNoPlan"
+msgstr "No plan yet."
+
+msgid "mwWeeks"
+msgstr "weeks"
+
+msgid "mwDrills"
+msgstr "drills"
+
+msgid "mwExpected"
+msgstr "Expected"
+
+msgid "mwRetest"
+msgstr "Re-test"
+
+msgid "mwImproved"
+msgstr "improved"
+
+msgid "mwWorse"
+msgstr "worse"
+
+msgid "mwAwaiting"
+msgstr "Waiting for the next two matches. A delta from one match is noise, not evidence."
+
+msgid "mwNoRecheck"
+msgstr "No measurement yet."
+
+msgid "mwNoRules"
+msgstr "The plan carries no measurable diagnosis."
+
+msgid "mwCalibrated"
+msgstr "Calibrated — spatial stats in meters"
+
+msgid "mwUncalibrated"
+msgstr "Not calibrated — spatial stats are pixel-based estimates"
+
+msgid "mwCalibrationUnknown"
+msgstr "Calibration state unknown"
+
+msgid "mwBasedOn"
+msgstr "Plan based on matches"
+
+msgid "mwWindow"
+msgstr "Post-plan window"
+
+msgid "mwSelectMatch"
+msgstr "Select or analyse a match to see its week."
+
+msgid "mwBridgeUnavailable"
+msgstr "The backend bridge is not available."
+
+msgid "mwUnresolvedDrills"
+msgstr "Referenced drills missing from the knowledge base: "
+
+msgid "mwStage_no_analysis"
+msgstr "no analysis"
+
+msgid "mwStage_no_plan"
+msgstr "no plan"
+
+msgid "mwStage_awaiting_matches"
+msgstr "awaiting matches"
+
+msgid "mwStage_measured"
+msgstr "measured"
+
+msgid "mwStage_not_observed"
+msgstr "not observed"
+
+msgid "mwStage_error"
+msgstr "error"
+
+msgid "mwState_measured"
+msgstr "measured"
+
+msgid "mwState_insufficient_sample"
+msgstr "insufficient sample"
+
+msgid "mwState_unmeasurable"
+msgstr "unmeasurable"
+
+msgid "mwState_rule_not_found"
+msgstr "rule not found"
+
+msgid "mwState_no_declared_metric"
+msgstr "no declared metric"

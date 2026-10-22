@@ -6,7 +6,6 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
 
 from kawkab.core.pressing_traps import PressingTrap
 from kawkab.core.transitions import PhaseTransition
@@ -45,6 +44,7 @@ def _zone_midpoint(trap: PressingTrap) -> tuple[float, float]:
 
 def _infer_team_for_trap(events: list[dict], trap: PressingTrap) -> str:
     from kawkab.core.pressing_traps import _classify_trap_zone
+
     counts: dict[str, int] = defaultdict(int)
     for ev in events:
         if ev.get("type") not in ("tackle", "interception", "foul"):
@@ -57,7 +57,7 @@ def _infer_team_for_trap(events: list[dict], trap: PressingTrap) -> str:
             counts[ev.get("team", "")] += 1
     if not counts:
         return "home"
-    return max(counts, key=counts.get)
+    return max(counts, key=counts.get)  # type: ignore[arg-type,return-value]
 
 
 def _find_trap_recovery_events(
@@ -66,6 +66,7 @@ def _find_trap_recovery_events(
     team: str,
 ) -> list[float]:
     from kawkab.core.pressing_traps import _classify_trap_zone
+
     sorted_ev = sorted(events, key=lambda e: e.get("timestamp", 0.0))
     n = len(sorted_ev)
     recovery_times: list[float] = []
@@ -81,7 +82,12 @@ def _find_trap_recovery_events(
             continue
         for k in range(i + 1, min(n, i + 8)):
             later = sorted_ev[k]
-            if later.get("team") == team and later.get("type") in ("pass", "carry", "shot", "dribble"):
+            if later.get("team") == team and later.get("type") in (
+                "pass",
+                "carry",
+                "shot",
+                "dribble",
+            ):
                 recovery_times.append(later.get("timestamp", 0.0))
                 break
 
@@ -117,8 +123,7 @@ def analyze_trap_transitions(
                     continue
 
                 spatial_dist = math.sqrt(
-                    (trans.start_x - trap_mid[0]) ** 2
-                    + (trans.start_y - trap_mid[1]) ** 2
+                    (trans.start_x - trap_mid[0]) ** 2 + (trans.start_y - trap_mid[1]) ** 2
                 )
                 if spatial_dist > TRAP_LINK_DISTANCE_M:
                     continue
@@ -137,18 +142,20 @@ def analyze_trap_transitions(
                         if ev.get("is_goal"):
                             goal_scored = True
 
-                links.append(TrapTransitionLink(
-                    trap_index=ti,
-                    transition_index=tj,
-                    time_delta=time_delta,
-                    spatial_distance=spatial_dist,
-                    goal_scored=goal_scored,
-                    shot_created=shot_created,
-                ))
+                links.append(
+                    TrapTransitionLink(
+                        trap_index=ti,
+                        transition_index=tj,
+                        time_delta=time_delta,
+                        spatial_distance=spatial_dist,
+                        goal_scored=goal_scored,
+                        shot_created=shot_created,
+                    )
+                )
                 total_time_delta += time_delta
 
-    traps_with_links = set(l.trap_index for l in links)
-    traps_with_goals = set(l.trap_index for l in links if l.goal_scored)
+    traps_with_links = {link.trap_index for link in links}
+    traps_with_goals = {link.trap_index for link in links if link.goal_scored}
     conversion_rate = len(traps_with_links) / max(successful_count, 1)
     goal_conversion_rate = len(traps_with_goals) / max(successful_count, 1)
     avg_time = total_time_delta / max(len(links), 1)
@@ -166,10 +173,7 @@ def analyze_trap_transitions(
 def summarize_trap_transition(analysis: TrapTransitionAnalysis) -> dict[str, str]:
     if analysis.total_traps > 0:
         minutes_per = 90.0 / analysis.total_traps
-        freq = (
-            f"A pressing trap every {minutes_per:.1f} minutes"
-            " leading to a counter-attack"
-        )
+        freq = f"A pressing trap every {minutes_per:.1f} minutes leading to a counter-attack"
     else:
         freq = "No pressing traps detected"
 

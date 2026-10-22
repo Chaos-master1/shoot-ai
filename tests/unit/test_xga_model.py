@@ -1,6 +1,7 @@
 """Tests for Expected Goals Against (xGA) model."""
 
 import pytest
+
 from kawkab.core.xga_model import (
     ExpectedGoalsAgainstModel,
     XGAReport,
@@ -29,9 +30,30 @@ class TestXgaCompute:
     def test_three_shots(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.5, "start_x": 90, "start_y": 34, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.5, "start_x": 85, "start_y": 20, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.5, "start_x": 80, "start_y": 50, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "start_x": 90,
+                "start_y": 34,
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "start_x": 85,
+                "start_y": 20,
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "start_x": 80,
+                "start_y": 50,
+                "is_goal": True,
+            },
         ]
         xga = model.compute_xga(events, "home")
         assert xga == pytest.approx(1.5, rel=0.01)
@@ -48,7 +70,14 @@ class TestXgaCompute:
     def test_own_shots_not_counted(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "home", "xg": 0.8, "start_x": 90, "start_y": 34, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "home",
+                "xg": 0.8,
+                "start_x": 90,
+                "start_y": 34,
+                "is_goal": False,
+            },
         ]
         xga = model.compute_xga(events, "home")
         assert xga == 0.0
@@ -63,9 +92,30 @@ class TestXgaByZone:
     def test_zone_distribution(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.3, "start_x": 90, "start_y": 10, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.6, "start_x": 95, "start_y": 55, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.1, "start_x": 50, "start_y": 34, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.3,
+                "start_x": 90,
+                "start_y": 10,
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.6,
+                "start_x": 95,
+                "start_y": 55,
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.1,
+                "start_x": 50,
+                "start_y": 34,
+                "is_goal": False,
+            },
         ]
         zones = model.compute_xga_by_zone(events, "home")
         assert len(zones) >= 2
@@ -82,8 +132,26 @@ class TestXgaByType:
     def test_type_split(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.5, "body_part": "head", "start_x": 90, "start_y": 34, "metadata": {}, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.3, "body_part": "right_foot", "start_x": 85, "start_y": 34, "metadata": {}, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "body_part": "head",
+                "start_x": 90,
+                "start_y": 34,
+                "metadata": {},
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.3,
+                "body_part": "right_foot",
+                "start_x": 85,
+                "start_y": 34,
+                "metadata": {},
+                "is_goal": False,
+            },
         ]
         type_bd, sit_bd = model.compute_xga_by_type(events, "home")
         assert "head" in type_bd
@@ -93,8 +161,26 @@ class TestXgaByType:
     def test_type_situation_split(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.4, "body_part": "right_foot", "start_x": 90, "start_y": 34, "metadata": {"set_piece": "corner_kick"}, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.76, "body_part": "right_foot", "start_x": 95, "start_y": 34, "metadata": {"set_piece": "penalty"}, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.4,
+                "body_part": "right_foot",
+                "start_x": 90,
+                "start_y": 34,
+                "metadata": {"set_piece": "corner_kick"},
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.76,
+                "body_part": "right_foot",
+                "start_x": 95,
+                "start_y": 34,
+                "metadata": {"set_piece": "penalty"},
+                "is_goal": True,
+            },
         ]
         type_bd, sit_bd = model.compute_xga_by_type(events, "home")
         assert "set_piece" in sit_bd or "penalty" in sit_bd
@@ -112,9 +198,30 @@ class TestXgaSavePct:
     def test_save_pct_calculation(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 1.0, "start_x": 90, "start_y": 34, "is_goal": True},
-            {"type": "shot", "team": "away", "xg": 1.0, "start_x": 85, "start_y": 20, "is_goal": True},
-            {"type": "shot", "team": "away", "xg": 1.0, "start_x": 80, "start_y": 50, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 1.0,
+                "start_x": 90,
+                "start_y": 34,
+                "is_goal": True,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 1.0,
+                "start_x": 85,
+                "start_y": 20,
+                "is_goal": True,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 1.0,
+                "start_x": 80,
+                "start_y": 50,
+                "is_goal": False,
+            },
         ]
         sp = model.compute_xga_save_pct(events, "home")
         assert sp == pytest.approx(0.333, rel=0.01)
@@ -127,8 +234,22 @@ class TestXgaSavePct:
     def test_save_pct_all_saved(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.5, "start_x": 90, "start_y": 34, "is_goal": False},
-            {"type": "shot", "team": "away", "xg": 0.3, "start_x": 85, "start_y": 20, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "start_x": 90,
+                "start_y": 34,
+                "is_goal": False,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.3,
+                "start_x": 85,
+                "start_y": 20,
+                "is_goal": False,
+            },
         ]
         sp = model.compute_xga_save_pct(events, "home")
         assert sp == pytest.approx(1.0, rel=0.01)
@@ -136,8 +257,22 @@ class TestXgaSavePct:
     def test_save_pct_all_conceded(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.5, "start_x": 90, "start_y": 34, "is_goal": True},
-            {"type": "shot", "team": "away", "xg": 0.5, "start_x": 85, "start_y": 20, "is_goal": True},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "start_x": 90,
+                "start_y": 34,
+                "is_goal": True,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "start_x": 85,
+                "start_y": 20,
+                "is_goal": True,
+            },
         ]
         sp = model.compute_xga_save_pct(events, "home")
         assert sp == pytest.approx(0.0, rel=0.01)
@@ -147,8 +282,26 @@ class TestXgaFullReport:
     def test_full_report_structure(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.5, "body_part": "head", "start_x": 90, "start_y": 34, "metadata": {}, "is_goal": True},
-            {"type": "shot", "team": "away", "xg": 0.3, "body_part": "right_foot", "start_x": 50, "start_y": 34, "metadata": {}, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.5,
+                "body_part": "head",
+                "start_x": 90,
+                "start_y": 34,
+                "metadata": {},
+                "is_goal": True,
+            },
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.3,
+                "body_part": "right_foot",
+                "start_x": 50,
+                "start_y": 34,
+                "metadata": {},
+                "is_goal": False,
+            },
         ]
         report = model.compute_full_report(events, "home")
         assert isinstance(report, XGAReport)
@@ -166,7 +319,16 @@ class TestXgaFullReport:
     def test_full_report_to_dict(self):
         model = ExpectedGoalsAgainstModel()
         events = [
-            {"type": "shot", "team": "away", "xg": 0.4, "body_part": "left_foot", "start_x": 88, "start_y": 30, "metadata": {}, "is_goal": False},
+            {
+                "type": "shot",
+                "team": "away",
+                "xg": 0.4,
+                "body_part": "left_foot",
+                "start_x": 88,
+                "start_y": 30,
+                "metadata": {},
+                "is_goal": False,
+            },
         ]
         report = model.compute_full_report(events, "home")
         d = report.to_dict()

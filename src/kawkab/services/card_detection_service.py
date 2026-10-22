@@ -11,8 +11,7 @@ Output: list of CardEvents with confidence and source attribution.
 
 from __future__ import annotations
 
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -66,12 +65,13 @@ class CardDetectionService:
 
     def __init__(self) -> None:
         self._available = True
-        self._cv2 = None
+        self._cv2: Any = None
         self._try_import_cv2()
 
     def _try_import_cv2(self) -> None:
         try:
             import cv2
+
             self._cv2 = cv2
         except Exception:
             pass
@@ -98,7 +98,7 @@ class CardDetectionService:
         if self._cv2 is None or not frames:
             return []
         detections_per_frame: list[tuple[float, CardType | None, float]] = []
-        for ts, frame in zip(timestamps, frames):
+        for ts, frame in zip(timestamps, frames, strict=False):
             if frame is None or frame.size == 0:
                 continue
             try:
@@ -120,14 +120,16 @@ class CardDetectionService:
             if count >= 3:
                 minute = int(ts // 60)
                 second = int(ts % 60)
-                events.append(CardEvent(
-                    card_type=card_type,
-                    minute=minute,
-                    second=second,
-                    source=CardSource.VISUAL,
-                    confidence=min(0.9, conf * (count / 6)),
-                    description=f"Referee raised {card_type.value} card detected in {count} consecutive frames",
-                ))
+                events.append(
+                    CardEvent(
+                        card_type=card_type,
+                        minute=minute,
+                        second=second,
+                        source=CardSource.VISUAL,
+                        confidence=min(0.9, conf * (count / 6)),
+                        description=f"Referee raised {card_type.value} card detected in {count} consecutive frames",
+                    )
+                )
                 i += count
             else:
                 i += 1
@@ -146,8 +148,12 @@ class CardDetectionService:
             red_mask = self._cv2.bitwise_or(red_lower, red_upper)
             yellow_pct = float(yellow_mask.mean()) / 255.0
             red_pct = float(red_mask.mean()) / 255.0
-            yellow_contours, _ = self._cv2.findContours(yellow_mask, self._cv2.RETR_EXTERNAL, self._cv2.CHAIN_APPROX_SIMPLE)
-            red_contours, _ = self._cv2.findContours(red_mask, self._cv2.RETR_EXTERNAL, self._cv2.CHAIN_APPROX_SIMPLE)
+            yellow_contours, _ = self._cv2.findContours(
+                yellow_mask, self._cv2.RETR_EXTERNAL, self._cv2.CHAIN_APPROX_SIMPLE
+            )
+            red_contours, _ = self._cv2.findContours(
+                red_mask, self._cv2.RETR_EXTERNAL, self._cv2.CHAIN_APPROX_SIMPLE
+            )
             yellow_card_like = self._filter_card_contours(yellow_contours)
             red_card_like = self._filter_card_contours(red_contours)
             if yellow_card_like > 0 and yellow_pct > 0.002:
@@ -192,16 +198,15 @@ class CardDetectionService:
             return AudioCardSignal(False, False, False, 0.0)
         try:
             from scipy import signal as sp_signal
-            freqs, times, Sxx = sp_signal.spectrogram(
-                audio_chunk, fs=sample_rate, nperseg=1024
-            )
+
+            freqs, times, Sxx = sp_signal.spectrogram(audio_chunk, fs=sample_rate, nperseg=1024)
         except Exception:
             return AudioCardSignal(False, False, False, 0.0)
         whistle_mask = (freqs >= 1000) & (freqs <= 3500)
-        whistle_energy = float(Sxx[whistle_mask_mask].mean()) if whistle_mask.any() else 0.0
+        whistle_energy = float(Sxx[whistle_mask].mean()) if whistle_mask.any() else 0.0
         has_whistle = whistle_energy > 0.001
         if len(audio_chunk) > sample_rate // 2:
-            rms = float(np.sqrt(np.mean(audio_chunk ** 2)))
+            rms = float(np.sqrt(np.mean(audio_chunk**2)))
             peak_rms = float(np.sqrt(np.mean(np.abs(audio_chunk) ** 2)))
             has_crowd_reaction = peak_rms > rms * 1.5
         else:
@@ -223,9 +228,7 @@ class CardDetectionService:
     # Tactical inference: foul events → likely cards
     # ------------------------------------------------------------------
 
-    def infer_cards_tactically(
-        self, events: list[dict[str, Any]]
-    ) -> list[CardEvent]:
+    def infer_cards_tactically(self, events: list[dict[str, Any]]) -> list[CardEvent]:
         """Infer cards from event patterns.
 
         Heuristics:
@@ -248,41 +251,52 @@ class CardDetectionService:
             player_key = (player_tid or 0, team)
             location_x = event.get("x", 0) or 0
             in_penalty_area = location_x > 88.5 or location_x < 16.5
-            is_last_man = (
-                (location_x > 80 and team == "home")
-                or (location_x < 20 and team == "away")
+            is_last_man = (location_x > 80 and team == "home") or (
+                location_x < 20 and team == "away"
             )
             severity = event.get("severity", 0.5)
             if is_last_man and severity > 0.6:
-                card_events.append(CardEvent(
-                    card_type=CardType.RED,
-                    minute=minute, second=second,
-                    player_track_id=player_tid,
-                    player_name=player_name, team=team,
-                    source=CardSource.TACTICAL,
-                    confidence=0.6,
-                    description="Last-man tactical foul — red card (DOGSO) likely per Law 12",
-                ))
+                card_events.append(
+                    CardEvent(
+                        card_type=CardType.RED,
+                        minute=minute,
+                        second=second,
+                        player_track_id=player_tid,
+                        player_name=player_name,
+                        team=team,
+                        source=CardSource.TACTICAL,
+                        confidence=0.6,
+                        description="Last-man tactical foul — red card (DOGSO) likely per Law 12",
+                    )
+                )
             elif in_penalty_area and severity > 0.4:
-                card_events.append(CardEvent(
-                    card_type=CardType.YELLOW,
-                    minute=minute, second=second,
-                    player_track_id=player_tid,
-                    player_name=player_name, team=team,
-                    source=CardSource.TACTICAL,
-                    confidence=0.55,
-                    description="Foul in penalty area — yellow card likely",
-                ))
+                card_events.append(
+                    CardEvent(
+                        card_type=CardType.YELLOW,
+                        minute=minute,
+                        second=second,
+                        player_track_id=player_tid,
+                        player_name=player_name,
+                        team=team,
+                        source=CardSource.TACTICAL,
+                        confidence=0.55,
+                        description="Foul in penalty area — yellow card likely",
+                    )
+                )
             elif severity > 0.7:
-                card_events.append(CardEvent(
-                    card_type=CardType.YELLOW,
-                    minute=minute, second=second,
-                    player_track_id=player_tid,
-                    player_name=player_name, team=team,
-                    source=CardSource.TACTICAL,
-                    confidence=0.5,
-                    description="High-severity foul — yellow card likely",
-                ))
+                card_events.append(
+                    CardEvent(
+                        card_type=CardType.YELLOW,
+                        minute=minute,
+                        second=second,
+                        player_track_id=player_tid,
+                        player_name=player_name,
+                        team=team,
+                        source=CardSource.TACTICAL,
+                        confidence=0.5,
+                        description="High-severity foul — yellow card likely",
+                    )
+                )
             if player_key in booked_players:
                 for ce in card_events:
                     if (
@@ -302,8 +316,10 @@ class CardDetectionService:
     # ------------------------------------------------------------------
 
     async def fetch_external_cards(
-        self, match_id: int, statsbomb_service: Any | None = None,
-        api_football_service: Any | None = None
+        self,
+        match_id: int,
+        statsbomb_service: Any | None = None,
+        api_football_service: Any | None = None,
     ) -> list[CardEvent]:
         """Fetch card events from external data sources.
 
@@ -314,9 +330,7 @@ class CardDetectionService:
             try:
                 comp = await statsbomb_service.get_competitions()
                 for c in comp:
-                    matches = await statsbomb_service.get_matches(
-                        c.competition_id, c.season_id
-                    )
+                    matches = await statsbomb_service.get_matches(c.competition_id, c.season_id)
                     target = next((m for m in matches if m.match_id == match_id), None)
                     if target:
                         events = await statsbomb_service.get_events(match_id)
@@ -329,15 +343,19 @@ class CardDetectionService:
                                     card_type = CardType.YELLOW
                                 elif "Second Yellow" in e.raw.get("card", {}).get("name", ""):
                                     card_type = CardType.SECOND_YELLOW
-                                cards.append(CardEvent(
-                                    card_type=card_type,
-                                    minute=e.minute, second=e.second,
-                                    player_track_id=e.player_id,
-                                    player_name=e.player, team=e.team,
-                                    source=CardSource.EXTERNAL,
-                                    confidence=0.95,
-                                    description=f"StatsBomb verified card event",
-                                ))
+                                cards.append(
+                                    CardEvent(
+                                        card_type=card_type,
+                                        minute=e.minute,
+                                        second=e.second,
+                                        player_track_id=e.player_id,
+                                        player_name=e.player,
+                                        team=e.team,
+                                        source=CardSource.EXTERNAL,
+                                        confidence=0.95,
+                                        description="StatsBomb verified card event",
+                                    )
+                                )
                         return cards
             except Exception as e:
                 logger.warning(f"StatsBomb card fetch failed: {e}")

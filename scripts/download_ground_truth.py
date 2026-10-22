@@ -26,6 +26,7 @@ def download_skillcorner(output_dir: Path) -> bool:
 
     try:
         import httpx
+
         resp = httpx.get(url, timeout=120, follow_redirects=True)
         resp.raise_for_status()
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
@@ -54,6 +55,7 @@ def download_metrica(output_dir: Path) -> bool:
     ]
     try:
         import httpx
+
         client = httpx.Client(timeout=60, follow_redirects=True)
         metrica_dir = output_dir / "metrica"
         for fpath in files:
@@ -75,10 +77,13 @@ def download_statsbomb_fixtures(output_dir: Path) -> bool:
     """Download StatsBomb World Cup 2022 + EURO 2024 fixture metadata."""
     try:
         import httpx
+
         client = httpx.Client(timeout=60, follow_redirects=True)
 
         # Competition JSON
-        comp_url = "https://raw.githubusercontent.com/statsbomb/open-data/master/data/competitions.json"
+        comp_url = (
+            "https://raw.githubusercontent.com/statsbomb/open-data/master/data/competitions.json"
+        )
         resp = client.get(comp_url)
         resp.raise_for_status()
         comps = resp.json()
@@ -141,6 +146,7 @@ def converter(statsbomb_dir: Path, event_dir: Path):
     gt_dir.mkdir(exist_ok=True)
 
     import glob
+
     for ev_file in glob.glob(str(event_dir / "*.json")):
         try:
             events = json.loads(Path(ev_file).read_text())
@@ -152,15 +158,21 @@ def converter(statsbomb_dir: Path, event_dir: Path):
             ts = ev.get("timestamp", "00:00:00.000")
             # Convert HH:MM:SS.mmm to seconds
             parts = ts.replace(",", ".").split(":")
-            secs = float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2]) if len(parts) == 3 else 0.0
+            secs = (
+                float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+                if len(parts) == 3
+                else 0.0
+            )
             team = ev.get("team", {}).get("name", "unknown")
             player_id = ev.get("player", {}).get("id")
-            gt_events.append({
-                "event_type": ev_type,
-                "timestamp": secs,
-                "team": team,
-                "player_id": player_id,
-            })
+            gt_events.append(
+                {
+                    "event_type": ev_type,
+                    "timestamp": secs,
+                    "team": team,
+                    "player_id": player_id,
+                }
+            )
         if gt_events:
             match_id = Path(ev_file).stem
             (gt_dir / f"{match_id}_gt.json").write_text(json.dumps(gt_events, indent=2))
@@ -173,8 +185,7 @@ def main():
     parser.add_argument("--skillcorner", action="store_true")
     parser.add_argument("--metrica", action="store_true")
     parser.add_argument("--statsbomb", action="store_true")
-    parser.add_argument("--output", default="data/ground_truth",
-                        help="Output directory")
+    parser.add_argument("--output", default="data/ground_truth", help="Output directory")
     args = parser.parse_args()
 
     if not any([args.all, args.skillcorner, args.metrica, args.statsbomb]):

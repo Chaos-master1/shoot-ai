@@ -19,7 +19,6 @@ from loguru import logger
 
 from kawkab.core.mot_metrics import compute_mot_metrics
 
-
 logger.remove()
 logger.add(sys.stderr, format="<level>{level:8s}</level> | <message>", level="INFO")
 
@@ -63,14 +62,21 @@ def _grade_from_score(score: float) -> str:
 def _brier_score(probs: list[float], outcomes: list[bool]) -> float:
     if not probs or len(probs) != len(outcomes):
         return 0.0
-    return float(np.mean([(p - o) ** 2 for p, o in zip(probs, outcomes)]))
+    return float(np.mean([(p - o) ** 2 for p, o in zip(probs, outcomes, strict=False)]))
 
 
 def _log_loss(probs: list[float], outcomes: list[bool], eps: float = 1e-15) -> float:
     if not probs or len(probs) != len(outcomes):
         return 0.0
     probs = np.clip(probs, eps, 1 - eps)
-    return float(-np.mean([o * math.log(p) + (1 - o) * math.log(1 - p) for o, p in zip(outcomes, probs)]))
+    return float(
+        -np.mean(
+            [
+                o * math.log(p) + (1 - o) * math.log(1 - p)
+                for o, p in zip(outcomes, probs, strict=False)
+            ]
+        )
+    )
 
 
 def _calibration_error(probs: list[float], outcomes: list[bool], n_bins: int = 10) -> float:
@@ -145,7 +151,11 @@ class AccuracyAudit:
 
         events = self.ground_truth.get("events", [])
         tracks = self.ground_truth.get("tracks", self.ground_truth.get("tracking", []))
-        logger.info("Loaded ground truth: {} events, {} tracking frames", len(events), len(tracks) if isinstance(tracks, list) else 0)
+        logger.info(
+            "Loaded ground truth: {} events, {} tracking frames",
+            len(events),
+            len(tracks) if isinstance(tracks, list) else 0,
+        )
         self._loaded = True
         return True
 
@@ -169,7 +179,14 @@ class AccuracyAudit:
         gt_events = self.ground_truth.get("events", [])
         if not gt_events:
             logger.warning("No ground truth events to compare against")
-            return {"precision": 0.0, "recall": 0.0, "f1": 0.0, "per_type": {}, "total_gt": 0, "total_computed": 0}
+            return {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "per_type": {},
+                "total_gt": 0,
+                "total_computed": 0,
+            }
 
         gt_by_type: dict[str, list[float]] = {}
         for ev in gt_events:
@@ -195,7 +212,7 @@ class AccuracyAudit:
 
             matched_gt = set()
             tp = 0
-            for ci, ct in enumerate(comp_times):
+            for _ci, ct in enumerate(comp_times):
                 best_d = tolerance_s
                 best_gi = None
                 for gi, gt_t in enumerate(gt_times):
@@ -216,7 +233,9 @@ class AccuracyAudit:
             f1 = 2 * precision * recall / max(precision + recall, 1e-9)
 
             per_type[etype] = {
-                "tp": tp, "fp": fp, "fn": fn,
+                "tp": tp,
+                "fp": fp,
+                "fn": fn,
                 "precision": round(precision, 4),
                 "recall": round(recall, 4),
                 "f1": round(f1, 4),
@@ -227,7 +246,9 @@ class AccuracyAudit:
 
         overall_precision = total_tp / max(total_tp + total_fp, 1)
         overall_recall = total_tp / max(total_tp + total_fn, 1)
-        overall_f1 = 2 * overall_precision * overall_recall / max(overall_precision + overall_recall, 1e-9)
+        overall_f1 = (
+            2 * overall_precision * overall_recall / max(overall_precision + overall_recall, 1e-9)
+        )
 
         result = {
             "precision": round(overall_precision, 4),
@@ -237,8 +258,14 @@ class AccuracyAudit:
             "total_gt": len(gt_events),
             "total_computed": len(computed_events),
         }
-        logger.info("Event comparison: P={:.3f} R={:.3f} F1={:.3f} ({}/{} events)",
-                     overall_precision, overall_recall, overall_f1, total_tp, len(gt_events))
+        logger.info(
+            "Event comparison: P={:.3f} R={:.3f} F1={:.3f} ({}/{} events)",
+            overall_precision,
+            overall_recall,
+            overall_f1,
+            total_tp,
+            len(gt_events),
+        )
         return result
 
     def compare_possession(
@@ -269,7 +296,13 @@ class AccuracyAudit:
             "absolute_error": round(error, 1),
             "category": category,
         }
-        logger.info("Possession comparison: |{} - {}| = {} ({})", computed_pct, ground_truth_pct, error, category)
+        logger.info(
+            "Possession comparison: |{} - {}| = {} ({})",
+            computed_pct,
+            ground_truth_pct,
+            error,
+            category,
+        )
         return result
 
     def compare_tracking(
@@ -296,8 +329,12 @@ class AccuracyAudit:
             return {}
 
         metrics = compute_mot_metrics(computed_tracks, gt_tracks, fp_threshold=fp_threshold)
-        logger.info("Tracking comparison: MOTA={:.4f} MOTP={:.2f} IDF1={:.4f}",
-                     metrics.get("mota", 0), metrics.get("motp", 0), metrics.get("idf1", 0))
+        logger.info(
+            "Tracking comparison: MOTA={:.4f} MOTP={:.2f} IDF1={:.4f}",
+            metrics.get("mota", 0),
+            metrics.get("motp", 0),
+            metrics.get("idf1", 0),
+        )
         return metrics
 
     def compare_xg(
@@ -359,8 +396,13 @@ class AccuracyAudit:
             "log_loss": round(logloss, 4),
             "calibration_error": round(cal_error, 4),
         }
-        logger.info("xG comparison: Brier={:.4f} LogLoss={:.4f} CalErr={:.4f} ({} shots)",
-                     brier, logloss, cal_error, n_shots)
+        logger.info(
+            "xG comparison: Brier={:.4f} LogLoss={:.4f} CalErr={:.4f} ({} shots)",
+            brier,
+            logloss,
+            cal_error,
+            n_shots,
+        )
         return result
 
     def generate_report(self) -> dict[str, Any]:
@@ -390,14 +432,18 @@ class AccuracyAudit:
             f1 = ev_result.get("f1", 0.0)
             category_scores["event_accuracy"] = f1
             if f1 < 0.7:
-                suggestions.append(f"Low event detection F1 ({f1:.2f}) — review event type classification and temporal tolerance")
+                suggestions.append(
+                    f"Low event detection F1 ({f1:.2f}) — review event type classification and temporal tolerance"
+                )
             if ev_result.get("per_type"):
                 worst_type = min(
                     ((t, d["f1"]) for t, d in ev_result["per_type"].items()),
                     key=lambda x: x[1],
                 )
                 if worst_type[1] < 0.6:
-                    suggestions.append(f"Event type '{worst_type[0]}' has F1={worst_type[1]:.2f} — consider feature engineering for this type")
+                    suggestions.append(
+                        f"Event type '{worst_type[0]}' has F1={worst_type[1]:.2f} — consider feature engineering for this type"
+                    )
 
         # Possession error
         if "possession_home" in self.ground_truth and "possession_home" in self.computed:
@@ -410,7 +456,9 @@ class AccuracyAudit:
             score = max(0.0, 1.0 - err / 50.0)
             category_scores["possession"] = score
             if err > 5:
-                suggestions.append(f"Possession error is {err:.1f}% — check event filtering and possession assignment logic")
+                suggestions.append(
+                    f"Possession error is {err:.1f}% — check event filtering and possession assignment logic"
+                )
 
         # Tracking accuracy
         computed_tracks = self.computed.get("tracks", self.computed.get("tracking", {}))
@@ -423,9 +471,13 @@ class AccuracyAudit:
                 score = (mota + idf1) / 2.0
                 category_scores["tracking"] = max(0.0, score)
                 if mota < 0.5:
-                    suggestions.append(f"Tracking MOTA={mota:.3f} — high false positive/negative rate, check tracker thresholds and association logic")
+                    suggestions.append(
+                        f"Tracking MOTA={mota:.3f} — high false positive/negative rate, check tracker thresholds and association logic"
+                    )
                 if idf1 < 0.5:
-                    suggestions.append(f"Tracking IDF1={idf1:.3f} — high ID switch rate, check ReID feature quality and matching threshold")
+                    suggestions.append(
+                        f"Tracking IDF1={idf1:.3f} — high ID switch rate, check ReID feature quality and matching threshold"
+                    )
 
         # xG accuracy
         computed_shots = [e for e in self.computed.get("events", []) if e.get("type") == "shot"]
@@ -440,9 +492,13 @@ class AccuracyAudit:
                 xg_score = (brier_score + cal_score) / 2.0
                 category_scores["xg"] = xg_score
                 if brier > 0.25:
-                    suggestions.append(f"xG Brier score is {brier:.4f} (expected <0.20) — model probabilities may be poorly calibrated")
+                    suggestions.append(
+                        f"xG Brier score is {brier:.4f} (expected <0.20) — model probabilities may be poorly calibrated"
+                    )
                 if cal_error > 0.15:
-                    suggestions.append(f"xG calibration error is {cal_error:.4f} — consider isotonic regression or Platt scaling")
+                    suggestions.append(
+                        f"xG calibration error is {cal_error:.4f} — consider isotonic regression or Platt scaling"
+                    )
 
         # Overall
         if category_scores:
@@ -452,13 +508,19 @@ class AccuracyAudit:
         else:
             result.overall_score = 0.0
             result.overall_grade = "N/A"
-            suggestions.append("No comparison data provided — load ground truth and computed data first")
+            suggestions.append(
+                "No comparison data provided — load ground truth and computed data first"
+            )
 
         result.per_category_scores = {k: round(v, 4) for k, v in category_scores.items()}
         result.improvement_suggestions = suggestions
 
-        logger.info("Audit complete: grade={} score={:.3f} ({} categories)",
-                     result.overall_grade, result.overall_score, len(category_scores))
+        logger.info(
+            "Audit complete: grade={} score={:.3f} ({} categories)",
+            result.overall_grade,
+            result.overall_score,
+            len(category_scores),
+        )
 
         return result.to_dict()
 
@@ -468,8 +530,14 @@ def main() -> None:
     parser.add_argument("--match-id", required=True, help="Match identifier")
     parser.add_argument("--ground-truth", required=True, help="Path to ground truth JSON file")
     parser.add_argument("--computed", default=None, help="Optional path to computed data JSON file")
-    parser.add_argument("--tolerance", type=float, default=2.0, help="Event match tolerance in seconds")
-    parser.add_argument("--output", default=None, help="Path to write audit report JSON (prints to stdout if omitted)")
+    parser.add_argument(
+        "--tolerance", type=float, default=2.0, help="Event match tolerance in seconds"
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Path to write audit report JSON (prints to stdout if omitted)",
+    )
     args = parser.parse_args()
 
     auditor = AccuracyAudit(match_id=args.match_id, ground_truth_path=args.ground_truth)

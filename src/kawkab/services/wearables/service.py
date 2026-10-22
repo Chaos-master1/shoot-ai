@@ -15,11 +15,10 @@ change. Future cycles (C10+) add a ``save()`` path that persists the parsed
 
 from __future__ import annotations
 
+import inspect
 import json
-from typing import Optional
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.auto import detect_parser
 from kawkab.services.wearables.models import WearableSession
 
@@ -62,11 +61,15 @@ class WearableImportService:
 
     # -- persistence ------------------------------------------------------
 
-    def save_session(self, session: WearableSession, storage_service=None, match_id: int = 0) -> dict:
+    async def save_session(
+        self, session: WearableSession, storage_service=None, match_id: int = 0
+    ) -> dict:
         """Persist a parsed WearableSession to the database.
 
         Requires migration 020 (wearable_sessions table). If ``storage_service``
         is not provided the method returns a dict suitable for insertion.
+        Accepts both async (StorageService/PG adapter) and sync (test stubs)
+        ``save_wearable_session`` implementations.
         """
         if storage_service is not None:
             try:
@@ -77,7 +80,9 @@ class WearableImportService:
                     "athlete_name": session.athlete_name,
                     "device_type": session.device_type,
                     "device_serial": session.device_serial,
-                    "start_time": session.start_time.isoformat() if hasattr(session.start_time, "isoformat") else str(session.start_time or ""),
+                    "start_time": (
+                        session.start_time.isoformat() if session.start_time is not None else ""
+                    ),
                     "duration_s": d["duration_s"],
                     "sample_rate_hz": d["sample_rate_hz"],
                     "avg_hr": d["avg_hr"],
@@ -96,6 +101,8 @@ class WearableImportService:
                     "metadata_json": json.dumps(session.metadata),
                 }
                 result = storage_service.save_wearable_session(row)
+                if inspect.isawaitable(result):
+                    result = await result
                 return {"ok": True, "session_id": result}
             except Exception as e:
                 logger.error(f"save_session failed: {e}")
@@ -104,7 +111,7 @@ class WearableImportService:
 
     # -- structured entry point -------------------------------------------
 
-    def import_session(self, file_path: str) -> Optional[WearableSession]:
+    def import_session(self, file_path: str) -> WearableSession | None:
         """Parse a file into a structured WearableSession (or None on failure).
 
         This is the preferred path for new code (storage, fusion, metrics).

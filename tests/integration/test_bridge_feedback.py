@@ -2,47 +2,65 @@
 
 from __future__ import annotations
 
-import pytest
 import tempfile
 from pathlib import Path
 
-from kawkab.ui.bridge import Bridge
-from kawkab.services.feedback_service import FeedbackService, CoachFeedback, IssueReport
-from kawkab.services.storage_service import StorageService
+import pytest
+
 from kawkab.services.analysis_service import AnalysisService
-from kawkab.services.cv_service import MatchTrackData, FrameDetections, Detection
+from kawkab.services.cv_service import FrameDetections, MatchTrackData
+from kawkab.services.feedback_service import CoachFeedback, FeedbackService
+from kawkab.services.storage_service import StorageService
+from kawkab.ui.bridge import Bridge
 
 
 class FakeCVService:
     def __init__(self):
         self.model_size = "l"
-    async def process_video(self, video_path, progress_callback=None, frame_skip=3, enable_team_detection=True):
+
+    async def process_video(
+        self, video_path, progress_callback=None, frame_skip=3, enable_team_detection=True
+    ):
         return MatchTrackData(
-            match_id=1, fps=10.0, total_frames=10, duration_seconds=1.0,
+            match_id=1,
+            fps=10.0,
+            total_frames=10,
+            duration_seconds=1.0,
             frames=[FrameDetections(0, 0.0, [], 1280, 720)],
-            track_registry={}, player_teams={}, tracking_metrics={}, match_type="full_match",
+            track_registry={},
+            player_teams={},
+            tracking_metrics={},
+            match_type="full_match",
         )
+
 
 class FakeEnhancementService:
     async def preprocess_video(self, input_path, output_path):
         Path(output_path).write_bytes(b"fake")
 
+
 class FakeLLMService:
-    config = type('obj', (object,), {'provider': 'none'})()
+    config = type("obj", (object,), {"provider": "none"})()
+
     async def generate_coach_report(self, **kwargs):
         return "Test report"
 
+
 class FakeKnowledgeService:
     stats = {"rules": 40, "drills": 24}
+
     async def initialize(self):
         pass
+
 
 class FakeAudioService:
     pass
 
+
 class FakeHomographyService:
     def load_calibration(self, match_id):
         return None
+
     def save_calibration(self, match_id, matrix):
         pass
 
@@ -69,13 +87,18 @@ async def test_bridge_submit_feedback():
         )
 
         import json
-        result_json = await bridge.submit_feedback(json.dumps({
-            "coach_id": "coach_001",
-            "match_id": 1,
-            "overall_rating": 5,
-            "tracking_rating": 4,
-            "comments": "Excellent tool!",
-        }))
+
+        result_json = await bridge.submit_feedback(
+            json.dumps(
+                {
+                    "coach_id": "coach_001",
+                    "match_id": 1,
+                    "overall_rating": 5,
+                    "tracking_rating": 4,
+                    "comments": "Excellent tool!",
+                }
+            )
+        )
         result = json.loads(result_json)
         assert "error" not in result
         assert "feedback_id" in result
@@ -106,12 +129,17 @@ async def test_bridge_submit_issue():
         )
 
         import json
-        result_json = await bridge.submit_issue(json.dumps({
-            "category": "tracking",
-            "severity": "high",
-            "description": "Lost player 7",
-            "match_id": 1,
-        }))
+
+        result_json = await bridge.submit_issue(
+            json.dumps(
+                {
+                    "category": "tracking",
+                    "severity": "high",
+                    "description": "Lost player 7",
+                    "match_id": 1,
+                }
+            )
+        )
         result = json.loads(result_json)
         assert "error" not in result
         assert "issue_id" in result
@@ -131,7 +159,7 @@ async def test_bridge_get_feedback_stats():
         feedback = FeedbackService(storage_service=storage)
         for i in range(3):
             await feedback.submit_feedback(
-                CoachFeedback(coach_id=f"c{i}", match_id=i+1, overall_rating=4 if i < 2 else 2)
+                CoachFeedback(coach_id=f"c{i}", match_id=i + 1, overall_rating=4 if i < 2 else 2)
             )
 
         bridge = Bridge(
@@ -147,6 +175,7 @@ async def test_bridge_get_feedback_stats():
         )
 
         import json
+
         result_json = await bridge.get_feedback_stats()
         result = json.loads(result_json)
         assert "error" not in result
@@ -171,6 +200,7 @@ async def test_bridge_feedback_without_service():
     )
 
     import json
+
     result_json = await bridge.submit_feedback(json.dumps({"overall_rating": 5}))
     result = json.loads(result_json)
     assert "error" in result

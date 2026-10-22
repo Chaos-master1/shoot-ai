@@ -1,9 +1,8 @@
 """Tests for ball recovery analysis module."""
 
-import pytest
 from kawkab.core.ball_recovery import (
-    BallRecoveryAnalyzer,
     RECOVERY_EVENT_TYPES,
+    BallRecoveryAnalyzer,
     _to_zone,
     _zone_key,
 )

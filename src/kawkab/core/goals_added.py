@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 
 @dataclass
@@ -57,11 +56,13 @@ def compute_goals_added(
     per_game: list[dict] = []
     for m in match_stats:
         g = _compute_g_plus_from_match(m)
-        per_game.append({
-            "match_id": m.get("match_id", ""),
-            "g_plus": round(g, 4),
-            "minutes": m.get("minutes", 90),
-        })
+        per_game.append(
+            {
+                "match_id": m.get("match_id", ""),
+                "g_plus": round(g, 4),
+                "minutes": m.get("minutes", 90),
+            }
+        )
 
     games = len(match_stats)
     total_minutes = sum(m.get("minutes", 90) for m in match_stats) if games > 0 else 0

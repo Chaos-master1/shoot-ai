@@ -5,14 +5,20 @@ So we expect:
 - home_cluster should be YELLOW (Sweden)
 - away_cluster should be RED (Tunisia)
 """
-import asyncio, os, sys, time
+
+import asyncio
+import os
+import sys
+import time
+
 os.environ["PYTHONIOENCODING"] = "utf-8"
 from pathlib import Path
 
 
 async def main() -> int:
-    from kawkab.services import CVService, AnalysisService, HomographyService
     import numpy as np
+
+    from kawkab.services import CVService
 
     cv = CVService(model_size="l", gpu_enabled=True)
     await cv.initialize()
@@ -21,14 +27,15 @@ async def main() -> int:
     print("Loading 1-min clip...")
     t0 = time.time()
     track_data = await cv.process_video(Path("data/sweden_1min.mp4"), frame_skip=2)
-    print(f"  {time.time()-t0:.1f}s")
+    print(f"  {time.time() - t0:.1f}s")
 
     # Re-run color collection logic to get the actual RGB
     # This mimics what the team detection does
     import cv2
+
     cap = cv2.VideoCapture(str(Path("data/sweden_1min.mp4").resolve()))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    _ = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     valid_tracks = set(track_data.track_registry.keys())
     home_set = {tid for tid, team in track_data.player_teams.items() if team == "home"}
     away_set = {tid for tid, team in track_data.player_teams.items() if team == "away"}
@@ -101,7 +108,7 @@ async def main() -> int:
         for c in away_colors[:5]:
             print(f"  Sample: {c} -> {color_name(c)}")
 
-    print(f"\nExpected: home=YELLOW (Sweden), away=RED (Tunisia)")
+    print("\nExpected: home=YELLOW (Sweden), away=RED (Tunisia)")
     if home_colors and away_colors:
         h = np.mean(home_colors, axis=0)
         a = np.mean(away_colors, axis=0)

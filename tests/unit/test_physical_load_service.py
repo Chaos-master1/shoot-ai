@@ -6,9 +6,7 @@ import sys
 import types
 from dataclasses import dataclass, field
 from typing import Any
-from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
 from tests.conftest import install_kawkab_stubs, load_service_module
@@ -19,6 +17,7 @@ install_kawkab_stubs()
 # ---------------------------------------------------------------------------
 # cv_service stubs (for MatchTrackData import)
 # ---------------------------------------------------------------------------
+
 
 def _install_cv_service_stub() -> None:
     if "kawkab.services.cv_service" in sys.modules:
@@ -65,9 +64,7 @@ _install_cv_service_stub()
 
 @pytest.fixture(scope="module")
 def pl_mod():
-    return load_service_module(
-        "kawkab.services.physical_load_service", "physical_load_service.py"
-    )
+    return load_service_module("kawkab.services.physical_load_service", "physical_load_service.py")
 
 
 class _FakeHomography:
@@ -76,7 +73,9 @@ class _FakeHomography:
 
 
 def _make_detection(
-    bbox: tuple, track_id: int, class_name: str = "person",
+    bbox: tuple,
+    track_id: int,
+    class_name: str = "person",
 ) -> Any:
     """Create a Detection-like object (avoids importing real class)."""
     from dataclasses import dataclass
@@ -88,6 +87,7 @@ def _make_detection(
         class_id: int
         class_name: str
         track_id: int | None
+
     return _Det(bbox=bbox, confidence=0.9, class_id=0, class_name=class_name, track_id=track_id)
 
 
@@ -99,6 +99,7 @@ def _make_frame(frame_num: int, timestamp: float, dets: list) -> Any:
         detections: list
         image_width: int = 640
         image_height: int = 480
+
     return _Frm(frame_number=frame_num, timestamp=timestamp, detections=dets)
 
 
@@ -113,11 +114,11 @@ def _make_track_data(frames: list) -> Any:
         track_registry: dict = field(default_factory=dict)
         player_teams: dict = field(default_factory=dict)
         tracking_metrics: dict = field(default_factory=dict)
+
     return _TD(frames=frames)
 
 
 class TestPhysicalLoadService:
-
     @pytest.mark.asyncio
     async def test_no_frames(self, pl_mod):
         svc = pl_mod.PhysicalLoadService()
@@ -208,10 +209,14 @@ class TestPhysicalLoadService:
         p2 = [_make_detection((50, 50, 60, 70), track_id=2)]
         frames = [
             _make_frame(1, 0.0, p1 + p2),
-            _make_frame(2, 1.0, [
-                _make_detection((10, 0, 20, 20), track_id=1),
-                _make_detection((60, 50, 70, 70), track_id=2),
-            ]),
+            _make_frame(
+                2,
+                1.0,
+                [
+                    _make_detection((10, 0, 20, 20), track_id=1),
+                    _make_detection((60, 50, 70, 70), track_id=2),
+                ],
+            ),
         ]
         td = _make_track_data(frames=frames)
         result = await svc.compute_physical_load(td)
@@ -257,7 +262,12 @@ class TestPhysicalLoadService:
         td = _make_track_data(frames=frames)
         result = await svc.compute_physical_load(td)
         m = result[1]
-        total = m.walking_distance_m + m.jogging_distance_m + m.high_intensity_distance_m + m.sprint_distance_m
+        total = (
+            m.walking_distance_m
+            + m.jogging_distance_m
+            + m.high_intensity_distance_m
+            + m.sprint_distance_m
+        )
         assert total == pytest.approx(m.total_distance_m, rel=0.01)
 
     @pytest.mark.asyncio
@@ -284,8 +294,34 @@ class TestPhysicalLoadService:
     async def test_team_summary(self, pl_mod):
         svc = pl_mod.PhysicalLoadService()
         metrics_cls = pl_mod.PhysicalLoadMetrics
-        m1 = metrics_cls(track_id=1, total_distance_m=1000, sprint_distance_m=200, sprint_count=5, max_speed_kmh=30.0, acceleration_count=10, deceleration_count=8, work_rest_ratio=0.5, metabolic_power_estimate=500, jogging_distance_m=300, walking_distance_m=200, high_intensity_distance_m=300)
-        m2 = metrics_cls(track_id=2, total_distance_m=1200, sprint_distance_m=150, sprint_count=3, max_speed_kmh=28.0, acceleration_count=7, deceleration_count=6, work_rest_ratio=0.4, metabolic_power_estimate=450, jogging_distance_m=400, walking_distance_m=250, high_intensity_distance_m=400)
+        m1 = metrics_cls(
+            track_id=1,
+            total_distance_m=1000,
+            sprint_distance_m=200,
+            sprint_count=5,
+            max_speed_kmh=30.0,
+            acceleration_count=10,
+            deceleration_count=8,
+            work_rest_ratio=0.5,
+            metabolic_power_estimate=500,
+            jogging_distance_m=300,
+            walking_distance_m=200,
+            high_intensity_distance_m=300,
+        )
+        m2 = metrics_cls(
+            track_id=2,
+            total_distance_m=1200,
+            sprint_distance_m=150,
+            sprint_count=3,
+            max_speed_kmh=28.0,
+            acceleration_count=7,
+            deceleration_count=6,
+            work_rest_ratio=0.4,
+            metabolic_power_estimate=450,
+            jogging_distance_m=400,
+            walking_distance_m=250,
+            high_intensity_distance_m=400,
+        )
         player_loads = {1: m1, 2: m2}
         player_teams = {1: "home", 2: "home"}
         summary = await svc.compute_team_physical_summary(player_loads, player_teams)
@@ -298,8 +334,34 @@ class TestPhysicalLoadService:
     async def test_team_summary_home_away(self, pl_mod):
         svc = pl_mod.PhysicalLoadService()
         metrics_cls = pl_mod.PhysicalLoadMetrics
-        m1 = metrics_cls(track_id=1, total_distance_m=1000, sprint_distance_m=100, sprint_count=2, max_speed_kmh=30.0, acceleration_count=5, deceleration_count=4, work_rest_ratio=0.5, metabolic_power_estimate=300, jogging_distance_m=200, walking_distance_m=100, high_intensity_distance_m=200)
-        m2 = metrics_cls(track_id=2, total_distance_m=900, sprint_distance_m=50, sprint_count=1, max_speed_kmh=28.0, acceleration_count=3, deceleration_count=2, work_rest_ratio=0.3, metabolic_power_estimate=250, jogging_distance_m=150, walking_distance_m=50, high_intensity_distance_m=100)
+        m1 = metrics_cls(
+            track_id=1,
+            total_distance_m=1000,
+            sprint_distance_m=100,
+            sprint_count=2,
+            max_speed_kmh=30.0,
+            acceleration_count=5,
+            deceleration_count=4,
+            work_rest_ratio=0.5,
+            metabolic_power_estimate=300,
+            jogging_distance_m=200,
+            walking_distance_m=100,
+            high_intensity_distance_m=200,
+        )
+        m2 = metrics_cls(
+            track_id=2,
+            total_distance_m=900,
+            sprint_distance_m=50,
+            sprint_count=1,
+            max_speed_kmh=28.0,
+            acceleration_count=3,
+            deceleration_count=2,
+            work_rest_ratio=0.3,
+            metabolic_power_estimate=250,
+            jogging_distance_m=150,
+            walking_distance_m=50,
+            high_intensity_distance_m=100,
+        )
         player_loads = {1: m1, 2: m2}
         player_teams = {1: "home", 2: "away"}
         summary = await svc.compute_team_physical_summary(player_loads, player_teams)

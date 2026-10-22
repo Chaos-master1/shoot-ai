@@ -10,7 +10,7 @@ import asyncio
 import json
 import os
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +20,9 @@ from kawkab.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-CACHE_TTL_SHORT = 300       # 5 min for matches/scores
-CACHE_TTL_MEDIUM = 3600     # 1 h for standings
-CACHE_TTL_LONG = 86400      # 24 h for team/squad/competition data
+CACHE_TTL_SHORT = 300  # 5 min for matches/scores
+CACHE_TTL_MEDIUM = 3600  # 1 h for standings
+CACHE_TTL_LONG = 86400  # 24 h for team/squad/competition data
 
 
 @dataclass
@@ -78,7 +78,9 @@ class FootballDataService:
     def _cache_ttl(self, endpoint: str) -> int:
         if endpoint.startswith("/teams/") and not endpoint.endswith("/matches"):
             return CACHE_TTL_LONG
-        if endpoint.startswith("/competitions/") and ("/standings" in endpoint or "/teams" in endpoint):
+        if endpoint.startswith("/competitions/") and (
+            "/standings" in endpoint or "/teams" in endpoint
+        ):
             return CACHE_TTL_MEDIUM
         if endpoint == "/teams":
             return CACHE_TTL_LONG
@@ -95,6 +97,7 @@ class FootballDataService:
         await self._rate_limit()
         try:
             await self._ensure_client()
+            assert self._client is not None
             headers = {"X-Auth-Token": self.api_key} if self.api_key else {}
             resp = await self._client.get(
                 f"{self.BASE_URL}{endpoint}", params=params, headers=headers
@@ -142,15 +145,20 @@ class FootballDataService:
         results: list[dict] = []
         if teams_data:
             for t in teams_data.get("teams", []):
-                if query_lower in t.get("name", "").lower() or query_lower in t.get("shortName", "").lower():
-                    results.append({
-                        "id": t["id"],
-                        "name": t["name"],
-                        "short_name": t.get("shortName", ""),
-                        "tla": t.get("tla", ""),
-                        "crest": t.get("crest"),
-                        "area_name": t.get("area", {}).get("name") if t.get("area") else None,
-                    })
+                if (
+                    query_lower in t.get("name", "").lower()
+                    or query_lower in t.get("shortName", "").lower()
+                ):
+                    results.append(
+                        {
+                            "id": t["id"],
+                            "name": t["name"],
+                            "short_name": t.get("shortName", ""),
+                            "tla": t.get("tla", ""),
+                            "crest": t.get("crest"),
+                            "area_name": t.get("area", {}).get("name") if t.get("area") else None,
+                        }
+                    )
         if not results:
             comp_data = await self._request("/competitions")
             if comp_data:
@@ -162,17 +170,24 @@ class FootballDataService:
                     if not ct:
                         continue
                     for t in ct.get("teams", []):
-                        if query_lower in t.get("name", "").lower() or query_lower in t.get("shortName", "").lower():
-                            results.append({
-                                "id": t["id"],
-                                "name": t["name"],
-                                "short_name": t.get("shortName", ""),
-                                "tla": t.get("tla", ""),
-                                "crest": t.get("crest"),
-                                "area_name": t.get("area", {}).get("name") if t.get("area") else None,
-                                "competition_name": comp.get("name"),
-                                "competition_code": code,
-                            })
+                        if (
+                            query_lower in t.get("name", "").lower()
+                            or query_lower in t.get("shortName", "").lower()
+                        ):
+                            results.append(
+                                {
+                                    "id": t["id"],
+                                    "name": t["name"],
+                                    "short_name": t.get("shortName", ""),
+                                    "tla": t.get("tla", ""),
+                                    "crest": t.get("crest"),
+                                    "area_name": t.get("area", {}).get("name")
+                                    if t.get("area")
+                                    else None,
+                                    "competition_name": comp.get("name"),
+                                    "competition_code": code,
+                                }
+                            )
         dedup = {r["id"]: r for r in results}
         return list(dedup.values())
 
@@ -180,7 +195,13 @@ class FootballDataService:
         """Get full team details including squad."""
         return await self._request(f"/teams/{team_id}")
 
-    async def get_team_matches(self, team_id: int, date_from: str | None = None, date_to: str | None = None, status: str | None = None) -> list[dict]:
+    async def get_team_matches(
+        self,
+        team_id: int,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        status: str | None = None,
+    ) -> list[dict]:
         """Get matches for a team."""
         params = {}
         if date_from:
@@ -212,11 +233,10 @@ class FootballDataService:
         await self._rate_limit()
         try:
             await self._ensure_client()
+            assert self._client is not None
             headers = {"X-Auth-Token": self.api_key} if self.api_key else {}
             headers.update(extra_headers)
-            resp = await self._client.get(
-                f"{self.BASE_URL}/matches/{match_id}", headers=headers
-            )
+            resp = await self._client.get(f"{self.BASE_URL}/matches/{match_id}", headers=headers)
             if resp.status_code == 429:
                 await asyncio.sleep(3)
                 return await self.get_match(match_id, unfold)
@@ -255,9 +275,11 @@ class FootballDataService:
         """Get a single competition."""
         return await self._request(f"/competitions/{competition_code}")
 
-    async def get_competition_matches(self, competition_code: str, matchday: int | None = None, status: str | None = None) -> list[dict]:
+    async def get_competition_matches(
+        self, competition_code: str, matchday: int | None = None, status: str | None = None
+    ) -> list[dict]:
         """Get matches for a competition."""
-        params = {}
+        params: dict[str, int | str] = {}
         if matchday:
             params["matchday"] = matchday
         if status:
@@ -278,19 +300,23 @@ class FootballDataService:
             shirt = player.get("shirtNumber")
             if shirt is None:
                 continue
-            result.append({
-                "display_name": player.get("name", ""),
-                "jersey_number": shirt,
-                "preferred_position": player.get("position", ""),
-                "nationality": player.get("nationality"),
-                "date_of_birth": player.get("dateOfBirth"),
-                "team": side,
-                "football_data_person_id": player.get("id"),
-                "football_data_team_id": team_id,
-            })
+            result.append(
+                {
+                    "display_name": player.get("name", ""),
+                    "jersey_number": shirt,
+                    "preferred_position": player.get("position", ""),
+                    "nationality": player.get("nationality"),
+                    "date_of_birth": player.get("dateOfBirth"),
+                    "team": side,
+                    "football_data_person_id": player.get("id"),
+                    "football_data_team_id": team_id,
+                }
+            )
         return result
 
-    async def verify_match(self, api_match_id: int, detected_score_home: int, detected_score_away: int) -> dict | None:
+    async def verify_match(
+        self, api_match_id: int, detected_score_home: int, detected_score_away: int
+    ) -> dict | None:
         """Compare detected score with API match data."""
         match = await self.get_match(api_match_id, unfold=False)
         if not match:
@@ -306,7 +332,7 @@ class FootballDataService:
                 "api_score": None,
                 "status": match.get("status"),
             }
-        match_result = (api_home == detected_score_home and api_away == detected_score_away)
+        match_result = api_home == detected_score_home and api_away == detected_score_away
         return {
             "verified": match_result,
             "api_score": {"home": api_home, "away": api_away},

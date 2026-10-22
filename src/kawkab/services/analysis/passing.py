@@ -2,32 +2,31 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Any
+from kawkab.core.pass_network import PassNetwork
 
 
 class PassingMixin:
-    def _compute_pass_network(self, events):
-        edges: dict[tuple[int, int], int] = defaultdict(int)
+    def _compute_pass_network(self, events, player_teams: dict[int, str] | None = None):
+        """Delegates to core.pass_network.PassNetwork rather than
+        re-implementing pass-graph construction -- that version also has
+        betweenness and power-iteration eigenvector centrality this one
+        never grew. Output is a superset of the old shape: same
+        {"nodes": [{"id"}], "edges": [{"source","target",...}]} structure,
+        with "weight" renamed to "attempted"/"completed"/"completion_pct"
+        per edge (nothing in this codebase reads "weight" downstream).
 
-        for event in events:
-            if event["type"] != "pass" or not event.get("completed"):
-                continue
-            edge = (event["from_track_id"], event["to_track_id"])
-            edges[edge] += 1
-
-        nodes = set()
-        for (src, dst) in edges:
-            nodes.add(src)
-            nodes.add(dst)
-
-        return {
-            "nodes": [{"id": n} for n in nodes],
-            "edges": [
-                {"source": s, "target": t, "weight": w}
-                for (s, t), w in edges.items()
-            ],
-        }
+        Pre-filters to completed passes only, matching this method's
+        original (deliberate, tested) semantics: an attempted-but-failed
+        pass never reached its target, so it isn't a real connection
+        between two players -- PassNetwork itself tracks attempted vs
+        completed per edge for callers who want that, but a network of
+        *all* attempts (including 0%-complete ones) isn't what "pass
+        network" has conventionally meant here.
+        """
+        completed_events = [e for e in events if e.get("type") == "pass" and e.get("completed")]
+        pn = PassNetwork(min_passes=0)
+        pn.build(completed_events, player_teams)
+        return pn.get_connection_matrix(team=None)
 
     def detect_line_breaking_passes(self, events, n_lines=3):
         plen = self.pitch_length
@@ -48,14 +47,16 @@ class PassingMixin:
                 if start_x < line_x <= end_x:
                     lines_crossed += 1
             if lines_crossed >= 2:
-                line_breaks.append({
-                    "team": event.get("team", "home"),
-                    "player_track_id": event.get("player_track_id"),
-                    "start_x_pct": round(metadata.get("start_x_pct", 0.5), 3),
-                    "end_x_pct": round(metadata.get("end_x_pct", 0.6), 3),
-                    "lines_crossed": lines_crossed,
-                    "vertical_gain_pct": round(end_x / plen - start_x / plen, 3),
-                })
+                line_breaks.append(
+                    {
+                        "team": event.get("team", "home"),
+                        "player_track_id": event.get("player_track_id"),
+                        "start_x_pct": round(metadata.get("start_x_pct", 0.5), 3),
+                        "end_x_pct": round(metadata.get("end_x_pct", 0.6), 3),
+                        "lines_crossed": lines_crossed,
+                        "vertical_gain_pct": round(end_x / plen - start_x / plen, 3),
+                    }
+                )
         return line_breaks
 
     def attribute_possession_robust(self, events, frames=None):
@@ -70,15 +71,19 @@ class PassingMixin:
                 continue
             inferred = last_known.get(team)
             if inferred is not None:
-                attributed.append({
-                    **event,
-                    "player_track_id": inferred,
-                    "attribution_source": "last_known",
-                })
+                attributed.append(
+                    {
+                        **event,
+                        "player_track_id": inferred,
+                        "attribution_source": "last_known",
+                    }
+                )
             else:
-                attributed.append({
-                    **event,
-                    "player_track_id": -1,
-                    "attribution_source": "unknown",
-                })
+                attributed.append(
+                    {
+                        **event,
+                        "player_track_id": -1,
+                        "attribution_source": "unknown",
+                    }
+                )
         return attributed

@@ -1,14 +1,12 @@
 """Tests for Territory Compounding module."""
 
-import pytest
-
-from kawkab.core.xt_model import ExpectedThreatModel
 from kawkab.core.territory_value import (
     TerritoryCell,
     TerritoryReport,
     _detect_possession_chains_full,
     compute_territory_value,
 )
+from kawkab.core.xt_model import ExpectedThreatModel
 
 
 def _ev(
@@ -116,7 +114,10 @@ class TestComputeTerritoryValue:
         # Home should have higher total xT gained than conceded
         assert report.total_xT_gained >= 0
         # net should equal gained minus conceded
-        assert abs(report.net_territory_value - (report.total_xT_gained - report.total_xT_conceded)) < 1e-6
+        assert (
+            abs(report.net_territory_value - (report.total_xT_gained - report.total_xT_conceded))
+            < 1e-6
+        )
 
     def test_dominant_zones_detected(self):
         events = [
@@ -174,7 +175,9 @@ class TestComputeTerritoryValue:
 
 class TestTerritoryCell:
     def test_to_dict(self):
-        cell = TerritoryCell(zone_x=2, zone_y=3, xT_gained=1.5, xT_conceded=0.5, net_xT=1.0, event_count=5)
+        cell = TerritoryCell(
+            zone_x=2, zone_y=3, xT_gained=1.5, xT_conceded=0.5, net_xT=1.0, event_count=5
+        )
         d = cell.to_dict()
         assert d["zone_x"] == 2
         assert d["zone_y"] == 3
@@ -192,7 +195,9 @@ class TestTerritoryReport:
         assert "Territory Report" in text
 
     def test_to_dict(self):
-        report = TerritoryReport(team="home", match_id="m1", total_xT_gained=2.5, net_territory_value=1.0)
+        report = TerritoryReport(
+            team="home", match_id="m1", total_xT_gained=2.5, net_territory_value=1.0
+        )
         d = report.to_dict()
         assert d["team"] == "home"
         assert d["total_xT_gained"] == 2.5

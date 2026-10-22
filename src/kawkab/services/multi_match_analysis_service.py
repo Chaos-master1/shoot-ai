@@ -16,11 +16,9 @@ over time.
 from __future__ import annotations
 
 import json
-import math
 import sqlite3
 from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from typing import Any
 
 from kawkab.core.logging import get_logger
@@ -167,7 +165,7 @@ class MultiMatchAnalysisService:
             """,
             (season_id,),
         )
-        formations = defaultdict(int)
+        formations: defaultdict[str, int] = defaultdict(int)
         for r in cursor.fetchall():
             try:
                 data = json.loads(r["full_data"] or "{}")
@@ -178,7 +176,7 @@ class MultiMatchAnalysisService:
             except Exception:
                 pass
 
-        most_common = max(formations, key=formations.get) if formations else None
+        most_common = max(formations, key=formations.get) if formations else None  # type: ignore[arg-type,return-value]
 
         # Compute pass accuracy from available event data
         avg_pass_acc = 0.0
@@ -279,7 +277,7 @@ class MultiMatchAnalysisService:
         x_mean = sum(x) / n
         y_mean = sum(y) / n
 
-        numerator = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y))
+        numerator = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y, strict=False))
         denominator = sum((xi - x_mean) ** 2 for xi in x)
         slope = numerator / denominator if denominator > 0 else 0.0
 
@@ -302,9 +300,7 @@ class MultiMatchAnalysisService:
             worst_value=round(min(y), 2),
         )
 
-    async def compare_matches(
-        self, match_id_1: int, match_id_2: int
-    ) -> MatchComparison:
+    async def compare_matches(self, match_id_1: int, match_id_2: int) -> MatchComparison:
         """Compare two matches side-by-side."""
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -343,9 +339,9 @@ class MultiMatchAnalysisService:
         shots_diff = {}
         passes_diff = {}
         formation_diff = {}
-        line_height_diff = {}
-        ppda_diff = {}
-        xg_diff = {}
+        line_height_diff: dict[str, float] = {}
+        ppda_diff: dict[str, float] = {}
+        xg_diff: dict[str, float] = {}
 
         if m1 and m2:
             p1 = m1.get("possession_home", 0) or 0
@@ -366,8 +362,16 @@ class MultiMatchAnalysisService:
 
             formations = m1.get("formations", {})
             formations2 = m2.get("formations", {})
-            f1 = formations.get("home", {}).get("formation", "unknown") if isinstance(formations, dict) else "unknown"
-            f2 = formations2.get("home", {}).get("formation", "unknown") if isinstance(formations2, dict) else "unknown"
+            f1 = (
+                formations.get("home", {}).get("formation", "unknown")
+                if isinstance(formations, dict)
+                else "unknown"
+            )
+            f2 = (
+                formations2.get("home", {}).get("formation", "unknown")
+                if isinstance(formations2, dict)
+                else "unknown"
+            )
             formation_diff = {"match_1": f1, "match_2": f2}
             if f1 != f2:
                 key_diffs.append(f"Formation changed from {f1} to {f2}")
@@ -437,7 +441,7 @@ class MultiMatchAnalysisService:
 
         rows = cursor.fetchall()
 
-        formation_counts = defaultdict(int)
+        formation_counts: defaultdict[str, int] = defaultdict(int)
         possession_trend = []
         ppda_trend = []
         line_height_trend = []
@@ -571,18 +575,20 @@ class MultiMatchAnalysisService:
             total_passes = row["total_passes"] or 0
             completed = row["total_passes_completed"] or 0
             pass_acc = completed / total_passes if total_passes > 0 else 0.0
-            result.append({
-                "player_id": row["id"],
-                "name": row["display_name"],
-                "jersey": row["jersey_number"],
-                "position": row["preferred_position"],
-                "matches": row["matches"],
-                "avg_distance_m": round(row["avg_distance"] or 0, 1),
-                "avg_max_speed_kmh": round(row["avg_max_speed"] or 0, 2),
-                "avg_speed_kmh": round(row["avg_speed"] or 0, 2),
-                "total_shots": row["total_shots"] or 0,
-                "pass_accuracy": round(pass_acc, 3),
-            })
+            result.append(
+                {
+                    "player_id": row["id"],
+                    "name": row["display_name"],
+                    "jersey": row["jersey_number"],
+                    "position": row["preferred_position"],
+                    "matches": row["matches"],
+                    "avg_distance_m": round(row["avg_distance"] or 0, 1),
+                    "avg_max_speed_kmh": round(row["avg_max_speed"] or 0, 2),
+                    "avg_speed_kmh": round(row["avg_speed"] or 0, 2),
+                    "total_shots": row["total_shots"] or 0,
+                    "pass_accuracy": round(pass_acc, 3),
+                }
+            )
         return result
 
     async def close(self) -> None:

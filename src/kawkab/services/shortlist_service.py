@@ -8,7 +8,9 @@ from typing import Any
 
 
 class ShortlistService:
-    def __init__(self, db_path: str | Path | None = None, conn: sqlite3.Connection | None = None) -> None:
+    def __init__(
+        self, db_path: str | Path | None = None, conn: sqlite3.Connection | None = None
+    ) -> None:
         self._db_path = Path(db_path) if db_path else None
         self._conn: sqlite3.Connection | None = conn
 
@@ -23,6 +25,8 @@ class ShortlistService:
 
     def set_connection(self, conn: sqlite3.Connection) -> None:
         self._conn = conn
+
+    def add_to_shortlist(
         self,
         player_id: str,
         player_name: str,
@@ -49,8 +53,19 @@ class ShortlistService:
                  scout_rating, estimated_value, age, nationality)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (player_id, player_name, position, team, league, priority, notes,
-             scout_rating, estimated_value, age, nationality),
+            (
+                player_id,
+                player_name,
+                position,
+                team,
+                league,
+                priority,
+                notes,
+                scout_rating,
+                estimated_value,
+                age,
+                nationality,
+            ),
         )
         self.conn.commit()
         return cursor.lastrowid or 0
@@ -109,7 +124,15 @@ class ShortlistService:
     ) -> list[dict]:
         if self.conn is None:
             return []
-        allowed_sort = {"added_date", "last_updated", "player_name", "scout_rating", "estimated_value", "age", "priority"}
+        allowed_sort = {
+            "added_date",
+            "last_updated",
+            "player_name",
+            "scout_rating",
+            "estimated_value",
+            "age",
+            "priority",
+        }
         if sort_by not in allowed_sort:
             sort_by = "added_date"
         sort_dir = "ASC" if sort_dir.upper() == "ASC" else "DESC"
@@ -127,7 +150,9 @@ class ShortlistService:
         clause = (" WHERE " + " AND ".join(where)) if where else ""
         cursor = self.conn.cursor()
         cursor.execute(
-            f"SELECT * FROM player_shortlist{clause} ORDER BY {sort_by} {sort_dir} LIMIT ? OFFSET ?",
+            f"SELECT id, player_id, player_name, position, team, league, added_date, "
+            f"priority, status, notes, scout_rating, estimated_value, age, nationality, "
+            f"last_updated FROM player_shortlist{clause} ORDER BY {sort_by} {sort_dir} LIMIT ? OFFSET ?",
             (*params, limit, offset),
         )
         return [dict(row) for row in cursor.fetchall()]
@@ -137,7 +162,10 @@ class ShortlistService:
             return None
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT * FROM player_shortlist WHERE player_id = ? AND status != 'archived' ORDER BY added_date DESC LIMIT 1",
+            "SELECT id, player_id, player_name, position, team, league, added_date, "
+            "priority, status, notes, scout_rating, estimated_value, age, nationality, "
+            "last_updated FROM player_shortlist WHERE player_id = ? AND status != 'archived' "
+            "ORDER BY added_date DESC LIMIT 1",
             (player_id,),
         )
         row = cursor.fetchone()
@@ -153,6 +181,13 @@ class ShortlistService:
         by_status = {row["status"]: row["cnt"] for row in cursor.fetchall()}
         cursor.execute("SELECT priority, COUNT(*) as cnt FROM player_shortlist GROUP BY priority")
         by_priority = {row["priority"]: row["cnt"] for row in cursor.fetchall()}
-        cursor.execute("SELECT position, COUNT(*) as cnt FROM player_shortlist WHERE position != '' GROUP BY position ORDER BY cnt DESC LIMIT 10")
+        cursor.execute(
+            "SELECT position, COUNT(*) as cnt FROM player_shortlist WHERE position != '' GROUP BY position ORDER BY cnt DESC LIMIT 10"
+        )
         by_position = {row["position"]: row["cnt"] for row in cursor.fetchall()}
-        return {"total": total, "by_status": by_status, "by_priority": by_priority, "by_position": by_position}
+        return {
+            "total": total,
+            "by_status": by_status,
+            "by_priority": by_priority,
+            "by_position": by_position,
+        }

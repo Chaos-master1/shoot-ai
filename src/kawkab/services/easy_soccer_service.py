@@ -6,8 +6,6 @@ Sofascore module is stable (PyPI v0.0.8); FBref in development.
 
 from __future__ import annotations
 
-from typing import Any
-
 from kawkab.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -28,10 +26,13 @@ class EasySoccerService:
         if self._client is None:
             try:
                 import esd
+
                 self._client = esd.SofascoreClient()
                 self._available = True
             except ImportError:
-                logger.warning("EasySoccerData not installed. Install with: pip install EasySoccerData")
+                logger.warning(
+                    "EasySoccerData not installed. Install with: pip install EasySoccerData"
+                )
                 return None
             except Exception as e:
                 logger.warning(f"Failed to initialize EasySoccerData: {e}")
@@ -79,7 +80,6 @@ class EasySoccerService:
         if client is None:
             return None
         try:
-            import esd
             e = client.get_event(event_id)
             if e is None:
                 return None

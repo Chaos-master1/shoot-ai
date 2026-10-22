@@ -7,7 +7,7 @@ passes of a scoring chance.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from kawkab.core.xg_model import compute_xg_from_dict
@@ -71,15 +71,15 @@ def compute_xg_chain(
         key=lambda e: e.get("timestamp", 0),
     )
 
-    SHOT_TYPES = {"shot", "goal"}
-    POSSESSION_END = {"tackle", "interception", "clearance", "foul", "ball_out"}
+    shot_types = {"shot", "goal"}
+    possession_end = {"tackle", "interception", "clearance", "foul", "ball_out"}
 
     chain_start = 0
     for i, ev in enumerate(sorted_ev):
-        if ev.get("type") in POSSESSION_END and i > chain_start:
+        if ev.get("type") in possession_end and i > chain_start:
             chain_start = i + 1
             continue
-        if ev.get("type") not in SHOT_TYPES:
+        if ev.get("type") not in shot_types:
             continue
 
         shot_xg = compute_xg_from_dict(ev)
@@ -87,19 +87,21 @@ def compute_xg_chain(
             chain_start = i + 1
             continue
 
-        chain_events = sorted_ev[chain_start:i + 1]
+        chain_events = sorted_ev[chain_start : i + 1]
         n = len(chain_events)
         for j, cev in enumerate(chain_events):
             position_weight = (j + 1) / n
             contribution = shot_xg * position_weight * 0.5
-            role = "shot" if cev.get("type") in SHOT_TYPES else "buildup"
-            results.append(XgChain(
-                event_idx=chain_events.index(cev),
-                event_type=cev.get("type", ""),
-                event_team=team,
-                xg_contribution=round(contribution, 4),
-                role=role,
-            ))
+            role = "shot" if cev.get("type") in shot_types else "buildup"
+            results.append(
+                XgChain(
+                    event_idx=chain_events.index(cev),
+                    event_type=cev.get("type", ""),
+                    event_team=team,
+                    xg_contribution=round(contribution, 4),
+                    role=role,
+                )
+            )
 
         chain_start = i + 1
 
@@ -128,10 +130,10 @@ def compute_xg_buildup(
         key=lambda e: e.get("timestamp", 0),
     )
 
-    SHOT_TYPES = {"shot", "goal"}
+    shot_types = {"shot", "goal"}
 
     for i, ev in enumerate(sorted_ev):
-        if ev.get("type") not in SHOT_TYPES:
+        if ev.get("type") not in shot_types:
             continue
 
         shot_xg = compute_xg_from_dict(ev)
@@ -142,20 +144,22 @@ def compute_xg_buildup(
         for j in range(i - 1, max(i - 6, -1), -1):
             if sorted_ev[j].get("type") == "pass":
                 preceding.append(j)
-            elif sorted_ev[j].get("type") in SHOT_TYPES:
+            elif sorted_ev[j].get("type") in shot_types:
                 break
             if len(preceding) == 2:
                 break
 
         for rank, idx in enumerate(preceding):
-            is_primary = (rank == 0)
+            is_primary = rank == 0
             credit = shot_xg * (0.6 if is_primary else 0.4)
-            results.append(XgBuildup(
-                event_idx=idx,
-                event_type="pass",
-                credit=round(credit, 4),
-                is_primary_assist=is_primary,
-                is_secondary_assist=not is_primary,
-            ))
+            results.append(
+                XgBuildup(
+                    event_idx=idx,
+                    event_type="pass",
+                    credit=round(credit, 4),
+                    is_primary_assist=is_primary,
+                    is_secondary_assist=not is_primary,
+                )
+            )
 
     return results

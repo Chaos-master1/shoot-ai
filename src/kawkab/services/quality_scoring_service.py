@@ -12,6 +12,7 @@ Stores scores in the database for historical tracking and improvement.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass
 from typing import Any
@@ -70,10 +71,7 @@ class QualityScoringService:
 
         # Weighted composite
         overall = (
-            tracking_score * 0.35 +
-            event_score * 0.25 +
-            homography_score * 0.20 +
-            team_score * 0.20
+            tracking_score * 0.35 + event_score * 0.25 + homography_score * 0.20 + team_score * 0.20
         )
 
         return QualityScores(
@@ -84,12 +82,16 @@ class QualityScoringService:
             team_assignment=round(team_score, 3),
         )
 
-    async def save_scores(self, match_id: int, scores: QualityScores, issues: list[dict] | None = None) -> None:
+    async def save_scores(
+        self, match_id: int, scores: QualityScores, issues: list[dict] | None = None
+    ) -> None:
         """Save quality scores to the database."""
         conn = self._get_conn()
         cursor = conn.cursor()
 
-        warnings = [i["description"] for i in (issues or []) if i.get("severity") in ("medium", "low")]
+        warnings = [
+            i["description"] for i in (issues or []) if i.get("severity") in ("medium", "low")
+        ]
         critical_issues = [i for i in (issues or []) if i.get("severity") in ("critical", "high")]
 
         cursor.execute(
@@ -139,7 +141,7 @@ class QualityScoringService:
 
         metrics = getattr(track_data, "tracking_metrics", {}) or {}
         validated = metrics.get("validated_player_tracks", 0)
-        raw = metrics.get("raw_tracks_detected", 1)
+        _ = metrics.get("raw_tracks_detected", 1)
         fragmentation = metrics.get("fragmentation_rate", 0)
         quality = metrics.get("tracking_quality", "")
 
@@ -159,10 +161,10 @@ class QualityScoringService:
         mot_consistency = metrics.get("mot_self_consistency", None)
         if mot_consistency is not None:
             # Blend traditional metrics with MOT self-consistency
-            base_score = (count_ratio * 0.4 + frag_score * 0.3 + label_score * 0.3)
+            base_score = count_ratio * 0.4 + frag_score * 0.3 + label_score * 0.3
             return base_score * 0.6 + mot_consistency * 0.4
 
-        return (count_ratio * 0.4 + frag_score * 0.3 + label_score * 0.3)
+        return count_ratio * 0.4 + frag_score * 0.3 + label_score * 0.3
 
     def _compute_event_score(self, analysis: Any | None) -> float:
         """Compute event detection quality score (0-1)."""
@@ -170,7 +172,7 @@ class QualityScoringService:
             return 0.0
 
         events = getattr(analysis, "events", []) or []
-        total_events = len(events)
+        _ = len(events)
         shots = sum(1 for e in events if e.get("type") == "shot")
         passes = sum(1 for e in events if e.get("type") == "pass")
 
@@ -190,7 +192,7 @@ class QualityScoringService:
         if passes > expected_passes * 2:
             pass_score = max(0.0, 1.0 - (passes - expected_passes * 2) / expected_passes)
 
-        return (shot_score * 0.4 + pass_score * 0.6)
+        return shot_score * 0.4 + pass_score * 0.6
 
     def _compute_homography_score(self, homography_matrix: Any | None) -> float:
         """Compute homography quality score (0-1)."""
@@ -206,7 +208,7 @@ class QualityScoringService:
         # Error score (lower error = higher score)
         error_score = max(0.0, 1.0 - error_px / 50.0)
 
-        return (conf_score * 0.6 + error_score * 0.4)
+        return conf_score * 0.6 + error_score * 0.4
 
     def _compute_team_assignment_score(self, track_data: Any | None) -> float:
         """Compute team assignment quality score (0-1)."""
@@ -236,7 +238,7 @@ class QualityScoringService:
         else:
             cluster_score = 0.5
 
-        return (assigned_score * 0.6 + cluster_score * 0.4)
+        return assigned_score * 0.6 + cluster_score * 0.4
 
     async def close(self) -> None:
         if self._conn:

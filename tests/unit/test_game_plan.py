@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from kawkab.core.game_plan import GamePlanGenerator, generate_game_plan
 
 

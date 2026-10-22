@@ -1,4 +1,5 @@
 """Tests for bridge handler modules: Export, External, Lifecycle, Storage, Video."""
+
 from __future__ import annotations
 
 import json
@@ -23,10 +24,10 @@ from kawkab.ui.bridge_handlers.bridge_lifecycle import LifecycleHandler
 from kawkab.ui.bridge_handlers.bridge_storage import StorageHandler
 from kawkab.ui.bridge_handlers.bridge_video import VideoHandler
 
-
 # ========================================================================
 # Fixtures
 # ========================================================================
+
 
 @pytest.fixture
 def mock_bridge():
@@ -52,17 +53,25 @@ def mock_clip_service():
 @pytest.fixture
 def mock_storage():
     svc = MagicMock()
-    svc.get_match = AsyncMock(return_value={
-        "id": 1, "name": "Test Match", "match_date": "2025-01-01",
-        "video_path": "/videos/test.mp4", "home_team": "Home", "away_team": "Away",
-    })
-    svc.get_match_events = AsyncMock(return_value=[
-        {"type": "shot", "team": "home", "on_target": True, "timestamp": 120.0},
-        {"type": "shot", "team": "away", "on_target": False, "timestamp": 240.0},
-        {"type": "pass", "team": "home"},
-        {"type": "goal", "team": "home"},
-        {"type": "goal", "team": "home"},
-    ])
+    svc.get_match = AsyncMock(
+        return_value={
+            "id": 1,
+            "name": "Test Match",
+            "match_date": "2025-01-01",
+            "video_path": "/videos/test.mp4",
+            "home_team": "Home",
+            "away_team": "Away",
+        }
+    )
+    svc.get_match_events = AsyncMock(
+        return_value=[
+            {"type": "shot", "team": "home", "on_target": True, "timestamp": 120.0},
+            {"type": "shot", "team": "away", "on_target": False, "timestamp": 240.0},
+            {"type": "pass", "team": "home"},
+            {"type": "goal", "team": "home"},
+            {"type": "goal", "team": "home"},
+        ]
+    )
     svc.get_reports = AsyncMock(return_value=[{"report_text": "Good performance"}])
     svc.update_event = AsyncMock(return_value=True)
     svc.delete_event = AsyncMock(return_value=True)
@@ -126,14 +135,26 @@ def external_bzzoiro_handler(mock_bridge, mock_storage, mock_player_profile_serv
     svc = MagicMock()
     svc.check_status = AsyncMock(return_value={"available": True})
     svc.search_team = AsyncMock(return_value=[{"id": 1, "name": "BZ Team"}])
-    svc.get_team_squad = AsyncMock(return_value=[{
-        "id": 10, "name": "Player A", "jersey_number": 7,
-        "position": "FW", "nationality": "BR", "date_of_birth": "1995-01-01",
-    }])
-    svc.get_match_detail = AsyncMock(return_value={
-        "home_score": 2, "away_score": 0,
-        "home_team": "Home", "away_team": "Away",
-    })
+    svc.get_team_squad = AsyncMock(
+        return_value=[
+            {
+                "id": 10,
+                "name": "Player A",
+                "jersey_number": 7,
+                "position": "FW",
+                "nationality": "BR",
+                "date_of_birth": "1995-01-01",
+            }
+        ]
+    )
+    svc.get_match_detail = AsyncMock(
+        return_value={
+            "home_score": 2,
+            "away_score": 0,
+            "home_team": "Home",
+            "away_team": "Away",
+        }
+    )
     svc.get_standings = AsyncMock(return_value=[{"rank": 1, "team": "FC"}])
     svc.get_leagues = AsyncMock(return_value=[{"id": "L1", "name": "League 1"}])
     svc.get_team_matches = AsyncMock(return_value=[{"id": 1}])
@@ -168,16 +189,26 @@ def external_apifb_handler(mock_bridge, mock_storage, mock_player_profile_servic
     svc = MagicMock()
     svc.check_status = AsyncMock(return_value={"available": True})
     svc.search_team = AsyncMock(return_value=[{"id": 1, "name": "API Team"}])
-    svc.get_team_squad = AsyncMock(return_value=[{
-        "id": 20, "name": "APlayer", "jersey_number": 10,
-        "position": "MF",
-    }])
+    svc.get_team_squad = AsyncMock(
+        return_value=[
+            {
+                "id": 20,
+                "name": "APlayer",
+                "jersey_number": 10,
+                "position": "MF",
+            }
+        ]
+    )
     svc.get_standings = AsyncMock(return_value=[{"rank": 1}])
     svc.get_fixtures = AsyncMock(return_value=[{"id": 1}])
-    svc.get_fixture_detail = AsyncMock(return_value={
-        "home_score": 2, "away_score": 0,
-        "home_team": "Home", "away_team": "Away",
-    })
+    svc.get_fixture_detail = AsyncMock(
+        return_value={
+            "home_score": 2,
+            "away_score": 0,
+            "home_team": "Home",
+            "away_team": "Away",
+        }
+    )
     svc.get_predictions = AsyncMock(return_value={"winner": "home"})
     svc.get_live_fixtures = AsyncMock(return_value=[{"id": 2}])
 
@@ -194,32 +225,63 @@ def external_tsdb_handler(mock_bridge):
     svc = MagicMock()
     svc.get_all_leagues = AsyncMock(return_value=[{"id": 1}])
     tsdb_team = SimpleNamespace(
-        id=1, name="TS Team", league_name="L1", league_id=10,
-        badge_url="/badge.png", stadium="S", location="L",
-        formed_year=1900, api_football_id=100,
+        id=1,
+        name="TS Team",
+        league_name="L1",
+        league_id=10,
+        badge_url="/badge.png",
+        stadium="S",
+        location="L",
+        formed_year=1900,
+        api_football_id=100,
     )
     svc.search_teams = AsyncMock(return_value=[tsdb_team])
 
     tsdb_standing = SimpleNamespace(
-        rank=1, team_name="TS", team_id=1, badge_url="",
-        played=10, won=5, drawn=3, lost=2,
-        goals_for=20, goals_against=10, goal_diff=10,
-        points=18, form="WDL", description="",
+        rank=1,
+        team_name="TS",
+        team_id=1,
+        badge_url="",
+        played=10,
+        won=5,
+        drawn=3,
+        lost=2,
+        goals_for=20,
+        goals_against=10,
+        goal_diff=10,
+        points=18,
+        form="WDL",
+        description="",
     )
     svc.get_standings = AsyncMock(return_value=[tsdb_standing])
 
     tsdb_event = SimpleNamespace(
-        id=1, event_name="E1", home_team="H", away_team="A",
-        home_score=2, away_score=1, round="1", date="2025-01-01",
-        time="15:00", league_name="L1",
+        id=1,
+        event_name="E1",
+        home_team="H",
+        away_team="A",
+        home_score=2,
+        away_score=1,
+        round="1",
+        date="2025-01-01",
+        time="15:00",
+        league_name="L1",
     )
     svc.get_team_events_last = AsyncMock(return_value=[tsdb_event])
     svc.get_team_events_next = AsyncMock(return_value=[])
 
     tsdb_team_info = SimpleNamespace(
-        id=1, name="TS", alternate_name="", league_name="L1", league_id=10,
-        badge_url="", stadium="S", stadium_capacity=50000,
-        location="L", formed_year=1900, description="A club",
+        id=1,
+        name="TS",
+        alternate_name="",
+        league_name="L1",
+        league_id=10,
+        badge_url="",
+        stadium="S",
+        stadium_capacity=50000,
+        location="L",
+        formed_year=1900,
+        description="A club",
         api_football_id=100,
     )
     svc.get_team = AsyncMock(return_value=tsdb_team_info)
@@ -231,25 +293,55 @@ def external_tsdb_handler(mock_bridge):
 @pytest.fixture
 def external_statsbomb_handler(mock_bridge, mock_storage):
     svc = MagicMock()
-    svc.get_competitions = AsyncMock(return_value=[
-        MagicMock(competition_id=1, season_id=2, competition_name="UCL",
-                  country_name="Europe", season_name="2024-25",
-                  competition_gender="male", competition_international=True,
-                  competition_youth=False, has_360=False),
-    ])
-    svc.get_matches = AsyncMock(return_value=[
-        MagicMock(match_id=10, home_team="H", away_team="A",
-                  home_score=2, away_score=0, match_date="2025-01-01",
-                  competition_stage="Group", stadium="S", has_360=False),
-    ])
-    svc.get_events = AsyncMock(return_value=[
-        MagicMock(event_type="Shot", team="H", player="P1", xg=0.5,
-                  minute=30, outcome="Goal", shot_body_part="Right",
-                  shot_type="Open"),
-    ])
-    svc.get_lineups = AsyncMock(return_value=[
-        MagicMock(team_name="H", team_id=1, players=["P1", "P2"]),
-    ])
+    svc.get_competitions = AsyncMock(
+        return_value=[
+            MagicMock(
+                competition_id=1,
+                season_id=2,
+                competition_name="UCL",
+                country_name="Europe",
+                season_name="2024-25",
+                competition_gender="male",
+                competition_international=True,
+                competition_youth=False,
+                has_360=False,
+            ),
+        ]
+    )
+    svc.get_matches = AsyncMock(
+        return_value=[
+            MagicMock(
+                match_id=10,
+                home_team="H",
+                away_team="A",
+                home_score=2,
+                away_score=0,
+                match_date="2025-01-01",
+                competition_stage="Group",
+                stadium="S",
+                has_360=False,
+            ),
+        ]
+    )
+    svc.get_events = AsyncMock(
+        return_value=[
+            MagicMock(
+                event_type="Shot",
+                team="H",
+                player="P1",
+                xg=0.5,
+                minute=30,
+                outcome="Goal",
+                shot_body_part="Right",
+                shot_type="Open",
+            ),
+        ]
+    )
+    svc.get_lineups = AsyncMock(
+        return_value=[
+            MagicMock(team_name="H", team_id=1, players=["P1", "P2"]),
+        ]
+    )
     svc.import_match_to_db = AsyncMock(return_value=100)
     svc.search_team_matches = AsyncMock(return_value=[])
 
@@ -260,29 +352,53 @@ def external_statsbomb_handler(mock_bridge, mock_storage):
 @pytest.fixture
 def external_of_handler(mock_bridge):
     svc = MagicMock()
-    svc.get_matches = AsyncMock(return_value=[
-        SimpleNamespace(
-            competition="PL", round="1", date="2025-01-01", time="15:00",
-            home_team="H", away_team="A", home_score=2, away_score=1,
-            half_time_home=1, half_time_away=0,
-        ),
-    ])
-    svc.get_competitions = MagicMock(return_value=[
-        SimpleNamespace(id="en.1", name="Premier League", seasons=["2024-25"]),
-    ])
-    svc.search_team_matches = AsyncMock(return_value=[
-        SimpleNamespace(
-            competition="PL", season="2024-25", round="1",
-            date="2025-01-01", home_team="H", away_team="A",
-            home_score=2, away_score=1,
-        ),
-    ])
-    svc.get_worldcup_matches = AsyncMock(return_value=[
-        SimpleNamespace(
-            round="Final", date="2026-07-15", home_team="BRA",
-            away_team="ARG", home_score=3, away_score=1,
-        ),
-    ])
+    svc.get_matches = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                competition="PL",
+                round="1",
+                date="2025-01-01",
+                time="15:00",
+                home_team="H",
+                away_team="A",
+                home_score=2,
+                away_score=1,
+                half_time_home=1,
+                half_time_away=0,
+            ),
+        ]
+    )
+    svc.get_competitions = MagicMock(
+        return_value=[
+            SimpleNamespace(id="en.1", name="Premier League", seasons=["2024-25"]),
+        ]
+    )
+    svc.search_team_matches = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                competition="PL",
+                season="2024-25",
+                round="1",
+                date="2025-01-01",
+                home_team="H",
+                away_team="A",
+                home_score=2,
+                away_score=1,
+            ),
+        ]
+    )
+    svc.get_worldcup_matches = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                round="Final",
+                date="2026-07-15",
+                home_team="BRA",
+                away_team="ARG",
+                home_score=3,
+                away_score=1,
+            ),
+        ]
+    )
     svc.get_all_worldcup_years = MagicMock(return_value=[2018, 2022, 2026])
 
     services = {"openfootball_service": svc}
@@ -351,6 +467,7 @@ def video_handler_no_realtime(mock_bridge):
 # ========================================================================
 # ExportHandler Tests
 # ========================================================================
+
 
 class TestExportHandler:
     """ExportHandler — export_match_csv, export_match_json, export_report_pdf, extract_event_clips."""
@@ -433,7 +550,9 @@ class TestExportHandler:
     # ── StatsBomb export ──
 
     @pytest.mark.asyncio
-    async def test_export_statsbomb_success(self, export_handler, mock_data_export_service, tmp_path):
+    async def test_export_statsbomb_success(
+        self, export_handler, mock_data_export_service, tmp_path
+    ):
         src = tmp_path / "src_statsbomb.json"
         src.write_text('{"match_id": 1, "events": []}', encoding="utf-8")
         mock_data_export_service.export_statsbomb_compatible.return_value = src
@@ -445,7 +564,9 @@ class TestExportHandler:
 
     @pytest.mark.asyncio
     async def test_export_statsbomb_exception(self, export_handler, mock_data_export_service):
-        mock_data_export_service.export_statsbomb_compatible.side_effect = RuntimeError("export failed")
+        mock_data_export_service.export_statsbomb_compatible.side_effect = RuntimeError(
+            "export failed"
+        )
         result = json.loads(await export_handler.export_match_statsbomb("1", "/tmp/test.json"))
         assert "error" in result
 
@@ -457,7 +578,9 @@ class TestExportHandler:
 
     @pytest.mark.asyncio
     async def test_export_statsbomb_missing_match(self, export_handler, mock_data_export_service):
-        mock_data_export_service.export_statsbomb_compatible.side_effect = ValueError("Match 999 not found")
+        mock_data_export_service.export_statsbomb_compatible.side_effect = ValueError(
+            "Match 999 not found"
+        )
         result = json.loads(await export_handler.export_match_statsbomb("999", "/tmp/test.json"))
         assert "error" in result
 
@@ -465,6 +588,7 @@ class TestExportHandler:
 # ========================================================================
 # ExternalHandler Tests
 # ========================================================================
+
 
 class TestExternalHandler:
     """ExternalHandler — 51+ methods across 7 API providers."""
@@ -476,25 +600,28 @@ class TestExternalHandler:
     # ── service-unavailable (no services dict) ──
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("method,args", [
-        ("check_football_data_status", []),
-        ("check_bzzoiro_status", []),
-        ("check_easy_soccer_status", []),
-        ("check_apifootball_status", []),
-        ("check_thesportsdb_status", []),
-        ("check_statsbomb_status", []),
-        ("check_openfootball_status", []),
-        ("search_football_team", ["test"]),
-        ("search_bzzoiro_team", ["test"]),
-        ("search_apifootball_team", ["test"]),
-        ("get_football_competitions", []),
-        ("get_bzzoiro_leagues", []),
-        ("get_bzzoiro_live", []),
-        ("get_apifootball_live", []),
-        ("get_easy_soccer_live", []),
-        ("get_statsbomb_competitions", []),
-        ("get_openfootball_competitions", []),
-    ])
+    @pytest.mark.parametrize(
+        "method,args",
+        [
+            ("check_football_data_status", []),
+            ("check_bzzoiro_status", []),
+            ("check_easy_soccer_status", []),
+            ("check_apifootball_status", []),
+            ("check_thesportsdb_status", []),
+            ("check_statsbomb_status", []),
+            ("check_openfootball_status", []),
+            ("search_football_team", ["test"]),
+            ("search_bzzoiro_team", ["test"]),
+            ("search_apifootball_team", ["test"]),
+            ("get_football_competitions", []),
+            ("get_bzzoiro_leagues", []),
+            ("get_bzzoiro_live", []),
+            ("get_apifootball_live", []),
+            ("get_easy_soccer_live", []),
+            ("get_statsbomb_competitions", []),
+            ("get_openfootball_competitions", []),
+        ],
+    )
     async def test_service_unavailable_returns_default(self, external_empty_bridge, method, args):
         h = external_empty_bridge
         result = json.loads(await getattr(h, method)(*args))
@@ -514,7 +641,9 @@ class TestExternalHandler:
 
     @pytest.mark.asyncio
     async def test_football_import_squad(self, external_football_handler, mock_storage):
-        r = json.loads(await external_football_handler.import_football_team_squad("1", "42", "home"))
+        r = json.loads(
+            await external_football_handler.import_football_team_squad("1", "42", "home")
+        )
         assert r["success"] is True
         mock_storage.update_match_football_data.assert_called_once()
 
@@ -536,7 +665,11 @@ class TestExternalHandler:
 
     @pytest.mark.asyncio
     async def test_football_team_matches(self, external_football_handler):
-        r = json.loads(await external_football_handler.get_football_team_matches("1", "2025-01-01", "2025-12-31"))
+        r = json.loads(
+            await external_football_handler.get_football_team_matches(
+                "1", "2025-01-01", "2025-12-31"
+            )
+        )
         assert len(r["matches"]) == 1
 
     @pytest.mark.asyncio
@@ -567,7 +700,9 @@ class TestExternalHandler:
         mock_storage.update_match_bzzoiro.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_bzzoiro_import_squad_skipped(self, external_bzzoiro_handler, mock_player_profile_service):
+    async def test_bzzoiro_import_squad_skipped(
+        self, external_bzzoiro_handler, mock_player_profile_service
+    ):
         existing = MagicMock()
         existing.jersey_number = 7
         mock_player_profile_service.get_all_profiles.return_value = [existing]
@@ -611,7 +746,9 @@ class TestExternalHandler:
 
     @pytest.mark.asyncio
     async def test_bzzoiro_team_matches(self, external_bzzoiro_handler):
-        r = json.loads(await external_bzzoiro_handler.get_bzzoiro_team_matches("1", "2025-01-01", "2025-12-31"))
+        r = json.loads(
+            await external_bzzoiro_handler.get_bzzoiro_team_matches("1", "2025-01-01", "2025-12-31")
+        )
         assert len(r["matches"]) == 1
 
     # ── EasySoccer ──
@@ -687,7 +824,12 @@ class TestExternalHandler:
     @pytest.mark.asyncio
     async def test_apifb_verify_match_mismatch(self, external_apifb_handler, mock_storage):
         svc = external_apifb_handler._services["api_football_service"]
-        svc.get_fixture_detail.return_value = {"home_score": 5, "away_score": 0, "home_team": "H", "away_team": "A"}
+        svc.get_fixture_detail.return_value = {
+            "home_score": 5,
+            "away_score": 0,
+            "home_team": "H",
+            "away_team": "A",
+        }
         r = json.loads(await external_apifb_handler.verify_match_apifootball("1", "500"))
         assert r["match_ok"] is False
 
@@ -813,38 +955,61 @@ class TestExternalHandler:
     # ── Exception handling (parametrized across providers) ──
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("method,args,service_key", [
-        ("search_football_team", ["x"], "football_data_service"),
-        ("search_bzzoiro_team", ["x"], "bzzoiro_service"),
-        ("search_apifootball_team", ["x"], "api_football_service"),
-        ("get_football_competitions", [], "football_data_service"),
-        ("get_bzzoiro_leagues", [], "bzzoiro_service"),
-        ("get_easy_soccer_live", [], "easy_soccer_service"),
-        ("get_apifootball_fixtures", ["1", 2024], "api_football_service"),
-        ("get_statsbomb_competitions", [], "statsbomb_service"),
-        ("get_openfootball_matches", ["en.1", "2024-25"], "openfootball_service"),
-    ])
-    async def test_exception_returns_json_error(self, mock_bridge, mock_storage, method, args, service_key):
+    @pytest.mark.parametrize(
+        "method,args,service_key",
+        [
+            ("search_football_team", ["x"], "football_data_service"),
+            ("search_bzzoiro_team", ["x"], "bzzoiro_service"),
+            ("search_apifootball_team", ["x"], "api_football_service"),
+            ("get_football_competitions", [], "football_data_service"),
+            ("get_bzzoiro_leagues", [], "bzzoiro_service"),
+            ("get_easy_soccer_live", [], "easy_soccer_service"),
+            ("get_apifootball_fixtures", ["1", 2024], "api_football_service"),
+            ("get_statsbomb_competitions", [], "statsbomb_service"),
+            ("get_openfootball_matches", ["en.1", "2024-25"], "openfootball_service"),
+        ],
+    )
+    async def test_exception_returns_json_error(
+        self, mock_bridge, mock_storage, method, args, service_key
+    ):
         svc = MagicMock()
-        svc_mock = AsyncMock() if method in ("check_football_data_status", "check_apifootball_status", "check_statsbomb_status") else MagicMock()
+        svc_mock = (
+            AsyncMock()
+            if method
+            in ("check_football_data_status", "check_apifootball_status", "check_statsbomb_status")
+            else MagicMock()
+        )
         if isinstance(svc_mock, AsyncMock):
             svc_mock.side_effect = RuntimeError("api down")
         else:
-            setattr(svc_mock, svc_mock._method_map_.get(method.replace("search_", "search_").replace("get_", "get_"), "_"), MagicMock(side_effect=RuntimeError("api down"))) if False else None
+            setattr(
+                svc_mock,
+                svc_mock._method_map_.get(
+                    method.replace("search_", "search_").replace("get_", "get_"), "_"
+                ),
+                MagicMock(side_effect=RuntimeError("api down")),
+            ) if False else None
 
         # Simpler: make the real method fail by patching the service method
         handler = ExternalHandler(mock_bridge, {service_key: svc, "storage_service": mock_storage})
         fn = getattr(handler, method)
         # Patch so ANY call to the service raises
-        mock_method = AsyncMock(side_effect=RuntimeError("boom")) if method in (
-            "check_football_data_status", "check_apifootball_status", "check_statsbomb_status",
-        ) else MagicMock(side_effect=RuntimeError("boom"))
+        mock_method = (
+            AsyncMock(side_effect=RuntimeError("boom"))
+            if method
+            in (
+                "check_football_data_status",
+                "check_apifootball_status",
+                "check_statsbomb_status",
+            )
+            else MagicMock(side_effect=RuntimeError("boom"))
+        )
 
-        if method == "search_football_team":
-            svc.search_team = mock_method
-        elif method == "search_bzzoiro_team":
-            svc.search_team = mock_method
-        elif method == "search_apifootball_team":
+        if (
+            method == "search_football_team"
+            or method == "search_bzzoiro_team"
+            or method == "search_apifootball_team"
+        ):
             svc.search_team = mock_method
         elif method == "get_football_competitions":
             svc.get_competitions = mock_method
@@ -866,6 +1031,7 @@ class TestExternalHandler:
 # ========================================================================
 # LifecycleHandler Tests
 # ========================================================================
+
 
 class TestLifecycleHandler:
     """LifecycleHandler — get_gpu_info, profiler_status, profiler_reset, metrics_text."""
@@ -912,6 +1078,7 @@ class TestLifecycleHandler:
         svc._system_info = {"gpu_name": "NVIDIA RTX 4090"}
         # Make `classify_gpu_tier` raise to trigger error path
         import kawkab.services.benchmark_service as bm
+
         orig = bm.BenchmarkService.classify_gpu_tier
         bm.BenchmarkService.classify_gpu_tier = MagicMock(side_effect=RuntimeError("boom"))
         try:
@@ -924,6 +1091,7 @@ class TestLifecycleHandler:
 # ========================================================================
 # StorageHandler Tests
 # ========================================================================
+
 
 class TestStorageHandler:
     """StorageHandler — update_event, delete_event, submit_feedback, submit_issue, get_feedback_stats."""
@@ -1003,6 +1171,7 @@ class TestStorageHandler:
 # VideoHandler Tests
 # ========================================================================
 
+
 class TestVideoHandler:
     """VideoHandler — sync_*, trim, reel_*, realtime_*."""
 
@@ -1012,28 +1181,36 @@ class TestVideoHandler:
         assert video_handler._highlight_reel is not None
 
     def test_sync_load(self, video_handler):
-        with patch.object(video_handler._sync_service, "load_videos", return_value='{"ok": true}') as mock_load:
+        with patch.object(
+            video_handler._sync_service, "load_videos", return_value='{"ok": true}'
+        ) as mock_load:
             r = video_handler.sync_load('["/v1.mp4", "/v2.mp4"]')
             assert r == '{"ok": true}'
             mock_load.assert_called_once()
 
     def test_sync_set_offset(self, video_handler):
-        with patch.object(video_handler._sync_service, "set_offset", return_value='{"ok": true}') as mock_set:
+        with patch.object(
+            video_handler._sync_service, "set_offset", return_value='{"ok": true}'
+        ) as _:
             r = video_handler.sync_set_offset(0, 1.5)
             assert r == '{"ok": true}'
 
     def test_sync_positions(self, video_handler):
-        with patch.object(video_handler._sync_service, "get_sync_positions", return_value='{"positions": []}') as mock_pos:
+        with patch.object(
+            video_handler._sync_service, "get_sync_positions", return_value='{"positions": []}'
+        ) as _:
             r = video_handler.sync_positions(120.0)
             assert r == '{"positions": []}'
 
     def test_sync_state(self, video_handler):
-        with patch.object(video_handler._sync_service, "get_state", return_value='{"state": "ready"}') as mock_st:
+        with patch.object(
+            video_handler._sync_service, "get_state", return_value='{"state": "ready"}'
+        ) as _:
             r = video_handler.sync_state()
             assert r == '{"state": "ready"}'
 
     def test_sync_clear(self, video_handler):
-        with patch.object(video_handler._sync_service, "clear", return_value='{"ok": true}') as mock_cl:
+        with patch.object(video_handler._sync_service, "clear", return_value='{"ok": true}') as _:
             r = video_handler.sync_clear()
             assert r == '{"ok": true}'
 
@@ -1041,27 +1218,40 @@ class TestVideoHandler:
         r = json.loads(video_handler.sync_load("not-json"))
         assert "error" in r
 
-    @pytest.mark.parametrize("method,args", [
-        ("sync_set_offset", (0, 1.5)),
-        ("sync_positions", (120.0,)),
-        ("sync_state", ()),
-        ("sync_clear", ()),
-    ])
+    @pytest.mark.parametrize(
+        "method,args",
+        [
+            ("sync_set_offset", (0, 1.5)),
+            ("sync_positions", (120.0,)),
+            ("sync_state", ()),
+            ("sync_clear", ()),
+        ],
+    )
     def test_sync_methods_exception(self, video_handler, method, args):
-        attr = {"sync_set_offset": "set_offset", "sync_positions": "get_sync_positions",
-                "sync_state": "get_state", "sync_clear": "clear"}[method]
+        attr = {
+            "sync_set_offset": "set_offset",
+            "sync_positions": "get_sync_positions",
+            "sync_state": "get_state",
+            "sync_clear": "clear",
+        }[method]
         with patch.object(video_handler._sync_service, attr, side_effect=RuntimeError("sync fail")):
             r = json.loads(getattr(video_handler, method)(*args))
             assert "error" in r
 
     def test_trim_video(self, video_handler):
-        with patch("kawkab.services.clip_service.ClipExtractionService") as mock_cls, \
-             patch("kawkab.ui.bridge_handlers.bridge_video.SecurityValidator.validate_video_path",
-                   return_value=Path("/v/test.mp4")):
+        with (
+            patch("kawkab.services.clip_service.ClipExtractionService") as mock_cls,
+            patch(
+                "kawkab.ui.bridge_handlers.bridge_video.SecurityValidator.validate_video_path",
+                return_value=Path("/v/test.mp4"),
+            ),
+        ):
             instance = MagicMock()
             mock_cls.return_value = instance
+
             async def mock_extract(*a, **kw):
                 return "/out/trim.mp4"
+
             instance.extract_clip = mock_extract
             r = json.loads(video_handler.trim_video("/v/test.mp4", 10.0, 20.0, "my_trim.mp4"))
             assert r["ok"] is True
@@ -1072,20 +1262,30 @@ class TestVideoHandler:
         assert "error" in r
 
     def test_trim_video_exception(self, video_handler):
-        with patch("kawkab.services.clip_service.ClipExtractionService") as mock_cls, \
-             patch("kawkab.ui.bridge_handlers.bridge_video.SecurityValidator.validate_video_path",
-                   return_value=Path("/v/test.mp4")):
+        with (
+            patch("kawkab.services.clip_service.ClipExtractionService") as mock_cls,
+            patch(
+                "kawkab.ui.bridge_handlers.bridge_video.SecurityValidator.validate_video_path",
+                return_value=Path("/v/test.mp4"),
+            ),
+        ):
             instance = MagicMock()
             mock_cls.return_value = instance
+
             async def mock_raise(*a, **kw):
                 raise RuntimeError("trim fail")
+
             instance.extract_clip = mock_raise
             r = json.loads(video_handler.trim_video("/v/test.mp4", 0, 1))
             assert "error" in r
 
     def test_reel_compose(self, video_handler):
-        clips_json = json.dumps([{"video_path": "/v/a.mp4", "start_s": 0, "end_s": 10, "label": "goal"}])
-        with patch.object(video_handler._highlight_reel, "compose_reel", return_value='{"path": "/reel.mp4"}') as mock_reel:
+        clips_json = json.dumps(
+            [{"video_path": "/v/a.mp4", "start_s": 0, "end_s": 10, "label": "goal"}]
+        )
+        with patch.object(
+            video_handler._highlight_reel, "compose_reel", return_value='{"path": "/reel.mp4"}'
+        ) as _:
             r = video_handler.reel_compose(clips_json, "reel.mp4")
             assert r == '{"path": "/reel.mp4"}'
 
@@ -1095,9 +1295,14 @@ class TestVideoHandler:
 
     def test_reel_from_events(self, video_handler):
         events_json = json.dumps([{"type": "goal", "timestamp": 120, "team": "home"}])
-        with patch.object(video_handler._highlight_reel, "make_reel_from_events", return_value='{"path": "/reel.mp4"}') as mock_reel:
-            r = video_handler.reel_from_events(1, events_json, "/v/test.mp4")
-            assert r == '{"path": "/reel.mp4"}'
+        with patch.object(
+            video_handler._highlight_reel,
+            "make_reel_from_events",
+            return_value='{"path": "/reel.mp4"}',
+        ) as _:
+            r = json.loads(video_handler.reel_from_events(1, events_json, "/v/test.mp4"))
+            assert r["path"] == "/reel.mp4"
+            assert "reel_id" in r
 
     def test_reel_from_events_bad_json(self, video_handler):
         r = json.loads(video_handler.reel_from_events(1, "bad", "/v/test.mp4"))

@@ -23,11 +23,9 @@ Reference: FIT SDK https://developer.garmin.com/fit/protocol/
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
 
 from kawkab.core.logging import get_logger
-
 from kawkab.services.wearables.base import BaseWearableParser
 from kawkab.services.wearables.models import WearableDataPoint, WearableSession
 
@@ -80,12 +78,10 @@ class FitParser(BaseWearableParser):
         try:
             import fitdecode  # type: ignore[import-untyped]
         except ImportError:
-            logger.error(
-                "fitdecode not installed. Install with: pip install fitdecode"
-            )
+            logger.error("fitdecode not installed. Install with: pip install fitdecode")
             raise
 
-        session_start_dt: Optional[datetime] = None
+        session_start_dt: datetime | None = None
 
         with fitdecode.FitReader(file_path) as fit:
             for msg in fit:
@@ -133,7 +129,7 @@ class FitParser(BaseWearableParser):
 
     # -- internals ---------------------------------------------------------
 
-    def _record_to_datapoint(self, msg) -> Optional[WearableDataPoint]:  # noqa: ANN001
+    def _record_to_datapoint(self, msg) -> WearableDataPoint | None:  # noqa: ANN001
         """Convert a FIT record message to a WearableDataPoint."""
         ts_val = self._get_value(msg, "timestamp")
         if ts_val is None:
@@ -141,7 +137,7 @@ class FitParser(BaseWearableParser):
 
         # fitdecode returns timestamps as datetime objects (UTC-aware)
         timestamp_s: float
-        dt: Optional[datetime] = None
+        dt: datetime | None = None
         if isinstance(ts_val, datetime):
             dt = ts_val
             timestamp_s = dt.timestamp()
@@ -163,7 +159,9 @@ class FitParser(BaseWearableParser):
         if lon is not None:
             dp.longitude = float(lon)
 
-        dp.altitude_m = self._get_float(msg, "enhanced_altitude") or self._get_float(msg, "altitude")
+        dp.altitude_m = self._get_float(msg, "enhanced_altitude") or self._get_float(
+            msg, "altitude"
+        )
         dp.heart_rate_bpm = self._get_float(msg, "heart_rate")
         dp.speed_ms = self._get_float(msg, "speed")
         dp.distance_m = self._get_float(msg, "distance")
@@ -182,7 +180,9 @@ class FitParser(BaseWearableParser):
         for fit_field, meta_key in _FIT_SESSION_FIELDS.items():
             val = msg.get_value(fit_field)
             if val is not None:
-                session.metadata[meta_key] = float(val) if isinstance(val, (int, float)) else str(val)
+                session.metadata[meta_key] = (
+                    float(val) if isinstance(val, (int, float)) else str(val)
+                )
 
         # Also set start_time from session timestamp if not already captured
         if session.start_time is None:
@@ -226,7 +226,7 @@ class FitParser(BaseWearableParser):
         return None
 
     @staticmethod
-    def _get_float(msg, field_name: str) -> Optional[float]:  # noqa: ANN001
+    def _get_float(msg, field_name: str) -> float | None:  # noqa: ANN001
         val = FitParser._get_value(msg, field_name)
         if val is None:
             return None

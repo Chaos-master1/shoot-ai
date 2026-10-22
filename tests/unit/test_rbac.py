@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import pytest
-from kawkab.core.rbac import (
-    RBACMiddleware, Role, ROLE_HIERARCHY, PERMISSION_ROLES, rbac, get_rbac,
-)
 from fastapi import HTTPException
+
+from kawkab.core.rbac import (
+    PERMISSION_ROLES,
+    ROLE_HIERARCHY,
+    RBACMiddleware,
+    Role,
+    get_rbac,
+    rbac,
+)
 
 
 class TestRBACMiddleware:
@@ -106,11 +114,13 @@ class TestRequirePermissionDependency:
 
     @pytest.fixture(autouse=True)
     def setup_env_and_db(self):
-        import os, tempfile
+        import os
+        import tempfile
+
         self._old_secret = os.environ.get("KAWKAB_JWT_SECRET")
         self._old_db_url = os.environ.get("KAWKAB_DB_URL")
         self._old_cloud_db = os.environ.get("KAWKAB_CLOUD_DB")
-        os.environ["KAWKAB_JWT_SECRET"] = "test-secret-for-testing"
+        os.environ["KAWKAB_JWT_SECRET"] = "test-secret-for-testing-purposes-only-32chars"
         os.environ.pop("KAWKAB_DB_URL", None)
         db_path = os.path.join(tempfile.gettempdir(), f"kawkab_test_rbac_{id(self)}.db")
         os.environ["KAWKAB_CLOUD_DB"] = db_path
@@ -120,24 +130,23 @@ class TestRequirePermissionDependency:
             os.environ["KAWKAB_JWT_SECRET"] = self._old_secret
         if self._old_cloud_db:
             os.environ["KAWKAB_CLOUD_DB"] = self._old_cloud_db
-        try:
+        with contextlib.suppress(OSError):
             os.remove(db_path)
-        except OSError:
-            pass
 
     @pytest.fixture
     def client(self):
-        from fastapi.testclient import TestClient
-        from kawkab.cloud.server import app
         import threading
+
+        from fastapi.testclient import TestClient
+
         from kawkab.cloud import database
+        from kawkab.cloud.server import app
+
         database._local = threading.local()
         # Reset cached DB reference
         if hasattr(database._local, "conn"):
-            try:
+            with contextlib.suppress(Exception):
                 database._local.conn.close()
-            except Exception:
-                pass
             del database._local.conn
         return TestClient(app)
 
@@ -148,17 +157,22 @@ class TestRequirePermissionDependency:
 
     def test_expired_token_returns_401(self, client):
         # JWT with "exp" in the past
-        import jwt, time
+        import time
+
+        import jwt
+
         token = jwt.encode(
             {"sub": 1, "exp": int(time.time()) - 3600, "iat": int(time.time()) - 7200},
-            "test-secret-for-testing",
+            "test-secret-for-testing-purposes-only-32chars",
             algorithm="HS256",
         )
         resp = client.get("/api/v1/matches", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 401
 
     def test_garbage_token_returns_401(self, client):
-        resp = client.get("/api/v1/matches", headers={"Authorization": "Bearer garbage.invalid.token"})
+        resp = client.get(
+            "/api/v1/matches", headers={"Authorization": "Bearer garbage.invalid.token"}
+        )
         assert resp.status_code == 401
 
     def test_anonymous_endpoint_works_without_auth(self, client):
@@ -171,18 +185,23 @@ class TestRequirePermissionDependency:
     def registered_user(self, client):
         """Register a user and return a valid access token."""
         import uuid
+
         suffix = uuid.uuid4().hex[:8]
-        resp = client.post("/auth/register", json={
-            "username": f"rbac_user_{suffix}",
-            "email": f"rbac_{suffix}@test.com",
-            "password": "TestPass123!",
-            "display_name": "RBAC User",
-        })
+        resp = client.post(
+            "/auth/register",
+            json={
+                "username": f"rbac_user_{suffix}",
+                "email": f"rbac_{suffix}@test.com",
+                "password": "TestPass123!",
+                "display_name": "RBAC User",
+            },
+        )
         assert resp.status_code == 200, f"Register failed: {resp.status_code} {resp.text[:200]}"
         data = resp.json()
         yield data["access_token"]
         # Cleanup
         from kawkab.cloud.database import get_cloud_db
+
         db = get_cloud_db()
         db.execute("DELETE FROM users WHERE email = ?", (f"rbac_{suffix}@test.com",))
         db.commit()

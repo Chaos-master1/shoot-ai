@@ -1,22 +1,25 @@
 """Tests for Pressing Classifier — block type, man/zonal, trigger pressing."""
 
+from kawkab.core.game_constants import GAME
 from kawkab.core.pressing_classifier import (
-    classify_pressing_system,
-    _classify_block_type,
     _avg_defensive_line_x,
+    _classify_block_type,
     _detect_man_or_zonal,
     _detect_trigger_pressing_moments,
+    classify_pressing_system,
 )
-from kawkab.core.game_constants import GAME
 
 PITCH_LENGTH = GAME.PITCH_LENGTH_M
 
 
 def _make_event(team, etype, x=50, y=34, ts=0, completed=True, under_pressure=False):
     return {
-        "team": team, "type": etype,
-        "start_x": x, "start_y": y,
-        "timestamp": ts, "completed": completed,
+        "team": team,
+        "type": etype,
+        "start_x": x,
+        "start_y": y,
+        "timestamp": ts,
+        "completed": completed,
         "under_pressure": under_pressure,
     }
 
@@ -60,8 +63,11 @@ class TestAvgDefensiveLine:
 
 class TestManOrZonal:
     def test_man_oriented(self):
-        events = [_make_event("away", "tackle", x=i * 10, y=j * 10)
-                  for i in range(1, 6) for j in range(1, 3)]
+        events = [
+            _make_event("away", "tackle", x=i * 10, y=j * 10)
+            for i in range(1, 6)
+            for j in range(1, 3)
+        ]
         style = _detect_man_or_zonal(events, "home")
         assert style in ("man_oriented", "zonal", "unknown")
 
@@ -127,6 +133,7 @@ class TestClassifyPressingSystem:
 
     def test_pressing_report_to_dict(self):
         from kawkab.core.pressing_classifier import PressingSystemReport
+
         report = PressingSystemReport(
             team="away",
             primary_block_type="high_block",

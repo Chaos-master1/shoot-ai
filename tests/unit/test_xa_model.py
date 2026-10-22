@@ -1,6 +1,6 @@
 """Tests for Expected Assists model — Poisson pass-to-shot sequence model."""
 
-from kawkab.core.xa_model import ExpectedAssistModel, XAResult, XAMatchReport
+from kawkab.core.xa_model import ExpectedAssistModel, XAMatchReport, XAResult
 from kawkab.core.xg_model import EnhancedXgModel
 
 
@@ -50,12 +50,30 @@ class TestExpectedAssistModel:
     def test_compute_match_xa(self):
         model = ExpectedAssistModel()
         events = [
-            {"type": "pass", "team": "home", "end_x": 95, "end_y": 34,
-             "start_x": 60, "start_y": 34, "pass_type": "through_ball",
-             "is_progressive": True, "under_pressure": False, "timestamp": 10},
-            {"type": "pass", "team": "away", "end_x": 90, "end_y": 30,
-             "start_x": 70, "start_y": 30, "pass_type": "standard",
-             "is_progressive": False, "under_pressure": False, "timestamp": 20},
+            {
+                "type": "pass",
+                "team": "home",
+                "end_x": 95,
+                "end_y": 34,
+                "start_x": 60,
+                "start_y": 34,
+                "pass_type": "through_ball",
+                "is_progressive": True,
+                "under_pressure": False,
+                "timestamp": 10,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "end_x": 90,
+                "end_y": 30,
+                "start_x": 70,
+                "start_y": 30,
+                "pass_type": "standard",
+                "is_progressive": False,
+                "under_pressure": False,
+                "timestamp": 20,
+            },
             {"type": "shot", "team": "home"},
         ]
         report = model.compute_match_xa(events)
@@ -107,9 +125,18 @@ class TestSequenceModel:
     def test_match_report_includes_sequence_xa(self):
         model = ExpectedAssistModel()
         events = [
-            {"type": "pass", "team": "home", "end_x": 95, "end_y": 34,
-             "start_x": 60, "start_y": 34, "pass_type": "standard",
-             "is_progressive": True, "under_pressure": False, "timestamp": 10},
+            {
+                "type": "pass",
+                "team": "home",
+                "end_x": 95,
+                "end_y": 34,
+                "start_x": 60,
+                "start_y": 34,
+                "pass_type": "standard",
+                "is_progressive": True,
+                "under_pressure": False,
+                "timestamp": 10,
+            },
         ]
         report = model.compute_match_xa(events)
         assert report.home_sequence_xa >= 0
@@ -127,9 +154,18 @@ class TestMonteCarlo:
     def test_mc_returns_basic_stats(self):
         model = ExpectedAssistModel()
         events = [
-            {"type": "pass", "team": "home", "end_x": 95, "end_y": 34,
-             "start_x": 60, "start_y": 34, "pass_type": "standard",
-             "is_progressive": False, "under_pressure": False, "timestamp": 10},
+            {
+                "type": "pass",
+                "team": "home",
+                "end_x": 95,
+                "end_y": 34,
+                "start_x": 60,
+                "start_y": 34,
+                "pass_type": "standard",
+                "is_progressive": False,
+                "under_pressure": False,
+                "timestamp": 10,
+            },
         ]
         result = model.monte_carlo_sequence_xa(events, n_simulations=500, seed=42)
         assert result["home_xa"] >= 0
@@ -140,9 +176,18 @@ class TestMonteCarlo:
     def test_mc_seeded_reproducible(self):
         model = ExpectedAssistModel()
         events = [
-            {"type": "pass", "team": "home", "end_x": 95, "end_y": 34,
-             "start_x": 60, "start_y": 34, "pass_type": "through_ball",
-             "is_progressive": True, "under_pressure": False, "timestamp": 10},
+            {
+                "type": "pass",
+                "team": "home",
+                "end_x": 95,
+                "end_y": 34,
+                "start_x": 60,
+                "start_y": 34,
+                "pass_type": "through_ball",
+                "is_progressive": True,
+                "under_pressure": False,
+                "timestamp": 10,
+            },
         ]
         a = model.monte_carlo_sequence_xa(events, n_simulations=1000, seed=42)
         b = model.monte_carlo_sequence_xa(events, n_simulations=1000, seed=42)
@@ -158,9 +203,18 @@ class TestMonteCarlo:
         model = ExpectedAssistModel()
         events = [
             {"type": "shot", "team": "home"},
-            {"type": "pass", "team": "home", "end_x": 100, "end_y": 34,
-             "start_x": 50, "start_y": 34, "pass_type": "cross",
-             "is_progressive": False, "under_pressure": False, "timestamp": 5},
+            {
+                "type": "pass",
+                "team": "home",
+                "end_x": 100,
+                "end_y": 34,
+                "start_x": 50,
+                "start_y": 34,
+                "pass_type": "cross",
+                "is_progressive": False,
+                "under_pressure": False,
+                "timestamp": 5,
+            },
         ]
         result = model.monte_carlo_sequence_xa(events, n_simulations=100, seed=0)
         assert result["n_passes"] == 1
@@ -168,12 +222,30 @@ class TestMonteCarlo:
     def test_mc_two_teams(self):
         model = ExpectedAssistModel()
         events = [
-            {"type": "pass", "team": "home", "end_x": 95, "end_y": 34,
-             "start_x": 60, "start_y": 34, "pass_type": "standard",
-             "is_progressive": False, "under_pressure": False, "timestamp": 5},
-            {"type": "pass", "team": "away", "end_x": 90, "end_y": 30,
-             "start_x": 70, "start_y": 30, "pass_type": "through_ball",
-             "is_progressive": True, "under_pressure": False, "timestamp": 15},
+            {
+                "type": "pass",
+                "team": "home",
+                "end_x": 95,
+                "end_y": 34,
+                "start_x": 60,
+                "start_y": 34,
+                "pass_type": "standard",
+                "is_progressive": False,
+                "under_pressure": False,
+                "timestamp": 5,
+            },
+            {
+                "type": "pass",
+                "team": "away",
+                "end_x": 90,
+                "end_y": 30,
+                "start_x": 70,
+                "start_y": 30,
+                "pass_type": "through_ball",
+                "is_progressive": True,
+                "under_pressure": False,
+                "timestamp": 15,
+            },
         ]
         result = model.monte_carlo_sequence_xa(events, n_simulations=500, seed=42)
         assert result["home_xa"] > 0
@@ -240,9 +312,14 @@ class TestCrossSubtypes:
     def test_cross_subtype_from_event_dict(self):
         model = ExpectedAssistModel()
         event = {
-            "end_x": 95, "end_y": 10, "start_x": 70, "start_y": 10,
-            "pass_type": "cross", "cross_subtype": "cutback",
-            "is_progressive": False, "under_pressure": False,
+            "end_x": 95,
+            "end_y": 10,
+            "start_x": 70,
+            "start_y": 10,
+            "pass_type": "cross",
+            "cross_subtype": "cutback",
+            "is_progressive": False,
+            "under_pressure": False,
         }
         result = model.compute_pass_xa(event)
         assert result.pass_type_mult == 1.8

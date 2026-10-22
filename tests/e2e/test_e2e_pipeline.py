@@ -13,11 +13,10 @@ import ast
 import json
 from pathlib import Path
 
-import pytest
-
 
 def _get_mc():
     from kawkab.core.observability import MetricsCollector
+
     return MetricsCollector
 
 
@@ -90,6 +89,7 @@ class TestMetricsCollection:
     def test_singleton_metrics(self):
         from kawkab.core.observability import metrics as _m1
         from kawkab.core.observability import metrics as _m2
+
         assert _m1 is _m2
 
 
@@ -151,7 +151,9 @@ class TestProfilerIntegration:
 # ── A5: Bridge slot contract ─────────────────────────────────────────
 
 
-BRIDGE_SOURCE = Path(__file__).resolve().parent.parent.parent / "src" / "kawkab" / "ui" / "bridge.py"
+BRIDGE_SOURCE = (
+    Path(__file__).resolve().parent.parent.parent / "src" / "kawkab" / "ui" / "bridge.py"
+)
 
 
 class TestBridgeSlots:
@@ -170,7 +172,7 @@ class TestBridgeSlots:
             tree = ast.parse(f.read())
         methods: set[str] = set()
         for node in ast.walk(tree):
-            if isinstance(node, ast.AsyncFunctionDef) or isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
                 methods.add(node.name)
         return methods
 
@@ -224,7 +226,29 @@ class TestPoCompilation:
 
 
 class TestCoverageConfig:
-    def test_coverage_fail_under_is_50(self):
+    def test_coverage_fail_under_matches_pyproject(self):
+        # test.yml's coverage job runs plain `pytest --cov=src/kawkab`, with
+        # no --cov-fail-under flag of its own -- pytest-cov reads the
+        # threshold from pyproject.toml's [tool.coverage.report] fail_under
+        # automatically, so there's nothing in test.yml's own text to check
+        # a specific number against. What *is* worth asserting: the
+        # threshold is a real, deliberately-chosen value, not silently
+        # reverted to pytest-cov's un-set default (no failure at all).
+        pyproject = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
+        text = pyproject.read_text(encoding="utf-8")
+        assert "fail_under = 65" in text, (
+            "Coverage threshold in pyproject.toml should be 65 "
+            "(the real measured baseline as of the 2026-07-30 audit -- "
+            "see CLAUDE.md)"
+        )
+
+    def test_coverage_job_does_not_ignore_fixed_audio_service_tests(self):
+        # test_audio_service.py's 10 tests were genuinely failing (stale
+        # API) before the 2026-07-30 audit fixed them; test.yml's coverage
+        # job carried its own --ignore for it independently of ci.yml's
+        # unit job (already cleaned up), so this specific flag survived
+        # that pass. Now that the tests pass, ignoring them here just
+        # under-counts coverage for no reason.
         ci = Path(__file__).resolve().parent.parent.parent / ".github" / "workflows" / "test.yml"
         text = ci.read_text(encoding="utf-8")
-        assert "fail-under=50" in text, "Coverage threshold should be 50"
+        assert "--ignore=tests/unit/test_audio_service.py" not in text

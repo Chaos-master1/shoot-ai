@@ -9,7 +9,6 @@ Silent degradation: returns empty results on failure.
 from __future__ import annotations
 
 import asyncio
-import json
 import time
 from typing import Any
 
@@ -43,9 +42,7 @@ class ApiFootballService:
 
     async def _ensure_client(self) -> None:
         if self._client is None:
-            self._client = httpx.AsyncClient(
-                base_url=BASE_URL, timeout=15.0
-            )
+            self._client = httpx.AsyncClient(base_url=BASE_URL, timeout=15.0)
 
     async def _rate_limit(self) -> None:
         now = time.monotonic()
@@ -74,6 +71,7 @@ class ApiFootballService:
         await self._rate_limit()
         try:
             await self._ensure_client()
+            assert self._client is not None
             headers = {"x-apisports-key": self.api_key}
             resp = await self._client.get(path, headers=headers)
             if resp.status_code == 429:
@@ -108,7 +106,6 @@ class ApiFootballService:
 
     async def search_team(self, query: str) -> list[dict]:
         """Search teams by name."""
-        import json
 
         data = await self._request(f"/teams?search={query}", ttl=CACHE_TTL_LONG)
         if not data:
@@ -117,17 +114,19 @@ class ApiFootballService:
         for item in data.get("response", []):
             t = item.get("team", {})
             v = item.get("venue", {})
-            results.append({
-                "id": t.get("id"),
-                "name": t.get("name", ""),
-                "code": t.get("code", ""),
-                "country": t.get("country", ""),
-                "logo": t.get("logo"),
-                "founded": t.get("founded"),
-                "venue_name": v.get("name"),
-                "venue_city": v.get("city"),
-                "venue_capacity": v.get("capacity"),
-            })
+            results.append(
+                {
+                    "id": t.get("id"),
+                    "name": t.get("name", ""),
+                    "code": t.get("code", ""),
+                    "country": t.get("country", ""),
+                    "logo": t.get("logo"),
+                    "founded": t.get("founded"),
+                    "venue_name": v.get("name"),
+                    "venue_city": v.get("city"),
+                    "venue_capacity": v.get("capacity"),
+                }
+            )
         return results
 
     async def get_team_squad(self, team_id: int) -> list[dict]:
@@ -138,45 +137,53 @@ class ApiFootballService:
         players = []
         for item in data.get("response", []):
             for p in item.get("players", []):
-                players.append({
-                    "id": p.get("id"),
-                    "name": p.get("name", ""),
-                    "position": p.get("position", ""),
-                    "jersey_number": p.get("number"),
-                    "age": p.get("age"),
-                    "photo": p.get("photo"),
-                })
+                players.append(
+                    {
+                        "id": p.get("id"),
+                        "name": p.get("name", ""),
+                        "position": p.get("position", ""),
+                        "jersey_number": p.get("number"),
+                        "age": p.get("age"),
+                        "photo": p.get("photo"),
+                    }
+                )
         return players
 
     async def get_standings(self, league_id: int, season: int = 2024) -> list[dict]:
         """Get league standings."""
-        data = await self._request(f"/standings?league={league_id}&season={season}", ttl=CACHE_TTL_MEDIUM)
+        data = await self._request(
+            f"/standings?league={league_id}&season={season}", ttl=CACHE_TTL_MEDIUM
+        )
         if not data:
             return []
         rows = []
         for item in data.get("response", []):
             for standing_list in item.get("league", {}).get("standings", []):
                 for s in standing_list:
-                    rows.append({
-                        "rank": s.get("rank"),
-                        "team_id": s.get("team", {}).get("id"),
-                        "team_name": s.get("team", {}).get("name", ""),
-                        "team_logo": s.get("team", {}).get("logo"),
-                        "points": s.get("points"),
-                        "goalsDiff": s.get("goalsDiff"),
-                        "played": s.get("all", {}).get("played"),
-                        "wins": s.get("all", {}).get("win"),
-                        "draws": s.get("all", {}).get("draw"),
-                        "losses": s.get("all", {}).get("lose"),
-                        "goals_for": s.get("all", {}).get("goals", {}).get("for"),
-                        "goals_against": s.get("all", {}).get("goals", {}).get("against"),
-                        "form": s.get("form"),
-                        "description": s.get("description"),
-                        "group": s.get("group"),
-                    })
+                    rows.append(
+                        {
+                            "rank": s.get("rank"),
+                            "team_id": s.get("team", {}).get("id"),
+                            "team_name": s.get("team", {}).get("name", ""),
+                            "team_logo": s.get("team", {}).get("logo"),
+                            "points": s.get("points"),
+                            "goalsDiff": s.get("goalsDiff"),
+                            "played": s.get("all", {}).get("played"),
+                            "wins": s.get("all", {}).get("win"),
+                            "draws": s.get("all", {}).get("draw"),
+                            "losses": s.get("all", {}).get("lose"),
+                            "goals_for": s.get("all", {}).get("goals", {}).get("for"),
+                            "goals_against": s.get("all", {}).get("goals", {}).get("against"),
+                            "form": s.get("form"),
+                            "description": s.get("description"),
+                            "group": s.get("group"),
+                        }
+                    )
         return rows
 
-    async def get_fixtures(self, team_id: int, season: int = 2024, last: int | None = None, next: int | None = None) -> list[dict]:
+    async def get_fixtures(
+        self, team_id: int, season: int = 2024, last: int | None = None, next: int | None = None
+    ) -> list[dict]:
         """Get fixtures for a team."""
         path = f"/fixtures?team={team_id}&season={season}"
         if last is not None:
@@ -192,26 +199,28 @@ class ApiFootballService:
             teams = item.get("teams", {})
             goals = item.get("goals", {})
             league = item.get("league", {})
-            score = item.get("score", {})
-            matches.append({
-                "id": f.get("id"),
-                "date": f.get("date", ""),
-                "status": f.get("status", {}).get("long", ""),
-                "short_status": f.get("status", {}).get("short", ""),
-                "elapsed": f.get("status", {}).get("elapsed"),
-                "venue": f.get("venue", {}).get("name"),
-                "home_team": teams.get("home", {}).get("name", ""),
-                "home_team_id": teams.get("home", {}).get("id"),
-                "home_logo": teams.get("home", {}).get("logo"),
-                "away_team": teams.get("away", {}).get("name", ""),
-                "away_team_id": teams.get("away", {}).get("id"),
-                "away_logo": teams.get("away", {}).get("logo"),
-                "home_score": goals.get("home"),
-                "away_score": goals.get("away"),
-                "league_name": league.get("name", ""),
-                "league_id": league.get("id"),
-                "round": league.get("round"),
-            })
+            _ = item.get("score", {})
+            matches.append(
+                {
+                    "id": f.get("id"),
+                    "date": f.get("date", ""),
+                    "status": f.get("status", {}).get("long", ""),
+                    "short_status": f.get("status", {}).get("short", ""),
+                    "elapsed": f.get("status", {}).get("elapsed"),
+                    "venue": f.get("venue", {}).get("name"),
+                    "home_team": teams.get("home", {}).get("name", ""),
+                    "home_team_id": teams.get("home", {}).get("id"),
+                    "home_logo": teams.get("home", {}).get("logo"),
+                    "away_team": teams.get("away", {}).get("name", ""),
+                    "away_team_id": teams.get("away", {}).get("id"),
+                    "away_logo": teams.get("away", {}).get("logo"),
+                    "home_score": goals.get("home"),
+                    "away_score": goals.get("away"),
+                    "league_name": league.get("name", ""),
+                    "league_id": league.get("id"),
+                    "round": league.get("round"),
+                }
+            )
         return matches
 
     async def get_predictions(self, fixture_id: int) -> dict | None:
@@ -234,7 +243,7 @@ class ApiFootballService:
             return []
         leagues = []
         for item in data.get("response", []):
-            l = item.get("league", {})
+            league = item.get("league", {})
             c = item.get("country", {})
             seasons = item.get("seasons", [])
             current_season = None
@@ -242,23 +251,27 @@ class ApiFootballService:
                 if s.get("current"):
                     current_season = s.get("year")
                     break
-            leagues.append({
-                "id": l.get("id"),
-                "name": l.get("name", ""),
-                "type": l.get("type", ""),
-                "logo": l.get("logo"),
-                "country": c.get("name", ""),
-                "country_code": c.get("code"),
-                "country_flag": c.get("flag"),
-                "current_season": current_season,
-            })
+            leagues.append(
+                {
+                    "id": league.get("id"),
+                    "name": league.get("name", ""),
+                    "type": league.get("type", ""),
+                    "logo": league.get("logo"),
+                    "country": c.get("name", ""),
+                    "country_code": c.get("code"),
+                    "country_flag": c.get("flag"),
+                    "current_season": current_season,
+                }
+            )
         return leagues
 
     async def get_live_fixtures(self) -> list[dict]:
         """Get currently live fixtures."""
         return await self.get_fixtures_team(0, live="all")
 
-    async def get_fixtures_team(self, team_id: int | None = None, live: str | None = None) -> list[dict]:
+    async def get_fixtures_team(
+        self, team_id: int | None = None, live: str | None = None
+    ) -> list[dict]:
         """Get fixtures, optionally filtered by team or live status."""
         path = "/fixtures?"
         params = []
@@ -276,21 +289,23 @@ class ApiFootballService:
             teams = item.get("teams", {})
             goals = item.get("goals", {})
             league = item.get("league", {})
-            matches.append({
-                "id": f.get("id"),
-                "date": f.get("date", ""),
-                "status": f.get("status", {}).get("long", ""),
-                "short_status": f.get("status", {}).get("short", ""),
-                "elapsed": f.get("status", {}).get("elapsed"),
-                "home_team": teams.get("home", {}).get("name", ""),
-                "home_team_id": teams.get("home", {}).get("id"),
-                "away_team": teams.get("away", {}).get("name", ""),
-                "away_team_id": teams.get("away", {}).get("id"),
-                "home_score": goals.get("home"),
-                "away_score": goals.get("away"),
-                "league_name": league.get("name", ""),
-                "league_id": league.get("id"),
-            })
+            matches.append(
+                {
+                    "id": f.get("id"),
+                    "date": f.get("date", ""),
+                    "status": f.get("status", {}).get("long", ""),
+                    "short_status": f.get("status", {}).get("short", ""),
+                    "elapsed": f.get("status", {}).get("elapsed"),
+                    "home_team": teams.get("home", {}).get("name", ""),
+                    "home_team_id": teams.get("home", {}).get("id"),
+                    "away_team": teams.get("away", {}).get("name", ""),
+                    "away_team_id": teams.get("away", {}).get("id"),
+                    "home_score": goals.get("home"),
+                    "away_score": goals.get("away"),
+                    "league_name": league.get("name", ""),
+                    "league_id": league.get("id"),
+                }
+            )
         return matches
 
     async def get_fixture_detail(self, fixture_id: int) -> dict | None:

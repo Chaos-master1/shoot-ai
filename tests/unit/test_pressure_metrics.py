@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import sys
 import types
 from pathlib import Path
@@ -19,7 +18,6 @@ def _install_cv_stub() -> None:
     if "kawkab.services" in sys.modules:
         return
     from dataclasses import dataclass, field
-    from typing import Any
 
     services_mod = types.ModuleType("kawkab.services")
     sys.modules["kawkab.services"] = services_mod
@@ -68,23 +66,27 @@ MatchTrackData = _mod.MatchTrackData
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helper builders
 # ---------------------------------------------------------------------------
+
 
 def _ns(**kwargs):
     return types.SimpleNamespace(**kwargs)
 
 
 def _det(bbox, class_name, track_id=None, confidence=0.9, class_id=1):
-    return _ns(bbox=bbox, confidence=confidence, class_id=class_id,
-               class_name=class_name, track_id=track_id)
+    return _ns(
+        bbox=bbox,
+        confidence=confidence,
+        class_id=class_id,
+        class_name=class_name,
+        track_id=track_id,
+    )
 
 
 def _frame(fn, ts, dets, iw=1920, ih=1080):
-    return _ns(frame_number=fn, timestamp=ts, detections=dets,
-               image_width=iw, image_height=ih)
+    return _ns(frame_number=fn, timestamp=ts, detections=dets, image_width=iw, image_height=ih)
 
 
 def _track_data(frames=None, duration=5400.0, player_teams=None):
@@ -102,8 +104,13 @@ def _track_data(frames=None, duration=5400.0, player_teams=None):
 
 
 def _event(type_, team, timestamp=0.0, completed=True, metadata=None, is_pressed=False):
-    ev = {"type": type_, "team": team, "timestamp": timestamp,
-          "completed": completed, "is_pressed": is_pressed}
+    ev = {
+        "type": type_,
+        "team": team,
+        "timestamp": timestamp,
+        "completed": completed,
+        "is_pressed": is_pressed,
+    }
     if metadata is not None:
         ev["metadata"] = metadata
     return ev
@@ -113,6 +120,7 @@ def _event(type_, team, timestamp=0.0, completed=True, metadata=None, is_pressed
 # Service fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def svc():
     return PressureMetricsService(pitch_length=105.0, pitch_width=68.0)
@@ -121,6 +129,7 @@ def svc():
 # ===================================================================
 # PPDA
 # ===================================================================
+
 
 class TestPPDA:
     """Passes Per Defensive Action."""
@@ -198,6 +207,7 @@ class TestPPDA:
 # Passes under pressure
 # ===================================================================
 
+
 class TestPassesUnderPressure:
     """Percentage of passes made while under pressure."""
 
@@ -244,6 +254,7 @@ class TestPassesUnderPressure:
 # ===================================================================
 # Pressure events
 # ===================================================================
+
 
 class TestPressureEvents:
     """Pressure events — defender within 2m of ball carrier."""
@@ -308,6 +319,7 @@ class TestPressureEvents:
 # Counter-press success rate
 # ===================================================================
 
+
 class TestCounterPressSuccess:
     """Counter-press: regain possession within 8s of loss."""
 
@@ -369,6 +381,7 @@ class TestCounterPressSuccess:
 # Time to regain possession
 # ===================================================================
 
+
 class TestTimeToRegain:
     """Average time to regain possession after loss."""
 
@@ -414,21 +427,23 @@ class TestTimeToRegain:
 # Defensive shape
 # ===================================================================
 
+
 class TestDefensiveShape:
     """Line height, team width, compactness."""
 
     def test_defensive_shape_home(self, svc):
         # Home team players with varying x positions
-        p1 = _det((4, 4, 6, 6), "person", track_id=1)   # center (5, 5)
+        p1 = _det((4, 4, 6, 6), "person", track_id=1)  # center (5, 5)
         p2 = _det((14, 14, 16, 16), "person", track_id=2)  # center (15, 15)
         p3 = _det((24, 24, 26, 26), "person", track_id=3)  # center (25, 25)
         p4 = _det((34, 34, 36, 36), "person", track_id=4)  # center (35, 35)
         p5 = _det((44, 44, 46, 46), "person", track_id=5)  # center (45, 45)
         p6 = _det((54, 54, 56, 56), "person", track_id=6)  # center (55, 55)
         frame = _frame(0, 0.0, [p1, p2, p3, p4, p5, p6])
-        track = _track_data(frames=[frame],
-                            player_teams={1: "home", 2: "home", 3: "home",
-                                          4: "home", 5: "home", 6: "home"})
+        track = _track_data(
+            frames=[frame],
+            player_teams={1: "home", 2: "home", 3: "home", 4: "home", 5: "home", 6: "home"},
+        )
         line_h, width, compact = svc._compute_defensive_shape(track, "home")
         # back_positions: bottom third (6//3 = 2) → x=5, 15 → line_height = 10
         assert line_h == 10.0
@@ -443,8 +458,7 @@ class TestDefensiveShape:
         p2 = _det((44, 44, 46, 46), "person", track_id=2)
         p3 = _det((84, 84, 86, 86), "person", track_id=3)
         frame = _frame(0, 0.0, [p1, p2, p3])
-        track = _track_data(frames=[frame],
-                            player_teams={1: "away", 2: "away", 3: "away"})
+        track = _track_data(frames=[frame], player_teams={1: "away", 2: "away", 3: "away"})
         line_h, width, compact = svc._compute_defensive_shape(track, "away")
         # back_positions: top third (3//3 = 1) → highest x: (85, 85) → line_height = 85
         assert line_h == 85.0
@@ -470,15 +484,16 @@ class TestDefensiveShape:
 # Intensity by period
 # ===================================================================
 
+
 class TestIntensityByPeriod:
     """Pressing intensity (actions/min) in 15-min match periods."""
 
     def test_intensity_normal(self, svc):
         events = [
-            _event("tackle", "home", timestamp=100.0),   # 0-15 period
-            _event("tackle", "home", timestamp=200.0),   # 0-15 period
+            _event("tackle", "home", timestamp=100.0),  # 0-15 period
+            _event("tackle", "home", timestamp=200.0),  # 0-15 period
             _event("interception", "home", timestamp=1000.0),  # 15-30 period
-            _event("duel", "home", timestamp=3000.0),    # 45-60 period
+            _event("duel", "home", timestamp=3000.0),  # 45-60 period
         ]
         track = _track_data(frames=[], duration=5400.0)
         result = svc._compute_intensity_by_period(track, events, "home")
@@ -518,6 +533,7 @@ class TestIntensityByPeriod:
 # Full pipeline & edge cases
 # ===================================================================
 
+
 class TestFullPipeline:
     """End-to-end compute_pressure_metrics and edge cases."""
 
@@ -533,8 +549,7 @@ class TestFullPipeline:
         carrier = _det((49, 49, 51, 51), "person", track_id=1)
         defender = _det((50, 49, 52, 51), "person", track_id=2)
         frame = _frame(0, 0.0, [ball, carrier, defender])
-        track = _track_data(frames=[frame], duration=5400.0,
-                            player_teams={1: "home", 2: "away"})
+        track = _track_data(frames=[frame], duration=5400.0, player_teams={1: "home", 2: "away"})
         results = await svc.compute_pressure_metrics(track, events)
         assert "home" in results
         assert "away" in results

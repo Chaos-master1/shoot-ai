@@ -9,10 +9,16 @@ from __future__ import annotations
 
 import re
 import subprocess
-import sys
 from pathlib import Path
 
-JS_PATH = Path(__file__).resolve().parent.parent.parent / "src" / "kawkab" / "web" / "js" / "kawkab_polish.js"
+JS_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "src"
+    / "kawkab"
+    / "web"
+    / "js"
+    / "kawkab_polish.js"
+)
 
 
 def test_polish_file_exists() -> None:
@@ -93,10 +99,10 @@ def test_polish_dicts_have_same_keys() -> None:
     content = JS_PATH.read_text(encoding="utf-8")
     en_block = content.split('"tab_analyze": "Analyze"')[0]
     if en_block.rfind("return {") > en_block.rfind("};"):
-        en_block = en_block[en_block.rfind("return {"):]
+        en_block = en_block[en_block.rfind("return {") :]
     ar_block = content.split('"tab_analyze": "تحليل"')[0]
     if ar_block.rfind("return {") > ar_block.rfind("};"):
-        ar_block = ar_block[ar_block.rfind("return {"):]
+        ar_block = ar_block[ar_block.rfind("return {") :]
     en_keys = set(re.findall(r'"([a-z_]+)":', en_block))
     ar_keys = set(re.findall(r'"([a-z_]+)":', ar_block))
     assert en_keys, "No English keys found"
@@ -122,13 +128,26 @@ def test_polish_has_alert_translations() -> None:
 
 def test_polish_has_metric_translations() -> None:
     content = JS_PATH.read_text(encoding="utf-8")
-    for key in ["metric_distance", "metric_sprints", "metric_passes", "metric_shots", "metric_xg", "metric_goals"]:
+    for key in [
+        "metric_distance",
+        "metric_sprints",
+        "metric_passes",
+        "metric_shots",
+        "metric_xg",
+        "metric_goals",
+    ]:
         assert key in content, f"Missing metric translation: {key}"
 
 
 def test_polish_has_section_translations() -> None:
     content = JS_PATH.read_text(encoding="utf-8")
-    for key in ["section_pro", "section_realtime", "section_psychology", "section_weather", "section_rules"]:
+    for key in [
+        "section_pro",
+        "section_realtime",
+        "section_psychology",
+        "section_weather",
+        "section_rules",
+    ]:
         assert key in content, f"Missing section translation: {key}"
 
 
@@ -141,14 +160,19 @@ def test_polish_init_syncs_selector() -> None:
 
 def test_polish_uses_aria_live_region() -> None:
     content = JS_PATH.read_text(encoding="utf-8")
-    assert 'aria-live' in content
-    assert 'aria-atomic' in content
+    assert "aria-live" in content
+    assert "aria-atomic" in content
 
 
 def test_polish_falls_back_to_english() -> None:
     content = JS_PATH.read_text(encoding="utf-8")
-    assert "startsWith(\"ar\")" in content
-    assert "return \"en\"" in content or "?: \"en\"" in content or 'return "ar" : "en"' in content or '"ar" : "en"' in content
+    assert 'startsWith("ar")' in content
+    assert (
+        'return "en"' in content
+        or '?: "en"' in content
+        or 'return "ar" : "en"' in content
+        or '"ar" : "en"' in content
+    )
 
 
 def test_polish_persists_lang() -> None:
@@ -181,11 +205,13 @@ def test_accessibility_css_high_contrast() -> None:
 
 def pytest_skip(msg: str) -> None:
     import pytest
+
     pytest.skip(msg)
 
 
 def pytest_fail(msg: str) -> None:
     import pytest
+
     pytest.fail(msg)
 
 

@@ -44,6 +44,10 @@ function createMockChart() {
     MockChart.prototype.destroy = function() {
         this.destroyed = true;
     };
+    // Real Chart.js v3+ requires registering plugins/components before use;
+    // app-charts.js calls ChartJS.register(KawkabAnnotationPlugin) at load
+    // time whenever Chart is present (js/app-charts.js:107).
+    MockChart.register = jest.fn();
     return MockChart;
 }
 

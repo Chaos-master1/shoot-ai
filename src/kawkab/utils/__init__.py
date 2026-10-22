@@ -10,13 +10,13 @@ zalo/MathUtilities repository (Unlicense). The C#/Unity code was
 re-implemented in pure Python with NumPy.
 """
 
+from kawkab.utils.hungarian import hungarian, hungarian_match
 from kawkab.utils.kabsch import (
+    apply_rigid_transform,
     kabsch_align,
     kabsch_align_2d,
     kabsch_rotation,
-    apply_rigid_transform,
 )
-from kawkab.utils.hungarian import hungarian, hungarian_match
 from kawkab.utils.spatial_hash import SpatialHash2D, SpatialHash3D, bulk_insert_2d
 
 __all__ = [

@@ -3,13 +3,25 @@
 from kawkab.core.pattern_detection import TacticalPatternDetector
 
 
-def _make_pass(team: str, start_x: float, start_y: float, end_x: float, end_y: float,
-               from_track_id: int = 1, to_track_id: int = 2, timestamp: float = 0) -> dict:
+def _make_pass(
+    team: str,
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+    from_track_id: int = 1,
+    to_track_id: int = 2,
+    timestamp: float = 0,
+) -> dict:
     return {
-        "type": "pass", "team": team,
-        "start_x": start_x, "start_y": start_y,
-        "end_x": end_x, "end_y": end_y,
-        "from_track_id": from_track_id, "to_track_id": to_track_id,
+        "type": "pass",
+        "team": team,
+        "start_x": start_x,
+        "start_y": start_y,
+        "end_x": end_x,
+        "end_y": end_y,
+        "from_track_id": from_track_id,
+        "to_track_id": to_track_id,
         "timestamp": timestamp,
     }
 
@@ -50,7 +62,9 @@ class TestDetectRecurringSequences:
         for i in range(3):
             events.append(_make_pass("home", 30, 30, 40, 30, 1, 2, i * 2))
             events.append(_make_pass("home", 40, 30, 50, 30, 2, 3, i * 2 + 1))
-        events.append({"type": "shot", "team": "home", "timestamp": 20, "xg": 0.2, "is_goal": False})
+        events.append(
+            {"type": "shot", "team": "home", "timestamp": 20, "xg": 0.2, "is_goal": False}
+        )
         result = tpd.detect_recurring_sequences(events, "home", min_occurrences=2)
         if result:
             assert result[0]["shot_rate"] >= 0

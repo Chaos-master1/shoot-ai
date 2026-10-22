@@ -126,14 +126,12 @@ class OllamaProvider(LLMProvider):
         for attempt in range(max_retries):
             try:
                 async with httpx.AsyncClient(timeout=300.0) as client:
-                    response = await client.post(
-                        f"{self.base_url}/api/generate", json=payload
-                    )
+                    response = await client.post(f"{self.base_url}/api/generate", json=payload)
                     response.raise_for_status()
                     data = response.json()
                     result = data.get("response", "").strip()
                     logger.info(
-                        f"Ollama attempt {attempt+1}: "
+                        f"Ollama attempt {attempt + 1}: "
                         f"prompt_len={len(prompt)}, "
                         f"system_len={len(system) if system else 0}, "
                         f"eval_count={data.get('eval_count')}, "
@@ -143,11 +141,10 @@ class OllamaProvider(LLMProvider):
                     if result and len(result) > 10:
                         return result
             except Exception as e:
-                logger.warning(
-                    f"Ollama call failed (attempt {attempt+1}/{max_retries}): {e}"
-                )
+                logger.warning(f"Ollama call failed (attempt {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 import asyncio
+
                 await asyncio.sleep(2 * (attempt + 1))
 
         return (
@@ -206,7 +203,10 @@ class GoogleProvider(LLMProvider):
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
         self.api_key = config.api_key
-        self.model = "gemini-1.5-flash"
+        # "gemini-flash-latest" is Google's stable alias that tracks the
+        # newest GA Flash model; pinned names (1.5/2.5-flash) 404 for new
+        # API projects ("no longer available to new users").
+        self.model = "gemini-flash-latest"
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
 
     async def is_available(self) -> bool:
@@ -216,8 +216,9 @@ class GoogleProvider(LLMProvider):
         import httpx
 
         url = f"{self.base_url}/models/{self.model}:generateContent"
-        params = {"key": self.api_key}
-        headers = {"Content-Type": "application/json"}
+        # Header auth (x-goog-api-key): AQ.-prefix AI Studio keys are
+        # rejected when passed as the ?key= query parameter.
+        headers = {"Content-Type": "application/json", "x-goog-api-key": self.api_key or ""}
 
         full_prompt = f"{system}\n\n{prompt}" if system else prompt
 
@@ -230,9 +231,7 @@ class GoogleProvider(LLMProvider):
         }
 
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                url, params=params, headers=headers, json=payload
-            )
+            response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
             return data["candidates"][0]["content"]["parts"][0]["text"]
@@ -275,8 +274,7 @@ class LLMService:
         self.providers.append(OllamaProvider(config))
 
         logger.info(
-            f"LLMService: primary={config.provider}, "
-            f"{len(self.providers)} providers configured"
+            f"LLMService: primary={config.provider}, {len(self.providers)} providers configured"
         )
 
     async def generate(self, prompt: str, system: str | None = None) -> str:
@@ -296,26 +294,17 @@ class LLMService:
         for provider in self.providers:
             try:
                 if not await provider.is_available():
-                    logger.debug(
-                        f"{provider.__class__.__name__} not available, skipping"
-                    )
+                    logger.debug(f"{provider.__class__.__name__} not available, skipping")
                     continue
 
-                logger.info(
-                    f"Using {provider.__class__.__name__} for generation"
-                )
+                logger.info(f"Using {provider.__class__.__name__} for generation")
                 return await provider.generate(prompt, system)
             except Exception as e:
-                logger.warning(
-                    f"{provider.__class__.__name__} failed: {e}, "
-                    "trying next provider"
-                )
+                logger.warning(f"{provider.__class__.__name__} failed: {e}, trying next provider")
                 last_error = e
                 continue
 
-        raise RuntimeError(
-            f"All LLM providers failed. Last error: {last_error}"
-        )
+        raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
 
     async def generate_coach_report(
         self,

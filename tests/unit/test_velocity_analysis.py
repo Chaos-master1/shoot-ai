@@ -120,12 +120,18 @@ class TestGenerateVelocityReport:
         va = VelocityAnalyzer()
         tracking = {
             "frames": [
-                {"timestamp": 0.0, "detections": [
-                    {"class_name": "person", "track_id": 1, "x": 50, "y": 34},
-                ]},
-                {"timestamp": 0.5, "detections": [
-                    {"class_name": "person", "track_id": 1, "x": 52, "y": 34},
-                ]},
+                {
+                    "timestamp": 0.0,
+                    "detections": [
+                        {"class_name": "person", "track_id": 1, "x": 50, "y": 34},
+                    ],
+                },
+                {
+                    "timestamp": 0.5,
+                    "detections": [
+                        {"class_name": "person", "track_id": 1, "x": 52, "y": 34},
+                    ],
+                },
             ]
         }
         report = va.generate_velocity_report([], tracking)

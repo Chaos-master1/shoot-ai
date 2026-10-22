@@ -1,20 +1,107 @@
-"""Centralized configuration for the tracking pipeline.
+"""Application and tracking-pipeline configuration.
 
-All thresholds and parameters in one place. Loads from YAML if given,
-otherwise uses defaults. This eliminates 70+ hardcoded constants across
-cv_service.py, camera_cut_detector.py, pitch_detector.py, etc.
+Two distinct concerns share this module because both are conventionally
+called "config" and `kawkab.app` imports `get_settings` from here:
+
+- ``Settings`` / ``get_settings()`` — app-level runtime settings (desktop
+  app identity, GPU/model defaults, external API keys, LLM provider).
+  Sourced from environment variables / `.env`, documented in
+  `.env.example`. Used by `kawkab.app.MainWindow` to construct every
+  backend service.
+- ``TrackingConfig`` and friends — CV tracking-pipeline tuning parameters
+  (detection thresholds, tracker settings, filter/stitch tuning). Used by
+  the `kawkab track`/`batch` CLI pipeline, loaded from YAML/JSON.
 
 Usage:
-    cfg = TrackingConfig.load("configs/broadcast.yaml")
-    # or use defaults:
+    settings = get_settings()  # app-level, env-driven
+
+    cfg = TrackingConfig.load("configs/broadcast.yaml")  # or use defaults:
     cfg = TrackingConfig()
 """
+
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from kawkab import __version__ as _app_version
+
+
+class Settings(BaseSettings):
+    """App-level runtime settings, overridable via environment variables or `.env`.
+
+    Field names match their env var names uppercased (pydantic-settings
+    default), except where noted with an explicit ``validation_alias`` —
+    see `.env.example` for the full documented list.
+    """
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # App identity
+    app_name: str = "Kawkab AI"
+    app_version: str = _app_version
+
+    # Core (KAWKAB_-prefixed in .env.example)
+    lang: str = Field(default="en", validation_alias="KAWKAB_LANG")
+    debug: bool = Field(default=False, validation_alias="KAWKAB_DEBUG")
+    data_dir: str = Field(default="", validation_alias="KAWKAB_DATA_DIR")
+
+    # CV / tracking defaults — mirror the CVService/PoseAnalysisService
+    # constructor defaults so an unconfigured Settings() never overrides
+    # a service's own considered default.
+    model_size: str = "auto"
+    pose_model_size: str = "n"
+    confidence_threshold: float = 0.4
+    iou_threshold: float = 0.5
+    gpu_enabled: bool = True
+    frame_skip: int = 6
+    auto_detect_gpu_tier: bool = True
+
+    # Video enhancement
+    enable_upscaling: bool = False
+    enable_interpolation: bool = False
+
+    # External football data providers (read-only, optional, free tiers)
+    football_data_api_key: str = Field(default="", validation_alias="FOOTBALL_DATA_API_KEY")
+    apifootball_api_key: str = Field(default="", validation_alias="APIFOOTBALL_API_KEY")
+    bzzoiro_api_key: str = Field(default="", validation_alias="BZZOIRO_API_KEY")
+    thesportsdb_api_key: str = Field(default="", validation_alias="THESPORTSDB_API_KEY")
+
+    # LLM provider (local Ollama by default — mirrors LLMConfig's defaults)
+    llm_provider: str = Field(default="ollama", validation_alias="LLM_PROVIDER")
+    llm_api_key: str = Field(default="", validation_alias="LLM_API_KEY")
+    ollama_model: str = Field(default="ministral-3:14b", validation_alias="OLLAMA_MODEL")
+    ollama_base_url: str = Field(default="http://localhost:11434", validation_alias="OLLAMA_URL")
+    openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
+    openai_model: str = Field(default="gpt-4", validation_alias="OPENAI_MODEL")
+
+    # Optional service flags
+    enable_face_recognition: bool = Field(default=True, validation_alias="ENABLE_FACE_RECOGNITION")
+    enable_weather_detection: bool = Field(
+        default=True, validation_alias="ENABLE_WEATHER_DETECTION"
+    )
+    enable_realtime_analysis: bool = Field(
+        default=False, validation_alias="ENABLE_REALTIME_ANALYSIS"
+    )
+
+    # Physics engine (set-piece simulation)
+    fluidx3d_path: str = Field(default="", validation_alias="FLUIDX3D_PATH")
+    enable_physics_sim: bool = Field(default=False, validation_alias="ENABLE_PHYSICS_SIM")
+
+    # Security
+    session_timeout_minutes: int = Field(default=0, validation_alias="SESSION_TIMEOUT_MINUTES")
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Return the process-wide Settings singleton (cached after first call)."""
+    return Settings()
 
 
 @dataclass
@@ -156,7 +243,7 @@ class TrackingConfigRoot:
     @classmethod
     def _from_dict(cls, data: dict) -> TrackingConfigRoot:
         root = cls()
-        for section_name, section_cls in [
+        sections: list[tuple[str, type[Any]]] = [
             ("detection", DetectionConfig),
             ("tracking", TrackingConfig),
             ("filter", FilterConfig),
@@ -166,11 +253,13 @@ class TrackingConfigRoot:
             ("color", ColorConfig),
             ("event", EventDetectionConfig),
             ("performance", PerformanceConfig),
-        ]:
+        ]
+        for section_name, section_cls in sections:
             if section_name in data:
                 section_data = data[section_name]
                 current = getattr(root, section_name)
-                for field_name in section_cls.__dataclass_fields__:
+                fields = section_cls.__dataclass_fields__
+                for field_name in fields:
                     if field_name in section_data:
                         setattr(current, field_name, section_data[field_name])
         return root
@@ -179,6 +268,7 @@ class TrackingConfigRoot:
 def _load_yaml(path: Path) -> dict:
     """Minimal YAML loader — just key:value lines, no nesting."""
     import re
+
     result: dict[str, Any] = {}
     current_section: str | None = None
     section_data: dict[str, Any] = {}

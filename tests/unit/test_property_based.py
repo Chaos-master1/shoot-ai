@@ -3,18 +3,22 @@
 import math
 
 import numpy as np
+from hypothesis import assume, given
+from hypothesis import strategies as st
 
-from hypothesis import given, assume, strategies as st
-from kawkab.core.vaep import compute_vaep
+from kawkab.core.coords import (
+    STANDARD_PITCH,
+    clamp_pitch,
+    euclidean_distance_m,
+    norm_to_meters,
+    pitch_third,
+    zone_label,
+)
 from kawkab.core.epv import EPVModel
 from kawkab.core.pitch_control import VoronoiPitchControl, WeightedPitchControl
+from kawkab.core.vaep import compute_vaep
 from kawkab.core.xg_model import compute_xg
 from kawkab.core.xt_model import ExpectedThreatModel
-from kawkab.core.coords import (
-    STANDARD_PITCH, is_normalized, norm_to_meters, clamp_pitch,
-    pitch_third, zone_label, euclidean_distance_m,
-)
-
 
 # ── xG model ──────────────────────────────────────────────────────────
 
@@ -70,6 +74,7 @@ def test_xg_pressure_lowers(distance_m, angle_deg):
 
 # ── xT model ──────────────────────────────────────────────────────────
 
+
 @given(
     rows=st.integers(min_value=3, max_value=10),
     cols=st.integers(min_value=3, max_value=8),
@@ -77,10 +82,26 @@ def test_xg_pressure_lowers(distance_m, angle_deg):
 def test_xt_zone_grid_invariants(rows, cols):
     model = ExpectedThreatModel(rows=rows, cols=cols)
     events = [
-        {"type": "pass", "team": "home", "start_x": 30, "start_y": 34,
-         "end_x": 60, "end_y": 40, "completed": True, "timestamp": 5},
-        {"type": "pass", "team": "home", "start_x": 60, "start_y": 40,
-         "end_x": 80, "end_y": 34, "completed": True, "timestamp": 10},
+        {
+            "type": "pass",
+            "team": "home",
+            "start_x": 30,
+            "start_y": 34,
+            "end_x": 60,
+            "end_y": 40,
+            "completed": True,
+            "timestamp": 5,
+        },
+        {
+            "type": "pass",
+            "team": "home",
+            "start_x": 60,
+            "start_y": 40,
+            "end_x": 80,
+            "end_y": 34,
+            "completed": True,
+            "timestamp": 10,
+        },
     ]
     model.build_transition_matrix(events)
     ze = model.get_zone_values()
@@ -94,12 +115,17 @@ def test_xt_monotonic_with_more_data(n_events):
     model = ExpectedThreatModel(rows=4, cols=4)
     events = []
     for i in range(n_events):
-        events.append({
-            "type": "pass",
-            "start_x": 50, "start_y": 34,
-            "end_x": 80, "end_y": 34,
-            "completed": True, "timestamp": float(i),
-        })
+        events.append(
+            {
+                "type": "pass",
+                "start_x": 50,
+                "start_y": 34,
+                "end_x": 80,
+                "end_y": 34,
+                "completed": True,
+                "timestamp": float(i),
+            }
+        )
     model.build_transition_matrix(events)
     ze = model.get_zone_values()
     assert np.all(ze >= 0.0)
@@ -107,6 +133,7 @@ def test_xt_monotonic_with_more_data(n_events):
 
 
 # ── Coords ────────────────────────────────────────────────────────────
+
 
 @given(
     x=st.floats(min_value=-10, max_value=120),
@@ -180,15 +207,27 @@ def test_euclidean_distance_zero(x, y):
 # ── VAEP ────────────────────────────────────────────────────────────
 
 # Shared event strategy for property-based VAEP/EPV tests
-_vaep_event = st.fixed_dictionaries({
-    "type": st.sampled_from(["pass", "shot", "tackle", "interception",
-                              "clearance", "ball_recovery", "carry", "dribble"]),
-    "timestamp": st.floats(min_value=0, max_value=90, allow_nan=False, allow_infinity=False),
-    "team": st.sampled_from(["home", "away"]),
-    "x": st.floats(min_value=0, max_value=105, allow_nan=False, allow_infinity=False),
-    "y": st.floats(min_value=0, max_value=68, allow_nan=False, allow_infinity=False),
-    "is_goal": st.booleans(),
-})
+_vaep_event = st.fixed_dictionaries(
+    {
+        "type": st.sampled_from(
+            [
+                "pass",
+                "shot",
+                "tackle",
+                "interception",
+                "clearance",
+                "ball_recovery",
+                "carry",
+                "dribble",
+            ]
+        ),
+        "timestamp": st.floats(min_value=0, max_value=90, allow_nan=False, allow_infinity=False),
+        "team": st.sampled_from(["home", "away"]),
+        "x": st.floats(min_value=0, max_value=105, allow_nan=False, allow_infinity=False),
+        "y": st.floats(min_value=0, max_value=68, allow_nan=False, allow_infinity=False),
+        "is_goal": st.booleans(),
+    }
+)
 
 
 @given(events=st.lists(_vaep_event, min_size=1, max_size=6))
@@ -202,29 +241,25 @@ def test_vaep_bounds_property(events):
 
 @given(events=st.lists(_vaep_event, min_size=2, max_size=8))
 def test_vaep_turnover_not_nan(events):
-    assume(any(e.get("type") in {"tackle", "interception", "clearance", "block"}
-               for e in events))
+    assume(any(e.get("type") in {"tackle", "interception", "clearance", "block"} for e in events))
     results = compute_vaep(events)
     turnover_types = {"tackle", "interception", "clearance", "block"}
     turnover_results = [r for r in results if r["event_type"] in turnover_types]
     assert len(turnover_results) > 0
     for r in turnover_results:
-        assert -2.0 <= r["vaep_value"] <= 2.0, (
-            f"Turnover VAEP {r['vaep_value']} out of [-2, 2]"
-        )
+        assert -2.0 <= r["vaep_value"] <= 2.0, f"Turnover VAEP {r['vaep_value']} out of [-2, 2]"
         assert not math.isnan(r["vaep_value"])
 
 
 # ── EPV ─────────────────────────────────────────────────────────────
+
 
 @given(events=st.lists(_vaep_event, min_size=1, max_size=8))
 def test_epv_bounds(events):
     model = EPVModel()
     report = model.compute_match_epv(events)
     for p in report.possessions:
-        assert -2.0 <= p.value <= 2.0, (
-            f"EPV {p.value} out of [-2, 2]"
-        )
+        assert -2.0 <= p.value <= 2.0, f"EPV {p.value} out of [-2, 2]"
 
 
 @given(
@@ -236,8 +271,7 @@ def test_epv_goal_higher_than_pass(x, y):
     pass_poss = [{"type": "pass", "timestamp": 1.0, "team": "home", "x": x, "y": y}]
     goal_poss = [
         {"type": "pass", "timestamp": 1.0, "team": "home", "x": x, "y": y},
-        {"type": "shot", "timestamp": 2.0, "team": "home", "x": x + 3, "y": y,
-         "is_goal": True},
+        {"type": "shot", "timestamp": 2.0, "team": "home", "x": x + 3, "y": y, "is_goal": True},
     ]
     pass_val = model.compute_possession_epv(pass_poss).value
     goal_val = model.compute_possession_epv(goal_poss).value
@@ -262,6 +296,7 @@ def test_epv_explicit_empty_possession_zero():
 
 # ── Pitch Control ────────────────────────────────────────────────────
 
+
 @given(
     home_x=st.floats(min_value=5, max_value=100, allow_nan=False),
     away_x=st.floats(min_value=5, max_value=100, allow_nan=False),
@@ -274,9 +309,7 @@ def test_pitch_control_sum_to_100(home_x, away_x, home_y, away_y):
     away = [(away_x, away_y)]
     result = pc.compute_frame_control(home, away)
     total = result.home_control_pct + result.away_control_pct + result.disputed_pct
-    assert abs(total - 100.0) <= 1.0, (
-        f"Control percentages sum to {total}, expected ~100"
-    )
+    assert abs(total - 100.0) <= 1.0, f"Control percentages sum to {total}, expected ~100"
 
 
 @given(
@@ -310,9 +343,7 @@ def test_control_weighted_sum_to_100(home_x, away_x, home_y, away_y):
     away = [(away_x, away_y)]
     result = pc.compute_frame_control(home, away)
     total = result.home_control_pct + result.away_control_pct + result.disputed_pct
-    assert abs(total - 100.0) <= 1.0, (
-        f"Weighted control sum {total}, expected ~100"
-    )
+    assert abs(total - 100.0) <= 1.0, f"Weighted control sum {total}, expected ~100"
 
 
 @given(

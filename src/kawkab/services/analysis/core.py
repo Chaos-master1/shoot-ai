@@ -2,38 +2,57 @@
 
 from __future__ import annotations
 
+import contextlib
 import math
 import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from kawkab.core.game_constants import GAME
-from kawkab.core.logging import get_logger
 from kawkab.core.events import (
-    AssistType,
     BaseEvent,
-    BodyPart,
     CarryEvent,
-    EventType,
     PassEvent,
     PassType,
     PressureContext,
     ShotEvent,
-    ShotType,
-    TackleType,
 )
-from kawkab.core.xg_model import compute_xg, compute_xg_from_shot_event
-from kawkab.core.pitch_control import VoronoiPitchControl, MatchPitchControl
+from kawkab.core.game_constants import GAME
+from kawkab.core.logging import get_logger
+from kawkab.core.pitch_control import MatchPitchControl, VoronoiPitchControl
 from kawkab.core.player_rating import (
-    PlayerPosition,
     PlayerRating,
-    compute_rating,
-    _infer_position_from_x,
 )
-from kawkab.services.cv_service import FrameDetections, MatchTrackData
+from kawkab.core.xg_model import active_xg_model, compute_xg_trained_from_shot_event
+from kawkab.services.cv_service import MatchTrackData
 
 logger = get_logger(__name__)
+
+if TYPE_CHECKING:
+    # AnalysisService composes the tracking/xg_xt/passing mixins onto this
+    # class at runtime (services/analysis_service.py), but bare
+    # AnalysisServiceCore is constructed directly in tests -- so declare the
+    # mixin-supplied methods here for standalone type checking.
+    class _MixinProtocol:
+        pitch_width: float
+        use_kalman: bool
+
+        def _compute_player_stats(self, track_data, homography_matrix=None): ...
+        def _compute_player_stats_kalman(
+            self, track_data, homography_matrix, max_frame_delta_m
+        ): ...
+        def _compute_pass_network(self, events, player_teams=None): ...
+        def compute_ppda(self, track_data, team="home", homography_matrix=None): ...
+        def detect_formation(
+            self, track_data, team="home", n_players=11, homography_matrix=None
+        ): ...
+        def compute_xt_simple(self, events): ...
+        def _compute_player_ratings(
+            self, players, typed_events, pitch_control, track_data, homography_matrix
+        ): ...
+
+else:
+    _MixinProtocol = object
 
 PITCH_LENGTH = GAME.PITCH_LENGTH_M
 PITCH_WIDTH = GAME.PITCH_WIDTH_M
@@ -109,7 +128,7 @@ class MatchAnalysis:
     player_ratings: dict[int, PlayerRating] = field(default_factory=dict)
 
 
-class AnalysisServiceCore:
+class AnalysisServiceCore(_MixinProtocol):
     def __init__(
         self,
         pitch_length_m: float = 105.0,
@@ -129,10 +148,8 @@ class AnalysisServiceCore:
         for i in range(1, len(parts) + 1):
             prefix = ".".join(parts[:i])
             if prefix not in __import__("sys").modules:
-                try:
+                with contextlib.suppress(ImportError):
                     __import__("importlib").import_module(prefix)
-                except ImportError:
-                    pass
 
     async def analyze_match(
         self, track_data: MatchTrackData, match_id: int = 0, homography_matrix=None
@@ -153,10 +170,13 @@ class AnalysisServiceCore:
         events = self._detect_events(track_data, homography_matrix)
         team_stats = self._compute_team_stats(players, events, track_data, homography_matrix)
         possession = self._compute_possession(track_data, homography_matrix)
-        pass_network = self._compute_pass_network(events)
+        pass_network = self._compute_pass_network(events, track_data.player_teams)
 
-        home = TeamStats(team_name="Home")
-        away = TeamStats(team_name="Away")
+        # Merge the event-driven team stats with the possession split.
+        # (_compute_player_stats fills only physical fields; all event counts
+        # live on these objects, so there is no double-counting.)
+        home = team_stats["home"]
+        away = team_stats["away"]
         home.possession_pct = possession["home"]
         away.possession_pct = possession["away"]
 
@@ -196,19 +216,27 @@ class AnalysisServiceCore:
 
         carry_events_list = [c.to_dict() for c in typed_events if isinstance(c, CarryEvent)]
         progressive_carries_list = [
-            c.to_dict() for c in typed_events
-            if isinstance(c, CarryEvent) and c.is_progressive
+            c.to_dict() for c in typed_events if isinstance(c, CarryEvent) and c.is_progressive
         ]
 
-        home_formation = self.detect_formation(track_data, team="home", homography_matrix=homography_matrix)
-        away_formation = self.detect_formation(track_data, team="away", homography_matrix=homography_matrix)
+        home_formation = self.detect_formation(
+            track_data, team="home", homography_matrix=homography_matrix
+        )
+        away_formation = self.detect_formation(
+            track_data, team="away", homography_matrix=homography_matrix
+        )
         home_ppda = self.compute_ppda(track_data, team="home", homography_matrix=homography_matrix)
         away_ppda = self.compute_ppda(track_data, team="away", homography_matrix=homography_matrix)
         confidence = self._compute_confidence(track_data, events)
 
         shot_events = [e for e in typed_events if isinstance(e, ShotEvent)]
+        _ = active_xg_model()
         for se in shot_events:
-            se.xg = compute_xg_from_shot_event(se)
+            gk_distance = None
+            if se.gk_position_x is not None and se.x is not None and se.y is not None:
+                assert se.gk_position_y is not None  # invariant: y set alongside x
+                gk_distance = math.hypot(se.gk_position_x - se.x, se.gk_position_y - se.y)
+            se.xg = compute_xg_trained_from_shot_event(se, gk_distance_m=gk_distance)
             se.xg = max(0.0, min(1.0, se.xg))
         home_xg = sum(e.xg for e in shot_events if e.team == "home")
         away_xg = sum(e.xg for e in shot_events if e.team == "away")
@@ -230,10 +258,7 @@ class AnalysisServiceCore:
         }
 
         xt_data = self.compute_xt_simple(events)
-        logger.info(
-            f"xG: home={xg_data['home']} away={xg_data['away']} "
-            f"({len(shot_events)} shots)"
-        )
+        logger.info(f"xG: home={xg_data['home']} away={xg_data['away']} ({len(shot_events)} shots)")
         logger.info(f"xT: home={xt_data['home']} away={xt_data['away']}")
 
         pitch_control = self._compute_pitch_control(track_data, homography_matrix)
@@ -257,7 +282,7 @@ class AnalysisServiceCore:
             home_team=home,
             away_team=away,
             players=players,
-            events=backward_compat_events,
+            events=backward_compat_events,  # type: ignore[arg-type]
             pass_network=pass_network,
             confidence_overall=confidence,
             formations={
@@ -265,6 +290,10 @@ class AnalysisServiceCore:
                 "away": away_formation,
             },
             pressing_intensity=home_ppda.get("ppda") or 0.0,
+            ppda_breakdown={
+                "home": home_ppda,
+                "away": away_ppda,
+            },
             xg_total=xg_data,
             xt_total=xt_data,
             typed_events=typed_events,
@@ -301,16 +330,37 @@ class AnalysisServiceCore:
         )
 
     def _build_typed_shot(self, event: dict, homography_matrix=None) -> ShotEvent:
+        """Build a typed ShotEvent from a raw CV-pipeline shot event.
+
+        Convention notes (see CLAUDE.md's angle-convention table):
+        - ``angle_deg`` on ShotEvent is consumed by xG models in the
+          DEVIATION-from-central convention (0° = straight at goal,
+          larger = wider) — which is what the CV pipeline's
+          ``angle_to_goal_deg`` metadata stores. StatsBomb-imported
+          events store OPENING angle under the ``angle_deg`` metadata
+          key instead and must not be fed through here unconverted.
+        - Missing spatial metadata stays None. The old code silently
+          fabricated distance=18.0 m / angle=30° and the xG model
+          happily produced a plausible-looking number for a shot whose
+          position was never known — a fabricated stat, not an estimate.
+          The trained model treats gk_distance_m=0 as "feature absent",
+          so an honestly-absent value degrades gracefully instead of
+          lying.
+        """
         meta = event.get("metadata", {})
+        distance_raw = meta.get("distance_to_goal_m")
+        angle_raw = meta.get("angle_to_goal_deg")
         return ShotEvent(
             timestamp=event.get("timestamp", 0),
             team=event.get("team", "unknown"),
             track_id=event.get("track_id"),
             on_target=event.get("on_target", False),
-            distance_m=meta.get("distance_to_goal_m", 18.0),
-            angle_deg=meta.get("angle_to_goal_deg", 30.0),
+            distance_m=float(distance_raw) if distance_raw is not None else None,
+            angle_deg=float(angle_raw) if angle_raw is not None else None,
             xg=meta.get("xg", 0.0),
             confidence=event.get("confidence", 0.5),
+            gk_position_x=meta.get("gk_pitch_x"),
+            gk_position_y=meta.get("gk_pitch_y"),
             period=1,
         )
 
@@ -379,28 +429,35 @@ class AnalysisServiceCore:
                             try:
                                 cx, cy = homography_matrix.pixel_to_pitch(bx, by)
                             except Exception as e:
-                                logger.warning("Failed to convert ball pixel-to-pitch in carry detection: %s", e)
+                                logger.warning(
+                                    "Failed to convert ball pixel-to-pitch in carry detection: %s",
+                                    e,
+                                )
                         scx, scy = cbx, cby
                         if homography_matrix is not None:
                             try:
                                 scx, scy = homography_matrix.pixel_to_pitch(cbx, cby)
                             except Exception as e:
-                                logger.warning("Failed to convert carry-start pixel-to-pitch: %s", e)
+                                logger.warning(
+                                    "Failed to convert carry-start pixel-to-pitch: %s", e
+                                )
                         team = "unknown"
                         if track_data.player_teams:
                             team = track_data.player_teams.get(tid, "unknown")
-                        carries.append(CarryEvent(
-                            timestamp=cts,
-                            team=team,
-                            track_id=tid,
-                            start_x=scx,
-                            start_y=scy,
-                            end_x=cx,
-                            end_y=cy,
-                            distance_m=cd if homography_matrix else cd * 0.015,
-                            is_progressive=False,
-                            confidence=0.5,
-                        ))
+                        carries.append(
+                            CarryEvent(
+                                timestamp=cts,
+                                team=team,
+                                track_id=tid,
+                                start_x=scx,
+                                start_y=scy,
+                                end_x=cx,
+                                end_y=cy,
+                                distance_m=cd if homography_matrix else cd * 0.015,
+                                is_progressive=False,
+                                confidence=0.5,
+                            )
+                        )
                     carry_start.pop(tid, None)
                     ball_tracker.pop(tid, None)
         return carries
@@ -414,13 +471,20 @@ class AnalysisServiceCore:
                 return math.sqrt((ox_m - sx_m) ** 2 + (oy_m - sy_m) ** 2)
             except Exception:
                 pass
-        return math.sqrt((ox - sx) ** 2 + (oy - sy) ** 2)
+        # Uncalibrated: approximate with the project-wide pixel->meter
+        # ratio rather than returning the raw pixel distance mislabeled
+        # as meters (the old behavior fed pixel distances into meter
+        # thresholds like the 2m "is_pressed" check unchanged).
+        from kawkab.core.game_constants import GAME
+
+        px_dist = math.sqrt((ox - sx) ** 2 + (oy - sy) ** 2)
+        return px_dist * GAME.CARRY_PIXEL_TO_METER_RATIO
 
     def _infer_pressure_on_events(self, track_data, typed_events, homography_matrix=None) -> None:
         if not track_data.frames or not track_data.player_teams:
             return
 
-        team_to_side = {"home": "left", "away": "right"}
+        _ = {"home": "left", "away": "right"}
 
         for event in typed_events:
             ts = event.timestamp
@@ -469,7 +533,7 @@ class AnalysisServiceCore:
             min_angle = 0.0
             count_within_5m = 0
 
-            for tid, ox, oy in opponents:
+            for _tid, ox, oy in opponents:
                 dx = ox - sx
                 dy = oy - sy
                 dist_pitch = self._pixel_dist_to_meters(sx, sy, ox, oy, homography_matrix)
@@ -515,11 +579,10 @@ class AnalysisServiceCore:
             if y_gain > 0.5:
                 event.pass_type = PassType.SWITCH
                 continue
-            if ey < 0.2 or ey > 0.8:
-                if ex > 0.7:
-                    event.pass_type = PassType.CROSS
-                    event.is_cross = True
-                    continue
+            if (ey < 0.2 or ey > 0.8) and ex > 0.7:
+                event.pass_type = PassType.CROSS
+                event.is_cross = True
+                continue
             if x_gain > 0.15 and event.length_m > 15.0:
                 event.pass_type = PassType.THROUGH_BALL
                 event.is_through_ball = True
@@ -573,7 +636,9 @@ class AnalysisServiceCore:
             "assists": assist_count,
         }
 
-    def _compute_pitch_control(self, track_data, homography_matrix=None) -> MatchPitchControl | None:
+    def _compute_pitch_control(
+        self, track_data, homography_matrix=None
+    ) -> MatchPitchControl | None:
         if not track_data.frames:
             return None
 
@@ -596,31 +661,38 @@ class AnalysisServiceCore:
                         try:
                             ball_pos = homography_matrix.pixel_to_pitch(cx, cy)
                         except Exception as e:
-                            logger.warning("Failed to convert ball pixel-to-pitch in frame data: %s", e)
+                            logger.warning(
+                                "Failed to convert ball pixel-to-pitch in frame data: %s", e
+                            )
                 elif det.class_name == "person" and det.track_id is not None:
                     if has_homography:
                         try:
                             cx, cy = homography_matrix.pixel_to_pitch(cx, cy)
                         except Exception as e:
-                            logger.warning("Failed to convert player pixel-to-pitch (track_id=%s): %s", det.track_id, e)
+                            logger.warning(
+                                "Failed to convert player pixel-to-pitch (track_id=%s): %s",
+                                det.track_id,
+                                e,
+                            )
                     if use_player_teams:
                         team = track_data.player_teams.get(det.track_id)
                         if team == "home":
                             home_pos.append((cx, cy))
                         elif team == "away":
                             away_pos.append((cx, cy))
-                    else:
-                        if det.track_id % 2 == 0:
-                            home_pos.append((cx, cy))
-                        else:
-                            away_pos.append((cx, cy))
+                    # No team assignment: the old tid%2 parity split assigned
+                    # players to teams arbitrarily. Omit them -- Voronoi
+                    # control with fewer, honest players beats control with
+                    # half the players on the wrong teams.
 
-            frame_data.append({
-                "timestamp": frame.timestamp,
-                "home_positions": home_pos,
-                "away_positions": away_pos,
-                "ball_pos": ball_pos,
-            })
+            frame_data.append(
+                {
+                    "timestamp": frame.timestamp,
+                    "home_positions": home_pos,
+                    "away_positions": away_pos,
+                    "ball_pos": ball_pos,
+                }
+            )
 
         pc = VoronoiPitchControl()
         return pc.compute_match_control(frame_data)
@@ -636,7 +708,9 @@ class AnalysisServiceCore:
                 pitch_x, _ = homography_matrix.pixel_to_pitch(px, 0)
                 x_per_team[team].append(pitch_x)
             except Exception as e:
-                logger.warning("Failed to convert pixel x for team assignment (track_id=%s): %s", tid, e)
+                logger.warning(
+                    "Failed to convert pixel x for team assignment (track_id=%s): %s", tid, e
+                )
                 continue
 
         if len(x_per_team["home"]) < 3 or len(x_per_team["away"]) < 3:
@@ -657,7 +731,9 @@ class AnalysisServiceCore:
                 f"away at x={away_med:.0f}m (right) -> already correct"
             )
 
-    def _compute_player_stats_kalman(self, track_data, homography_matrix, max_frame_delta_m: float) -> dict[int, PlayerStats]:
+    def _compute_player_stats_kalman(
+        self, track_data, homography_matrix, max_frame_delta_m: float
+    ) -> dict[int, PlayerStats]:
         from kawkab.services.kalman_smoother import PlayerPositionSmoother
 
         players: dict[int, PlayerStats] = {}
@@ -723,17 +799,82 @@ class AnalysisServiceCore:
             players[tid].max_speed_kmh = max_speed
             players[tid].positions = [(ts, x, y) for ts, x, y in smoothed]
 
-        for tid, player in players.items():
+        for _tid, player in players.items():
             if track_data.duration_seconds > 0:
-                player.avg_speed_kmh = (
-                    player.distance_covered_m / track_data.duration_seconds * 3.6
-                )
+                player.avg_speed_kmh = player.distance_covered_m / track_data.duration_seconds * 3.6
 
         return players
+
+    def _nearest_goalkeeper_pitch_pos(
+        self,
+        track_data,
+        frame,
+        shot_team: str,
+        homography_matrix,
+        ball_pixel_pos: tuple[float, float] | None = None,
+    ) -> tuple[float, float] | None:
+        """Pitch-space position of the defending team's goalkeeper at shot time.
+
+        The GK is the defending-side player whose center is closest to their
+        own goal line — a cheap, camera-free heuristic that is correct in
+        the situations that matter (GK on their line during a shot) and
+        fails soft: None when homography or a defender-side player is
+        missing, never a fabricated position.
+
+        Returns (pitch_x, pitch_y) in meters, or None.
+        """
+        if homography_matrix is None or not track_data.player_teams:
+            return None
+        # Defending side = the team that did NOT shoot. "home" shoots →
+        # the GK we want plays for "away" and defends the right-side goal
+        # (x ≈ pitch_length); vice versa for "away" shooting. When the
+        # shot's team is unknown/unassigned, fall back to picking the
+        # goal the ball is actually closest to — the old else-branch
+        # defaulted to "home" defending, which is only correct by
+        # coincidence and picked the wrong goal half the time.
+        if shot_team == "home":
+            defending = "away"
+        elif shot_team == "away":
+            defending = "home"
+        else:
+            # Unknown shooter: the ball attacks the goal it is nearest
+            # to, so the team defending that goal is the defending side.
+            # The right-side goal (x ≈ pitch_length) is the one AWAY
+            # defends — consistent with the shot-detection branch above
+            # and with _assign_teams_by_pitch_side.
+            ball_pitch = None
+            if ball_pixel_pos is not None:
+                try:
+                    ball_pitch = homography_matrix.pixel_to_pitch(*ball_pixel_pos)
+                except Exception:
+                    ball_pitch = None
+            near_right = ball_pitch is not None and ball_pitch[0] > self.pitch_length / 2
+            defending = "away" if near_right else "home"
+        goal_x = 0.0 if defending == "home" else self.pitch_length
+        best: tuple[float, float] | None = None
+        best_d = float("inf")
+        for det in frame.detections:
+            if det.class_name != "person" or det.track_id is None:
+                continue
+            if track_data.player_teams.get(det.track_id) != defending:
+                continue
+            cx = (det.bbox[0] + det.bbox[2]) / 2
+            cy = (det.bbox[1] + det.bbox[3]) / 2
+            try:
+                px, py = homography_matrix.pixel_to_pitch(cx, cy)
+            except Exception:
+                continue
+            d = abs(px - goal_x) + abs(py - self.pitch_width / 2)
+            if d < best_d:
+                best_d = d
+                best = (px, py)
+        return best
 
     def _detect_events(self, track_data, homography_matrix=None) -> list[dict]:
         events: list[dict] = []
         prev_possession: int | None = None
+        pending_possession: int | None = None  # candidate awaiting confirmation
+        pending_possession_frame: int | None = None
         ball_track_id: int | None = None
         frames_since_shot: int = 999
 
@@ -742,11 +883,38 @@ class AnalysisServiceCore:
         shot_speed_threshold_mps = 8.0
         goal_proximity_m = 20.0
         shot_cooldown_frames = 15
+        # Possession-flip stability: a new possessor must hold the ball for
+        # 2 consecutive real frames before the flip (and its pass) is
+        # trusted. Enforced below via the pending_possession candidate's
+        # frame gap (<= 3 frame numbers apart with frame_skip copies
+        # excluded counts as consecutive).
+        pass_completion_window = 10  # frames of look-ahead used to judge pass completion
+
+        # Skipped frames are filled with verbatim copies of the last real
+        # detection set by CVService. Re-evaluating ball possession on those
+        # frozen copies double-counts whatever the previous real frame saw and
+        # cannot add new information -- skip them entirely (same guard the
+        # stats path in analysis/tracking.py already uses).
+        _metrics = getattr(track_data, "tracking_metrics", None)
+        frame_skip = 1
+        if isinstance(_metrics, dict):
+            try:
+                frame_skip = max(1, int(_metrics.get("frame_skip", 1)))
+            except (TypeError, ValueError):
+                frame_skip = 1
 
         ball_history: list[tuple[float, float, float, float | None, float | None]] = []
         possession_ball_positions: dict[int, tuple[float, float]] = {}
 
+        # Pending passes awaiting completion verdicts:
+        # (timestamp, frame_number, passer, receiver, pass_index_in_events)
+        pending_passes: list[tuple[float, int, int | None, int | None, int]] = []
+
         for frame in track_data.frames:
+            # Frozen skip-frame copies carry no new information (see above).
+            if frame_skip > 1 and frame.frame_number % frame_skip != 0:
+                continue
+
             ball_det = None
             player_dets = []
 
@@ -809,12 +977,22 @@ class AnalysisServiceCore:
                     is_shot = False
                     shot_conf = 0.0
 
-                    if homography_matrix is not None and p0[3] is not None and p1[3] is not None:
-                        dx_p = p1[3] - p0[3]
-                        dy_p = p1[4] - p0[4]
+                    p0_pitch_x: float | None = p0[3]
+                    p0_pitch_y: float | None = p0[4]
+                    p1_pitch_x: float | None = p1[3]
+                    p1_pitch_y: float | None = p1[4]
+                    if (
+                        homography_matrix is not None
+                        and p0_pitch_x is not None
+                        and p1_pitch_x is not None
+                        and p0_pitch_y is not None
+                        and p1_pitch_y is not None
+                    ):
+                        dx_p = p1_pitch_x - p0_pitch_x
+                        dy_p = p1_pitch_y - p0_pitch_y
                         speed_pitch = math.sqrt(dx_p * dx_p + dy_p * dy_p) / dt
                         if speed_pitch >= shot_speed_threshold_mps:
-                            cx = p1[3]
+                            cx = p1_pitch_x
                             near_left = cx <= goal_proximity_m
                             near_right = cx >= (self.pitch_length - goal_proximity_m)
                             moving_left = dx_p < 0
@@ -834,28 +1012,34 @@ class AnalysisServiceCore:
 
                     if is_shot:
                         frames_since_shot = 0
+                        # Team attribution: only report a real team. The old
+                        # tid % 2 parity fallback invented a 50/50 team split
+                        # that had no relation to actual team membership and
+                        # silently corrupted team-split shot/xG stats.
                         shot_team = "unknown"
                         if track_data.player_teams:
                             shot_team = track_data.player_teams.get(tid, "unknown")
                             if shot_team == "unknown" and prev_possession is not None:
                                 shot_team = track_data.player_teams.get(prev_possession, "unknown")
-                            if shot_team == "unknown":
-                                shot_team = "home" if tid % 2 == 0 else "away"
-                        else:
-                            shot_team = "home" if tid % 2 == 0 else "away"
 
-                        shot_metadata = {}
+                        shot_metadata: dict[str, Any] = {}
                         on_target = False
                         goal_width_m = 7.32
-                        if homography_matrix is not None and p1[3] is not None:
-                            bx_pitch = p1[3]
-                            by_pitch = p1[4]
+                        if (
+                            homography_matrix is not None
+                            and p1_pitch_x is not None
+                            and p1_pitch_y is not None
+                        ):
+                            bx_pitch = p1_pitch_x
+                            by_pitch = p1_pitch_y
                             pitch_len = self.pitch_length
                             pitch_wid = self.pitch_width
                             near_goal_x = 0 if bx_pitch <= pitch_len / 2 else pitch_len
                             goal_cx = near_goal_x
                             goal_cy = pitch_wid / 2
-                            d_to_goal = math.sqrt((bx_pitch - goal_cx) ** 2 + (by_pitch - goal_cy) ** 2)
+                            d_to_goal = math.sqrt(
+                                (bx_pitch - goal_cx) ** 2 + (by_pitch - goal_cy) ** 2
+                            )
                             angle_to_goal = math.degrees(
                                 math.atan2(abs(by_pitch - goal_cy), abs(bx_pitch - goal_cx))
                             )
@@ -863,25 +1047,46 @@ class AnalysisServiceCore:
                             shot_metadata["angle_to_goal_deg"] = round(angle_to_goal, 1)
                             shot_metadata["pitch_x"] = round(bx_pitch, 1)
                             shot_metadata["pitch_y"] = round(by_pitch, 1)
+                            # Goalkeeper position at shot time (pitch-space
+                            # meters) — consumed by the trained xG model via
+                            # ShotEvent.gk_position_x/y. Without this the
+                            # live path runs with gk_distance=0 = feature
+                            # absent, the strongest feature unused.
+                            gk_pitch_pos = self._nearest_goalkeeper_pitch_pos(
+                                track_data,
+                                frame,
+                                shot_team,
+                                homography_matrix,
+                                ball_pixel_pos=(bx, by),
+                            )
+                            if gk_pitch_pos is not None:
+                                shot_metadata["gk_pitch_x"] = round(gk_pitch_pos[0], 1)
+                                shot_metadata["gk_pitch_y"] = round(gk_pitch_pos[1], 1)
                             cross_line = abs(bx_pitch - near_goal_x) < 1.0
                             in_frame = abs(by_pitch - goal_cy) < goal_width_m / 2 + 1.0
                             on_target = cross_line and in_frame
                         else:
                             d_pix = math.sqrt(dx * dx + dy * dy)
                             shot_metadata["pixel_speed"] = round(d_pix / max(dt, 0.01), 1)
+                            # Honest provenance: without homography there is
+                            # no distance/angle metadata, so downstream xG is
+                            # "feature absent", not a fabricated estimate.
+                            shot_metadata["spatial_quality"] = "pixel_space"
 
                         logger.debug(
                             f"Shot by {shot_team}: d={shot_metadata.get('distance_to_goal_m', '?')}m, "
                             f"on_target={on_target}, conf={shot_conf:.2f}"
                         )
-                        events.append({
-                            "type": "shot",
-                            "timestamp": frame.timestamp,
-                            "team": shot_team,
-                            "on_target": on_target,
-                            "confidence": shot_conf,
-                            "metadata": shot_metadata,
-                        })
+                        events.append(
+                            {
+                                "type": "shot",
+                                "timestamp": frame.timestamp,
+                                "team": shot_team,
+                                "on_target": on_target,
+                                "confidence": shot_conf,
+                                "metadata": shot_metadata,
+                            }
+                        )
 
             closest_player = None
             closest_dist = float("inf")
@@ -896,44 +1101,136 @@ class AnalysisServiceCore:
             if closest_player is None or closest_player.track_id is None:
                 continue
 
-            if (
-                prev_possession is not None
-                and closest_player.track_id != prev_possession
-                and closest_dist < player_proximity_threshold
-            ):
-                if track_data.player_teams:
-                    team = track_data.player_teams.get(
-                        closest_player.track_id, "unknown"
+            tid_now = closest_player.track_id
+
+            if tid_now == prev_possession:
+                # Same possessor retains the ball; any pending flip
+                # candidate was single-frame jitter -- drop it.
+                pending_possession = None
+                pending_possession_frame = None
+            elif prev_possession is not None and closest_dist < player_proximity_threshold:
+                # Candidate new possessor actually near the ball.
+                if (
+                    pending_possession == tid_now
+                    and pending_possession_frame is not None
+                    and frame.frame_number - pending_possession_frame <= 3
+                ):
+                    # Confirmed: new possessor held the ball 2 frames in a row.
+                    if track_data.player_teams:
+                        team = track_data.player_teams.get(tid_now, "unknown")
+                        from_team = track_data.player_teams.get(prev_possession, "unknown")
+                    else:
+                        # No team assignment exists at all -- an honest
+                        # "unknown" beats the old tid%2 parity invention,
+                        # which split teams arbitrarily and corrupted every
+                        # downstream team-split stat.
+                        team = "unknown"
+                        from_team = "unknown"
+
+                    start_ball = possession_ball_positions.get(prev_possession, (bx, by))
+                    fw = frame.image_width or 1
+                    fh = frame.image_height or 1
+                    pass_metadata = {
+                        "start_x_pct": round(start_ball[0] / fw, 4),
+                        "start_y_pct": round(start_ball[1] / fh, 4),
+                        "end_x_pct": round(bx / fw, 4),
+                        "end_y_pct": round(by / fh, 4),
+                    }
+
+                    # Completion semantics: a possession flip straight to an
+                    # OPPOSING player is not a completed pass -- the ball was
+                    # won/intercepted. Mark it incomplete immediately so the
+                    # tackle/interception/high-turnover detectors downstream
+                    # can fire (they all key on completed=False).
+                    flip_to_opponent = (
+                        track_data.player_teams
+                        and from_team != "unknown"
+                        and team != "unknown"
+                        and from_team != team
                     )
-                else:
-                    team = "home" if prev_possession % 2 == 0 else "away"
+                    events.append(
+                        {
+                            "type": "pass",
+                            "timestamp": frame.timestamp,
+                            "from_track_id": prev_possession,
+                            "to_track_id": tid_now,
+                            "completed": not flip_to_opponent,
+                            "team": team,
+                            "confidence": min(1.0, 1.0 - closest_dist / 200),
+                            "metadata": pass_metadata,
+                        }
+                    )
+                    if flip_to_opponent:
+                        events[-1]["metadata"]["outcome"] = "lost_to_opponent"
+                    pending_passes.append(
+                        (
+                            frame.timestamp,
+                            frame.frame_number,
+                            prev_possession,
+                            tid_now,
+                            len(events) - 1,
+                        )
+                    )
+                    prev_possession = tid_now
+                    pending_possession = None
+                    pending_possession_frame = None
+                elif pending_possession != tid_now:
+                    # New (or third-player) candidate: start/restart pending.
+                    pending_possession = tid_now
+                    pending_possession_frame = frame.frame_number
+                # else: same candidate still waiting within the window.
+            elif prev_possession is None:
+                # First possessor of the match -- nothing to pass from.
+                prev_possession = tid_now
+            # else: ball far from every player (in flight / loose) -- keep the
+            # last possessor until someone re-establishes proximity.
 
-                start_ball = possession_ball_positions.get(prev_possession, (bx, by))
-                fw = frame.image_width or 1
-                fh = frame.image_height or 1
-                pass_metadata = {
-                    "start_x_pct": round(start_ball[0] / fw, 4),
-                    "start_y_pct": round(start_ball[1] / fh, 4),
-                    "end_x_pct": round(bx / fw, 4),
-                    "end_y_pct": round(by / fh, 4),
-                }
-
-                events.append({
-                    "type": "pass",
-                    "timestamp": frame.timestamp,
-                    "from_track_id": prev_possession,
-                    "to_track_id": closest_player.track_id,
-                    "completed": True,
-                    "team": team,
-                    "confidence": min(1.0, 1.0 - closest_dist / 200),
-                    "metadata": pass_metadata,
-                })
-
-            prev_possession = closest_player.track_id
+            # ---- Pass completion look-ahead ----
+            # Decide completion of recently-emitted passes: watch the next
+            # pass_completion_window frames of possession. Receiver keeps the
+            # ball -> completed. Possession moves straight to the other team
+            # -> intercepted (completed=False, feeds the tackle detector).
+            if pending_passes:
+                still_open: list[tuple[float, int, int | None, int | None, int]] = []
+                for p in pending_passes:
+                    pts, pfno, passer, receiver, eidx = p
+                    if frame.frame_number - pfno > pass_completion_window:
+                        # Window elapsed with the receiver (apparently)
+                        # retaining possession -- leave completed as-is.
+                        continue
+                    if tid_now == receiver:
+                        # Receiver confirmed in possession.
+                        continue
+                    cur_team = (
+                        track_data.player_teams.get(tid_now, "unknown")
+                        if track_data.player_teams
+                        else "unknown"
+                    )
+                    rcv_team = (
+                        track_data.player_teams.get(receiver, "unknown")
+                        if track_data.player_teams
+                        else "unknown"
+                    )
+                    if (
+                        receiver is not None
+                        and tid_now != receiver
+                        and cur_team != rcv_team
+                        and cur_team != "unknown"
+                        and rcv_team != "unknown"
+                    ):
+                        # A different player from a DIFFERENT team took the
+                        # ball before the receiver settled it: interception.
+                        events[eidx]["completed"] = False
+                        events[eidx]["metadata"]["outcome"] = "intercepted"
+                    # else: keep waiting; ball may just be in flight.
+                    still_open.append(p)
+                pending_passes = still_open
 
         return events
 
-    def _compute_team_stats(self, players, events, track_data, homography_matrix=None) -> dict[str, TeamStats]:
+    def _compute_team_stats(
+        self, players, events, track_data, homography_matrix=None
+    ) -> dict[str, TeamStats]:
         home = TeamStats(team_name="Home")
         away = TeamStats(team_name="Away")
 
@@ -953,7 +1250,22 @@ class AnalysisServiceCore:
         unknown_frames = 0
         use_player_teams = bool(track_data.player_teams)
 
+        # Frozen skip-frame copies duplicate the previous real frame's
+        # detections verbatim -- counting them would multiply whatever team
+        # held the ball there by the frame-skip factor. Only real detection
+        # frames should count toward possession.
+        _metrics = getattr(track_data, "tracking_metrics", None)
+        frame_skip = 1
+        if isinstance(_metrics, dict):
+            try:
+                frame_skip = max(1, int(_metrics.get("frame_skip", 1)))
+            except (TypeError, ValueError):
+                frame_skip = 1
+
         for frame in track_data.frames:
+            if frame_skip > 1 and frame.frame_number % frame_skip != 0:
+                continue
+
             ball_det = None
             player_dets = []
 
@@ -980,6 +1292,15 @@ class AnalysisServiceCore:
                     closest = p
 
             if closest and closest.track_id is not None:
+                # Possession attribution cap: the old rule attributed the
+                # ball to the nearest player no matter how far away --
+                # a ball 500px from everyone still "belonged" to someone.
+                # Beyond this radius the ball is contested/in flight;
+                # count the frame as unknown rather than fabricating
+                # possession. ~150px at 720p is roughly 2.5m of pitch.
+                if closest_dist > 150.0:
+                    unknown_frames += 1
+                    continue
                 if use_player_teams:
                     team = track_data.player_teams.get(closest.track_id)
                     if team == "home":
@@ -988,15 +1309,17 @@ class AnalysisServiceCore:
                         away_frames += 1
                     else:
                         unknown_frames += 1
-                else:
-                    if closest.track_id % 2 == 0:
-                        home_frames += 1
-                    else:
-                        away_frames += 1
+                # No team assignment at all: the old tid%2 parity split
+                # fabricated a 50/50 possession number from track IDs that
+                # have no relation to team membership. Leave both counters
+                # untouched and report honestly below instead.
 
         total = home_frames + away_frames
         if total == 0:
-            return {"home": 50.0, "away": 50.0}
+            # No team-attributable possession evidence exists. Returning the
+            # old hardcoded 50/50 here presented a fabricated number as a
+            # measurement; report zero-information honestly instead.
+            return {"home": 0.0, "away": 0.0, "unknown": 100.0}
 
         return {
             "home": (home_frames / total) * 100,
@@ -1008,14 +1331,10 @@ class AnalysisServiceCore:
             return 0.0
 
         frames_with_ball = sum(
-            1
-            for f in track_data.frames
-            if any(d.class_name == "sports ball" for d in f.detections)
+            1 for f in track_data.frames if any(d.class_name == "sports ball" for d in f.detections)
         )
         frames_with_players = sum(
-            1
-            for f in track_data.frames
-            if any(d.class_name == "person" for d in f.detections)
+            1 for f in track_data.frames if any(d.class_name == "person" for d in f.detections)
         )
 
         ball_pct = frames_with_ball / track_data.total_frames

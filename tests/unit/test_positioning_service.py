@@ -52,42 +52,66 @@ class TestRunTypeClassification:
     def test_behind_defense(self) -> None:
         svc = PositioningService(min_run_distance_m=1.0)
         result = svc._classify_run(
-            (50, 34), (55, 34), [], 0, 10,
+            (50, 34),
+            (55, 34),
+            [],
+            0,
+            10,
         )
         assert result == RunType.BEHIND_DEFENSE
 
     def test_wide(self) -> None:
         svc = PositioningService(min_run_distance_m=1.0)
         result = svc._classify_run(
-            (50, 30), (50, 40), [], 0, 10,
+            (50, 30),
+            (50, 40),
+            [],
+            0,
+            10,
         )
         assert result == RunType.WIDE
 
     def test_diagonal(self) -> None:
         svc = PositioningService(min_run_distance_m=1.0)
         result = svc._classify_run(
-            (50, 30), (55, 40), [], 0, 10,
+            (50, 30),
+            (55, 40),
+            [],
+            0,
+            10,
         )
         assert result == RunType.DIAGONAL
 
     def test_drop(self) -> None:
         svc = PositioningService(min_run_distance_m=1.0)
         result = svc._classify_run(
-            (60, 34), (50, 34), [], 0, 10,
+            (60, 34),
+            (50, 34),
+            [],
+            0,
+            10,
         )
         assert result == RunType.DROP
 
     def test_support(self) -> None:
         svc = PositioningService(min_run_distance_m=1.0)
         result = svc._classify_run(
-            (50, 34), (51, 34), [], 0, 10,
+            (50, 34),
+            (51, 34),
+            [],
+            0,
+            10,
         )
         assert result == RunType.SUPPORT
 
     def test_unknown_below_min_distance(self) -> None:
         svc = PositioningService(min_run_distance_m=10.0)
         result = svc._classify_run(
-            (50, 34), (52, 34), [], 0, 10,
+            (50, 34),
+            (52, 34),
+            [],
+            0,
+            10,
         )
         assert result == RunType.UNKNOWN
 
@@ -197,11 +221,13 @@ class TestEdgeCases:
         frames = [
             FakeFrame(
                 frame_number=0,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=50, cy=34),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
             ),
         ]
         report = svc.analyze(FakeMatchTrack(frames=frames), "home")
@@ -212,11 +238,13 @@ class TestEdgeCases:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.1, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=50 + i * 0.1, cy=34),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
                 ball_position=(60, 34),
             )
             for i in range(30)
@@ -229,11 +257,13 @@ class TestEdgeCases:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=10 + i * 0.8, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=10 + i * 0.8, cy=34),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
                 ball_position=(60, 34),
             )
             for i in range(120)
@@ -314,11 +344,13 @@ class TestAnalyzeRuns:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
                 ball_position=(60, 34),
             )
             for i in range(60)
@@ -332,11 +364,13 @@ class TestAnalyzeRuns:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50, cy=34 + i * 0.5),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=50, cy=34 + i * 0.5),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
                 ball_position=(50, 34),
             )
             for i in range(60)
@@ -350,11 +384,13 @@ class TestAnalyzeRuns:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.4, cy=34 + i * 0.3),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=50 + i * 0.4, cy=34 + i * 0.3),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
             )
             for i in range(60)
         ]
@@ -367,11 +403,13 @@ class TestAnalyzeRuns:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=80 - i * 0.5, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=80 - i * 0.5, cy=34),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
             )
             for i in range(60)
         ]
@@ -384,11 +422,13 @@ class TestAnalyzeRuns:
         frames = [
             FakeFrame(
                 frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
+                detections=[
+                    FakeDetection(
+                        bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
+                        track_id=1,
+                        team="home",
+                    )
+                ],
                 ball_position=(60, 34),
             )
             for i in range(90)
@@ -404,27 +444,29 @@ class TestAnalyzeRuns:
         svc = PositioningService(min_run_distance_m=5.0, fps=30.0)
         frames = []
         for i in range(60):
-            frames.append(FakeFrame(
-                frame_number=i,
-                detections=[
-                    FakeDetection(
-                        bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
-                        track_id=1,
-                        team="home",
-                    ),
-                    FakeDetection(
-                        bbox=FakeBBox(cx=40 + i * 0.4, cy=30),
-                        track_id=2,
-                        team="home",
-                    ),
-                    FakeDetection(
-                        bbox=FakeBBox(cx=60, cy=34),
-                        track_id=3,
-                        team="away",
-                    ),
-                ],
-                ball_position=(60, 34),
-            ))
+            frames.append(
+                FakeFrame(
+                    frame_number=i,
+                    detections=[
+                        FakeDetection(
+                            bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
+                            track_id=1,
+                            team="home",
+                        ),
+                        FakeDetection(
+                            bbox=FakeBBox(cx=40 + i * 0.4, cy=30),
+                            track_id=2,
+                            team="home",
+                        ),
+                        FakeDetection(
+                            bbox=FakeBBox(cx=60, cy=34),
+                            track_id=3,
+                            team="away",
+                        ),
+                    ],
+                    ball_position=(60, 34),
+                )
+            )
         report = svc.analyze(FakeMatchTrack(frames=frames), "home")
         assert report.total_runs == 2
 
@@ -434,17 +476,19 @@ class TestAnalyzeRuns:
         p1_x = 50.0
         for i in range(90):
             p1_x += 0.5
-            frames.append(FakeFrame(
-                frame_number=i,
-                detections=[
-                    FakeDetection(
-                        bbox=FakeBBox(cx=p1_x, cy=34),
-                        track_id=1,
-                        team="home",
-                    ),
-                ],
-                ball_position=(60, 34),
-            ))
+            frames.append(
+                FakeFrame(
+                    frame_number=i,
+                    detections=[
+                        FakeDetection(
+                            bbox=FakeBBox(cx=p1_x, cy=34),
+                            track_id=1,
+                            team="home",
+                        ),
+                    ],
+                    ball_position=(60, 34),
+                )
+            )
         report = svc.analyze(FakeMatchTrack(frames=frames), "home")
         # With min_run_distance_m=3.0, the run distance will be ~47m
         # xT for BEHIND_DEFENSE at ~47m with avg speed should be 0.04 minimum

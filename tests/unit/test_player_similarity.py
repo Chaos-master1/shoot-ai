@@ -1,11 +1,10 @@
 """Tests for Player Similarity Engine."""
 
 from kawkab.core.player_similarity import (
-    PlayerSimilarityEngine,
-    PlayerProfile,
-    STAT_NAMES,
     STAT_DIM,
     STAT_MEANS,
+    STAT_NAMES,
+    PlayerSimilarityEngine,
 )
 
 
@@ -41,7 +40,9 @@ class TestFindSimilarPlayers:
 
     def test_opposite_profiles_low_score(self):
         pse = PlayerSimilarityEngine()
-        target = pse.build_player_profile(_default_stats(1, pass_completion_pct=100, passes_per_90=90))
+        target = pse.build_player_profile(
+            _default_stats(1, pass_completion_pct=100, passes_per_90=90)
+        )
         pool = [pse.build_player_profile(_default_stats(2, pass_completion_pct=0, passes_per_90=0))]
         results = pse.find_similar_players(target, pool, top_n=5)
         assert len(results) == 1
@@ -103,7 +104,9 @@ class TestComputePositionSimilarity:
 
     def test_no_match_low_score(self):
         pse = PlayerSimilarityEngine()
-        high_stats = _default_stats(1, **{k: v + 30 for k, v in STAT_MEANS.items() if k != "player_id"})
+        high_stats = _default_stats(
+            1, **{k: v + 30 for k, v in STAT_MEANS.items() if k != "player_id"}
+        )
         profile = pse.build_player_profile(high_stats)
         low_archetype = [v - 5 for v in profile.vector]
         score = pse.compute_position_similarity(profile, low_archetype)

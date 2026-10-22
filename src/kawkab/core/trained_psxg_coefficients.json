@@ -1,0 +1,25 @@
+{
+  "intercept": -1.2790473051916134,
+  "distance_m": -0.05510679786014554,
+  "distance_m_sq": -0.00019898974432493966,
+  "angle_opening_deg": 0.04700545297588676,
+  "placement_height": -0.4252178194885869,
+  "placement_lateral_abs": -0.03580966148361557,
+  "lateral_height_interaction": 0.2032008215163957,
+  "is_header": -1.2294520291338815,
+  "is_free_kick": 0.6931810822775631,
+  "_model_name": "kawkab_psxg_trained_statsbomb",
+  "_n_train_shots": 2219,
+  "_trained_at": "2026-09-07T00:55:11.983662+00:00",
+  "_feature_names": [
+    "intercept",
+    "distance_m",
+    "distance_m_sq",
+    "angle_opening_deg",
+    "placement_height",
+    "placement_lateral_abs",
+    "lateral_height_interaction",
+    "is_header",
+    "is_free_kick"
+  ]
+}

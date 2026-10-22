@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
 from kawkab.core.suspension_tracker import (
-    PlayerDiscipline,
-    SuspensionReport,
     analyze_suspensions,
 )
 
 
-def make_card_event(player_id: str, player_name: str, ev_type: str, team: str = "Team A", match_num: int = 1) -> dict:
+def make_card_event(
+    player_id: str, player_name: str, ev_type: str, team: str = "Team A", match_num: int = 1
+) -> dict:
     return {
         "player_id": player_id,
         "player_name": player_name,
@@ -41,8 +40,7 @@ class TestSuspensionTracker:
 
     def test_suspension_threshold_triggers(self):
         events = [
-            make_card_event("p1", "Player 1", "yellow_card", match_num=i)
-            for i in range(1, 6)
+            make_card_event("p1", "Player 1", "yellow_card", match_num=i) for i in range(1, 6)
         ]
         report = analyze_suspensions(events, "Liga", "team_1")
         p1 = next(p for p in report.players if p.player_id == "p1")
@@ -52,8 +50,7 @@ class TestSuspensionTracker:
 
     def test_upcoming_risk_detected(self):
         events = [
-            make_card_event("p1", "Player 1", "yellow_card", match_num=i)
-            for i in range(1, 5)
+            make_card_event("p1", "Player 1", "yellow_card", match_num=i) for i in range(1, 5)
         ]
         report = analyze_suspensions(events, "Liga", "team_1")
         assert len(report.upcoming_risk) >= 1
@@ -91,8 +88,7 @@ class TestSuspensionTracker:
             "fair_play_red_penalty": 15,
         }
         events = [
-            make_card_event("p1", "Player 1", "yellow_card", match_num=i)
-            for i in range(1, 4)
+            make_card_event("p1", "Player 1", "yellow_card", match_num=i) for i in range(1, 4)
         ]
         report = analyze_suspensions(events, "Liga", "team_1", suspension_rules=rules)
         p1 = next(p for p in report.players if p.player_id == "p1")

@@ -1,7 +1,10 @@
 """Tests for substitution impact analysis."""
 
-import pytest
-from kawkab.core.substitution_analysis import SubstitutionAnalyzer, SubstitutionMatchReport, SubstitutionEvent
+from kawkab.core.substitution_analysis import (
+    SubstitutionAnalyzer,
+    SubstitutionEvent,
+    SubstitutionMatchReport,
+)
 
 
 class TestSubstitutionAnalyzer:
@@ -44,7 +47,15 @@ class TestSubstitutionAnalyzer:
         assert len(report.substitutions) == 2
 
     def test_sub_to_dict(self):
-        sub = SubstitutionEvent(minute=60, player_out_id=7, player_in_id=11, team="home", xg_before=0.2, xg_after=0.5, xg_delta=0.3)
+        sub = SubstitutionEvent(
+            minute=60,
+            player_out_id=7,
+            player_in_id=11,
+            team="home",
+            xg_before=0.2,
+            xg_after=0.5,
+            xg_delta=0.3,
+        )
         d = sub.to_dict()
         assert d["minute"] == 60.0
         assert d["player_out"] == 7
@@ -69,7 +80,16 @@ class TestSubstitutionAnalyzer:
 
     def test_pressing_before_after(self):
         sa = SubstitutionAnalyzer()
-        subs = [{"minute": 60, "player_out": 8, "player_in": 17, "team": "home", "pressing_before": 8.5, "pressing_after": 6.2}]
+        subs = [
+            {
+                "minute": 60,
+                "player_out": 8,
+                "player_in": 17,
+                "team": "home",
+                "pressing_before": 8.5,
+                "pressing_after": 6.2,
+            }
+        ]
         report = sa.analyze_substitutions(subs, [])
         assert report.substitutions[0].pressing_before == 8.5
         assert report.substitutions[0].pressing_after == 6.2

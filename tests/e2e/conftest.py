@@ -8,7 +8,7 @@ import sys
 import types
 
 try:
-    from PySide6.QtCore import QObject, Signal, Slot
+    from PySide6.QtCore import QObject, Signal, Slot  # noqa: F401  (probe: real Qt vs stubs)
 except ImportError:
     # Minimal stubs so bridge module can be imported for testing
     class _QObjectStub:
@@ -17,21 +17,26 @@ except ImportError:
     def _slot(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     def _signal(*args, **kwargs):
         class SignalDescriptor:
             def __init__(self, *types):
                 self.types = types
+
             def __get__(self, obj, objtype=None):
                 return _SignalInstance()
+
             def emit(self, *args):
                 pass
+
         return SignalDescriptor(*args)
 
     class _SignalInstance:
         def emit(self, *args):
             pass
+
         def connect(self, f):
             pass
 

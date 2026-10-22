@@ -1,0 +1,57 @@
+{
+  "status": "ok",
+  "generated_at": "2026-09-16T02:52:15.238546+00:00",
+  "provenance": {
+    "ground_truth": "Metrica open sample game 2 (MIT), first 2000 frames, committed fixtures",
+    "tracker": "kawkab.services.norfair_tracker.NorfairTracker (production)",
+    "metrics": "kawkab.core.mot_metrics.compute_mot_metrics (CLEAR MOT)",
+    "seed": 13,
+    "degradation": {
+      "noise_px_std": 3.0,
+      "drop_rate": 0.1,
+      "fp_rate_per_player_per_frame": 0.03
+    },
+    "pixel_scale_px_per_m": 20.0,
+    "match_threshold_px": 40.0,
+    "ball_tracking": "excluded (persons only; evaluate_tracking convention)",
+    "reid": "inactive on black frames (zero embeddings \u2192 inf distance) \u2014 measures the tracker core, not the appearance model"
+  },
+  "rows": [
+    {
+      "row": "ceiling",
+      "elapsed_s": 12.51,
+      "n_pred_tracks": 38,
+      "n_gt_tracks": 22,
+      "mota": 0.9903,
+      "motp": 0.08,
+      "idf1": 0.9954,
+      "id_precision": 0.9937,
+      "id_recall": 0.9972,
+      "false_positives": 280,
+      "false_negatives": 122,
+      "id_switches": 24,
+      "fragments": 12,
+      "total_gt_detections": 43978,
+      "total_pred_detections": 44136,
+      "total_matches": 43856
+    },
+    {
+      "row": "degraded",
+      "elapsed_s": 11.53,
+      "n_pred_tracks": 202,
+      "n_gt_tracks": 22,
+      "mota": 0.9155,
+      "motp": 4.62,
+      "idf1": 0.962,
+      "id_precision": 0.9336,
+      "id_recall": 0.9921,
+      "false_positives": 3101,
+      "false_negatives": 347,
+      "id_switches": 268,
+      "fragments": 52,
+      "total_gt_detections": 43978,
+      "total_pred_detections": 46732,
+      "total_matches": 43631
+    }
+  ]
+}

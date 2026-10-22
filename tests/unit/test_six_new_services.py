@@ -35,8 +35,10 @@ def _install_cv_stub() -> None:
     class _Paths:
         def __init__(self):
             from pathlib import Path
+
             self.calibration_dir = Path("/tmp/cal")
             self.data_dir = Path("/tmp/data")
+
     paths_mod.get_paths = lambda: _Paths()
     sys.modules["kawkab.core.paths"] = paths_mod
 
@@ -70,8 +72,10 @@ ClipTag = _vr.ClipTag
 
 PitchDetector = _pd.PitchDetector
 
-import pytest
 from dataclasses import dataclass, field
+from typing import Any
+
+import pytest
 
 
 @dataclass
@@ -115,15 +119,19 @@ class TestPositioningService:
         svc = PositioningService(min_run_distance_m=10.0)
         frames = []
         for i in range(30):
-            frames.append(FakeFrame(
-                frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.1, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
-                ball_position=(60, 34),
-            ))
+            frames.append(
+                FakeFrame(
+                    frame_number=i,
+                    detections=[
+                        FakeDetection(
+                            bbox=FakeBBox(cx=50 + i * 0.1, cy=34),
+                            track_id=1,
+                            team="home",
+                        )
+                    ],
+                    ball_position=(60, 34),
+                )
+            )
         report = svc.analyze(FakeMatchTrack(frames=frames), "home")
         assert report.total_runs == 0
 
@@ -131,15 +139,19 @@ class TestPositioningService:
         svc = PositioningService(min_run_distance_m=5.0, fps=30.0)
         frames = []
         for i in range(60):
-            frames.append(FakeFrame(
-                frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
-                    track_id=1,
-                    team="home",
-                )],
-                ball_position=(60, 34),
-            ))
+            frames.append(
+                FakeFrame(
+                    frame_number=i,
+                    detections=[
+                        FakeDetection(
+                            bbox=FakeBBox(cx=50 + i * 0.5, cy=34),
+                            track_id=1,
+                            team="home",
+                        )
+                    ],
+                    ball_position=(60, 34),
+                )
+            )
         report = svc.analyze(FakeMatchTrack(frames=frames), "home")
         assert report.total_runs >= 1
         assert any(r.run_type in (RunType.BEHIND_DEFENSE, RunType.DIAGONAL) for r in report.runs)
@@ -152,14 +164,18 @@ class TestPositioningService:
     def test_run_classification_diagonal(self) -> None:
         frames = []
         for i in range(40):
-            frames.append(FakeFrame(
-                frame_number=i,
-                detections=[FakeDetection(
-                    bbox=FakeBBox(cx=50 + i * 0.3, cy=34 + i * 0.3),
-                    track_id=2,
-                    team="home",
-                )],
-            ))
+            frames.append(
+                FakeFrame(
+                    frame_number=i,
+                    detections=[
+                        FakeDetection(
+                            bbox=FakeBBox(cx=50 + i * 0.3, cy=34 + i * 0.3),
+                            track_id=2,
+                            team="home",
+                        )
+                    ],
+                )
+            )
         svc = PositioningService(min_run_distance_m=3.0)
         report = svc.analyze(FakeMatchTrack(frames=frames), "home")
         assert any(r.run_type == RunType.DIAGONAL for r in report.runs)
@@ -200,7 +216,21 @@ class TestPlayerDevelopmentService:
     def test_declining_trend(self) -> None:
         svc = PlayerDevelopmentService(improvement_threshold=0.01)
         history = [
-            PlayerMatchStat(f"m{i}", f"2024-01-{i:02}", 90, 50 - i * 5, 45 - i * 5, 10000, 30, 0.3, 0.4, 10, 1, 0, 50)
+            PlayerMatchStat(
+                f"m{i}",
+                f"2024-01-{i:02}",
+                90,
+                50 - i * 5,
+                45 - i * 5,
+                10000,
+                30,
+                0.3,
+                0.4,
+                10,
+                1,
+                0,
+                50,
+            )
             for i in range(1, 6)
         ]
         report = svc.analyze(1, "Test", "MF", history)
@@ -242,8 +272,13 @@ class TestWorkloadService:
 
     def test_high_acwr_flag(self) -> None:
         svc = WorkloadService()
-        high_rpe = lambda d: WorkloadRecord(f"2024-01-{d:02}", WorkloadSource.MATCH, 90, rpe=8.5)
-        low_rpe = lambda d: WorkloadRecord(f"2024-01-{d:02}", WorkloadSource.MATCH, 90, rpe=4.0)
+
+        def high_rpe(d):
+            return WorkloadRecord(f"2024-01-{d:02}", WorkloadSource.MATCH, 90, rpe=8.5)
+
+        def low_rpe(d):
+            return WorkloadRecord(f"2024-01-{d:02}", WorkloadSource.MATCH, 90, rpe=4.0)
+
         chronic_records = [low_rpe(d) for d in range(1, 22)]
         acute_records = [high_rpe(d) for d in range(22, 29)]
         records = chronic_records + acute_records
@@ -399,7 +434,9 @@ class TestVideoReviewService:
         svc = VideoReviewService()
         session = svc.create_session(1, 9000)
         svc.add_clip(session.session_id, "X", 0, 100, tags=[ClipTag.GOAL.value])
-        svc.add_annotation(session.session_id, AnnotationKind.ARROW, 50, {"x1": 0, "y1": 0, "x2": 1, "y2": 1})
+        svc.add_annotation(
+            session.session_id, AnnotationKind.ARROW, 50, {"x1": 0, "y1": 0, "x2": 1, "y2": 1}
+        )
         payload = svc.export_session(session.session_id)
         assert payload is not None
         new_svc = VideoReviewService()

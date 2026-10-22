@@ -1,12 +1,11 @@
 """Tests for form analysis + Team of the Week module."""
 
-import pytest
 from kawkab.core.form_analysis import (
-    FormAnalyzer,
     POSITION_ORDER,
     POSITION_SLOTS,
-    _result_from_match,
+    FormAnalyzer,
     _points_from_result,
+    _result_from_match,
 )
 
 

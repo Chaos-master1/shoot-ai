@@ -87,9 +87,7 @@ def _detect_possession_chains(events: list[dict]) -> list[list[int]]:
     if not events:
         return []
 
-    sorted_indices = sorted(
-        range(len(events)), key=lambda i: events[i].get("timestamp", 0.0)
-    )
+    sorted_indices = sorted(range(len(events)), key=lambda i: events[i].get("timestamp", 0.0))
     chains: list[list[int]] = []
     current_chain: list[int] = []
     current_team: str | None = None
@@ -114,9 +112,7 @@ def _detect_possession_chains(events: list[dict]) -> list[list[int]]:
     return chains
 
 
-def _find_chain_for_shot(
-    shot_idx: int, chains: list[list[int]]
-) -> list[int] | None:
+def _find_chain_for_shot(shot_idx: int, chains: list[list[int]]) -> list[int] | None:
     """Return the possession chain (list of event indices) that contains *shot_idx*."""
     for chain in chains:
         if shot_idx in chain:
@@ -128,9 +124,7 @@ def _chain_events(events: list[dict], chain_indices: list[int]) -> list[dict]:
     return [events[i] for i in chain_indices]
 
 
-def _measure_chain(
-    events: list[dict], chain_indices: list[int]
-) -> tuple[int, float]:
+def _measure_chain(events: list[dict], chain_indices: list[int]) -> tuple[int, float]:
     chain_evs = _chain_events(events, chain_indices)
     passes = sum(1 for e in chain_evs if e.get("type") == "pass")
     timestamps = [e.get("timestamp", 0.0) for e in chain_evs]
@@ -230,7 +224,7 @@ def _build_phase_breakdown(
             "avg_xg_per_shot": 0.0,
         }
 
-    for shot_idx, shot_ev in enumerate(side_events):
+    for _shot_idx, shot_ev in enumerate(side_events):
         if shot_ev.get("type") != "shot":
             continue
         # Find this shot's index in the full events list
@@ -249,13 +243,9 @@ def _build_phase_breakdown(
             continue
 
         chain_indices = _find_chain_for_shot(full_idx, chains)
-        chain_evs = (
-            _chain_events(events, chain_indices) if chain_indices else []
-        )
+        chain_evs = _chain_events(events, chain_indices) if chain_indices else []
 
-        phase = classify_possession_phase(
-            events, full_idx, chain_evs, set_piece_indices
-        )
+        phase = classify_possession_phase(events, full_idx, chain_evs, set_piece_indices)
         pv = phase.value
         phase_data[pv]["shots"] += 1
         phase_data[pv]["goals"] += 1 if shot_ev.get("is_goal") else 0
@@ -265,9 +255,7 @@ def _build_phase_breakdown(
 
     for pv in phase_data:
         s = phase_data[pv]["shots"]
-        phase_data[pv]["avg_xg_per_shot"] = (
-            round(phase_data[pv]["xg"] / s, 4) if s else 0.0
-        )
+        phase_data[pv]["avg_xg_per_shot"] = round(phase_data[pv]["xg"] / s, 4) if s else 0.0
 
     totals = {"shots": 0, "goals": 0, "xg": 0.0}
     for pv in phase_data:
@@ -324,17 +312,11 @@ def compute_phase_xg(
         chains = possession_chain_events
 
     set_piece_indices = {
-        i
-        for i, ev in enumerate(events)
-        if ev.get("type", "").lower() in set_piece_event_types
+        i for i, ev in enumerate(events) if ev.get("type", "").lower() in set_piece_event_types
     }
 
-    team_breakdown = _build_phase_breakdown(
-        team_events, events, chains, set_piece_indices
-    )
-    opp_breakdown = _build_phase_breakdown(
-        opponent_events, events, chains, set_piece_indices
-    )
+    team_breakdown = _build_phase_breakdown(team_events, events, chains, set_piece_indices)
+    opp_breakdown = _build_phase_breakdown(opponent_events, events, chains, set_piece_indices)
 
     team_id = team_events[0].get("team", "home") if team_events else "home"
 

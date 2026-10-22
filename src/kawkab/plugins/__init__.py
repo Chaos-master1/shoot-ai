@@ -37,26 +37,24 @@ class KawkabPlugin(ABC):
 
     # ── Lifecycle hooks ────────────────────────────────────────────
 
-    async def on_plugin_load(self, app: Any) -> None:
+    async def on_plugin_load(self, app: Any) -> None:  # noqa: B027  (optional hook)
         """Called once when the plugin is first loaded.
 
         *app* is the main :class:`~kawkab.app.KawkabApp` instance.
         """
 
-    async def on_plugin_unload(self, app: Any) -> None:
+    async def on_plugin_unload(self, app: Any) -> None:  # noqa: B027  (optional hook)
         """Called when the application is shutting down."""
 
-    async def on_analysis_start(
+    async def on_analysis_start(  # noqa: B027  (optional hook)
         self, match_id: int, video_path: str, config: dict[str, Any]
     ) -> None:
         """Called before a match analysis begins."""
 
-    async def on_analysis_end(
-        self, match_id: int, result: dict[str, Any]
-    ) -> None:
+    async def on_analysis_end(self, match_id: int, result: dict[str, Any]) -> None:  # noqa: B027  (optional hook)
         """Called after a match analysis completes."""
 
-    async def on_frame(
+    async def on_frame(  # noqa: B027  (optional hook)
         self,
         match_id: int,
         frame_number: int,
@@ -65,7 +63,7 @@ class KawkabPlugin(ABC):
     ) -> None:
         """Called for each processed frame during CV detection."""
 
-    async def on_event_detected(
+    async def on_event_detected(  # noqa: B027  (optional hook)
         self,
         match_id: int,
         event: dict[str, Any],

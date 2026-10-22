@@ -1,15 +1,14 @@
 """Tests for Squad Value Estimation — heuristic market valuation."""
 
 from kawkab.core.squad_valuation import (
-    estimate_player_value,
-    estimate_squad_value,
+    LEAGUE_MULTIPLIERS,
     _age_multiplier,
-    _performance_score,
+    _confidence_label,
     _contract_multiplier,
     _league_multiplier,
-    _confidence_label,
-    POSITION_BASELINES,
-    LEAGUE_MULTIPLIERS,
+    _performance_score,
+    estimate_player_value,
+    estimate_squad_value,
 )
 
 
@@ -46,17 +45,38 @@ class TestPerformanceScore:
         assert score == 5.0
 
     def test_good_stats(self):
-        stats = {"minutes_played": 1800, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}
+        stats = {
+            "minutes_played": 1800,
+            "xg_per_90": 0.5,
+            "xa_per_90": 0.3,
+            "goals_per_90": 0.4,
+            "assists_per_90": 0.2,
+            "rating_per_90": 7.5,
+        }
         score = _performance_score(stats)
         assert 10.0 <= score <= 100.0
 
     def test_elite_stats(self):
-        stats = {"minutes_played": 2000, "xg_per_90": 1.0, "xa_per_90": 0.8, "goals_per_90": 0.9, "assists_per_90": 0.5, "rating_per_90": 9.0}
+        stats = {
+            "minutes_played": 2000,
+            "xg_per_90": 1.0,
+            "xa_per_90": 0.8,
+            "goals_per_90": 0.9,
+            "assists_per_90": 0.5,
+            "rating_per_90": 9.0,
+        }
         score = _performance_score(stats)
         assert score <= 100.0
 
     def test_with_rating(self):
-        stats = {"minutes_played": 1500, "xg_per_90": 0.0, "xa_per_90": 0.0, "goals_per_90": 0.0, "assists_per_90": 0.0, "rating_per_90": 10.0}
+        stats = {
+            "minutes_played": 1500,
+            "xg_per_90": 0.0,
+            "xa_per_90": 0.0,
+            "goals_per_90": 0.0,
+            "assists_per_90": 0.0,
+            "rating_per_90": 10.0,
+        }
         score = _performance_score(stats)
         assert score > 5.0
 
@@ -112,48 +132,167 @@ class TestConfidenceLabel:
 class TestEstimatePlayerValue:
     def test_basic_forward(self):
         val = estimate_player_value(
-            "p1", age=25, position="fwd",
-            performance_stats={"minutes_played": 1800, "xg_per_90": 0.4, "xa_per_90": 0.2, "goals_per_90": 0.35, "assists_per_90": 0.15, "rating_per_90": 7.0},
-            contract_years_remaining=3, league_tier="premier_league",
+            "p1",
+            age=25,
+            position="fwd",
+            performance_stats={
+                "minutes_played": 1800,
+                "xg_per_90": 0.4,
+                "xa_per_90": 0.2,
+                "goals_per_90": 0.35,
+                "assists_per_90": 0.15,
+                "rating_per_90": 7.0,
+            },
+            contract_years_remaining=3,
+            league_tier="premier_league",
         )
         assert val.player_id == "p1"
         assert val.estimated_value > 0
 
     def test_young_defender_low_value(self):
         val = estimate_player_value(
-            "p2", age=19, position="def",
-            performance_stats={"minutes_played": 200, "xg_per_90": 0.01, "xa_per_90": 0.01, "goals_per_90": 0.0, "assists_per_90": 0.0, "rating_per_90": 6.0},
-            contract_years_remaining=5, league_tier="championship",
+            "p2",
+            age=19,
+            position="def",
+            performance_stats={
+                "minutes_played": 200,
+                "xg_per_90": 0.01,
+                "xa_per_90": 0.01,
+                "goals_per_90": 0.0,
+                "assists_per_90": 0.0,
+                "rating_per_90": 6.0,
+            },
+            contract_years_remaining=5,
+            league_tier="championship",
         )
         assert val.estimated_value > 0
         assert val.age_multiplier == 1.2
 
     def test_old_player_depreciation(self):
         val = estimate_player_value(
-            "p3", age=35, position="mid",
-            performance_stats={"minutes_played": 1500, "xg_per_90": 0.2, "xa_per_90": 0.15, "goals_per_90": 0.1, "assists_per_90": 0.12, "rating_per_90": 6.8},
-            contract_years_remaining=1, league_tier="premier_league",
+            "p3",
+            age=35,
+            position="mid",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0.2,
+                "xa_per_90": 0.15,
+                "goals_per_90": 0.1,
+                "assists_per_90": 0.12,
+                "rating_per_90": 6.8,
+            },
+            contract_years_remaining=1,
+            league_tier="premier_league",
         )
         assert val.age_multiplier == 0.4
         assert val.contract_multiplier == 0.8
 
     def test_short_contract_depression(self):
-        val1 = estimate_player_value("p4", age=25, position="mid", performance_stats={"minutes_played": 1500, "xg_per_90": 0.3, "xa_per_90": 0.2, "goals_per_90": 0.2, "assists_per_90": 0.1, "rating_per_90": 7.0}, contract_years_remaining=4)
-        val2 = estimate_player_value("p4", age=25, position="mid", performance_stats={"minutes_played": 1500, "xg_per_90": 0.3, "xa_per_90": 0.2, "goals_per_90": 0.2, "assists_per_90": 0.1, "rating_per_90": 7.0}, contract_years_remaining=0)
+        val1 = estimate_player_value(
+            "p4",
+            age=25,
+            position="mid",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0.3,
+                "xa_per_90": 0.2,
+                "goals_per_90": 0.2,
+                "assists_per_90": 0.1,
+                "rating_per_90": 7.0,
+            },
+            contract_years_remaining=4,
+        )
+        val2 = estimate_player_value(
+            "p4",
+            age=25,
+            position="mid",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0.3,
+                "xa_per_90": 0.2,
+                "goals_per_90": 0.2,
+                "assists_per_90": 0.1,
+                "rating_per_90": 7.0,
+            },
+            contract_years_remaining=0,
+        )
         assert val1.estimated_value > val2.estimated_value
 
     def test_league_multiplier_effect(self):
-        val_pl = estimate_player_value("p5", age=25, position="fwd", performance_stats={"minutes_played": 1500, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}, league_tier="premier_league")
-        val_other = estimate_player_value("p5", age=25, position="fwd", performance_stats={"minutes_played": 1500, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}, league_tier="other")
+        val_pl = estimate_player_value(
+            "p5",
+            age=25,
+            position="fwd",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0.5,
+                "xa_per_90": 0.3,
+                "goals_per_90": 0.4,
+                "assists_per_90": 0.2,
+                "rating_per_90": 7.5,
+            },
+            league_tier="premier_league",
+        )
+        val_other = estimate_player_value(
+            "p5",
+            age=25,
+            position="fwd",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0.5,
+                "xa_per_90": 0.3,
+                "goals_per_90": 0.4,
+                "assists_per_90": 0.2,
+                "rating_per_90": 7.5,
+            },
+            league_tier="other",
+        )
         assert val_pl.estimated_value > val_other.estimated_value
 
     def test_position_baselines(self):
-        gk = estimate_player_value("g", age=25, position="gk", performance_stats={"minutes_played": 1500, "xg_per_90": 0, "xa_per_90": 0, "goals_per_90": 0, "assists_per_90": 0, "rating_per_90": 6.5})
-        fwd = estimate_player_value("f", age=25, position="fwd", performance_stats={"minutes_played": 1500, "xg_per_90": 0, "xa_per_90": 0, "goals_per_90": 0, "assists_per_90": 0, "rating_per_90": 6.5})
+        gk = estimate_player_value(
+            "g",
+            age=25,
+            position="gk",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0,
+                "xa_per_90": 0,
+                "goals_per_90": 0,
+                "assists_per_90": 0,
+                "rating_per_90": 6.5,
+            },
+        )
+        fwd = estimate_player_value(
+            "f",
+            age=25,
+            position="fwd",
+            performance_stats={
+                "minutes_played": 1500,
+                "xg_per_90": 0,
+                "xa_per_90": 0,
+                "goals_per_90": 0,
+                "assists_per_90": 0,
+                "rating_per_90": 6.5,
+            },
+        )
         assert fwd.estimated_value > gk.estimated_value
 
     def test_confidence_in_report(self):
-        val = estimate_player_value("p6", age=22, position="mid", performance_stats={"minutes_played": 1600, "xg_per_90": 0.2, "xa_per_90": 0.1, "goals_per_90": 0.15, "assists_per_90": 0.1, "rating_per_90": 6.8}, contract_years_remaining=3)
+        val = estimate_player_value(
+            "p6",
+            age=22,
+            position="mid",
+            performance_stats={
+                "minutes_played": 1600,
+                "xg_per_90": 0.2,
+                "xa_per_90": 0.1,
+                "goals_per_90": 0.15,
+                "assists_per_90": 0.1,
+                "rating_per_90": 6.8,
+            },
+            contract_years_remaining=3,
+        )
         assert val.confidence in ("low", "medium", "high")
 
 
@@ -165,16 +304,69 @@ class TestEstimateSquadValue:
         assert r.most_valuable == ""
 
     def test_single_player_squad(self):
-        players = [{"player_id": "p1", "age": 25, "position": "fwd", "performance_stats": {"minutes_played": 1800, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}, "contract_years_remaining": 3}]
+        players = [
+            {
+                "player_id": "p1",
+                "age": 25,
+                "position": "fwd",
+                "performance_stats": {
+                    "minutes_played": 1800,
+                    "xg_per_90": 0.5,
+                    "xa_per_90": 0.3,
+                    "goals_per_90": 0.4,
+                    "assists_per_90": 0.2,
+                    "rating_per_90": 7.5,
+                },
+                "contract_years_remaining": 3,
+            }
+        ]
         r = estimate_squad_value("team_a", players)
         assert r.total_squad_value > 0
         assert r.most_valuable == "p1"
 
     def test_multiple_players(self):
         players = [
-            {"player_id": "p1", "age": 25, "position": "fwd", "performance_stats": {"minutes_played": 1800, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}},
-            {"player_id": "p2", "age": 32, "position": "def", "performance_stats": {"minutes_played": 1500, "xg_per_90": 0.05, "xa_per_90": 0.02, "goals_per_90": 0.02, "assists_per_90": 0.01, "rating_per_90": 6.5}, "contract_years_remaining": 1},
-            {"player_id": "p3", "age": 19, "position": "mid", "performance_stats": {"minutes_played": 300, "xg_per_90": 0.1, "xa_per_90": 0.05, "goals_per_90": 0.05, "assists_per_90": 0.02, "rating_per_90": 6.2}, "contract_years_remaining": 4},
+            {
+                "player_id": "p1",
+                "age": 25,
+                "position": "fwd",
+                "performance_stats": {
+                    "minutes_played": 1800,
+                    "xg_per_90": 0.5,
+                    "xa_per_90": 0.3,
+                    "goals_per_90": 0.4,
+                    "assists_per_90": 0.2,
+                    "rating_per_90": 7.5,
+                },
+            },
+            {
+                "player_id": "p2",
+                "age": 32,
+                "position": "def",
+                "performance_stats": {
+                    "minutes_played": 1500,
+                    "xg_per_90": 0.05,
+                    "xa_per_90": 0.02,
+                    "goals_per_90": 0.02,
+                    "assists_per_90": 0.01,
+                    "rating_per_90": 6.5,
+                },
+                "contract_years_remaining": 1,
+            },
+            {
+                "player_id": "p3",
+                "age": 19,
+                "position": "mid",
+                "performance_stats": {
+                    "minutes_played": 300,
+                    "xg_per_90": 0.1,
+                    "xa_per_90": 0.05,
+                    "goals_per_90": 0.05,
+                    "assists_per_90": 0.02,
+                    "rating_per_90": 6.2,
+                },
+                "contract_years_remaining": 4,
+            },
         ]
         r = estimate_squad_value("team_a", players)
         assert r.total_squad_value > 0
@@ -194,12 +386,40 @@ class TestEstimateSquadValue:
         assert r.age_distribution["veteran"] == 2
 
     def test_value_rating(self):
-        players = [{"player_id": "p1", "age": 25, "position": "fwd", "performance_stats": {"minutes_played": 1800, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}}]
+        players = [
+            {
+                "player_id": "p1",
+                "age": 25,
+                "position": "fwd",
+                "performance_stats": {
+                    "minutes_played": 1800,
+                    "xg_per_90": 0.5,
+                    "xa_per_90": 0.3,
+                    "goals_per_90": 0.4,
+                    "assists_per_90": 0.2,
+                    "rating_per_90": 7.5,
+                },
+            }
+        ]
         r = estimate_squad_value("team_a", players)
         assert r.value_rating in ("underpriced", "fair", "overpriced")
 
     def test_custom_league_tier(self):
-        players = [{"player_id": "p1", "age": 25, "position": "fwd", "performance_stats": {"minutes_played": 1800, "xg_per_90": 0.5, "xa_per_90": 0.3, "goals_per_90": 0.4, "assists_per_90": 0.2, "rating_per_90": 7.5}}]
+        players = [
+            {
+                "player_id": "p1",
+                "age": 25,
+                "position": "fwd",
+                "performance_stats": {
+                    "minutes_played": 1800,
+                    "xg_per_90": 0.5,
+                    "xa_per_90": 0.3,
+                    "goals_per_90": 0.4,
+                    "assists_per_90": 0.2,
+                    "rating_per_90": 7.5,
+                },
+            }
+        ]
         r_pl = estimate_squad_value("team_a", players, league_tier="premier_league")
         r_other = estimate_squad_value("team_a", players, league_tier="other")
         assert r_pl.total_squad_value > r_other.total_squad_value

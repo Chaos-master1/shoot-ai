@@ -33,15 +33,48 @@ LEAGUE_MAP: dict[str, str] = {
 }
 
 SEASONS: list[str] = [
-    "2010-11", "2011-12", "2012-13", "2013-14", "2014-15",
-    "2015-16", "2016-17", "2017-18", "2018-19", "2019-20",
-    "2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26",
+    "2010-11",
+    "2011-12",
+    "2012-13",
+    "2013-14",
+    "2014-15",
+    "2015-16",
+    "2016-17",
+    "2017-18",
+    "2018-19",
+    "2019-20",
+    "2020-21",
+    "2021-22",
+    "2022-23",
+    "2023-24",
+    "2024-25",
+    "2025-26",
 ]
 
 WORLDCUP_YEARS: list[int] = [
-    1930, 1934, 1938, 1950, 1954, 1958, 1962, 1966,
-    1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998,
-    2002, 2006, 2010, 2014, 2018, 2022, 2026,
+    1930,
+    1934,
+    1938,
+    1950,
+    1954,
+    1958,
+    1962,
+    1966,
+    1970,
+    1974,
+    1978,
+    1982,
+    1986,
+    1990,
+    1994,
+    1998,
+    2002,
+    2006,
+    2010,
+    2014,
+    2018,
+    2022,
+    2026,
 ]
 
 
@@ -107,6 +140,7 @@ class OpenFootballDataService:
         if cached is not None:
             return cached
         await self._ensure_client()
+        assert self._client is not None
         try:
             r = await self._client.get(url)
             if r.status_code == 200:
@@ -155,9 +189,7 @@ class OpenFootballDataService:
             return []
         return [self._parse_match(m, competition_id, season) for m in data["matches"]]
 
-    def _parse_match(
-        self, raw: dict, competition_id: str, season: str
-    ) -> MatchResult:
+    def _parse_match(self, raw: dict, competition_id: str, season: str) -> MatchResult:
         score = raw.get("score")
         home_score, away_score, ht_home, ht_away = None, None, None, None
         if isinstance(score, dict):
@@ -219,7 +251,4 @@ class OpenFootballDataService:
         data = await self._get(url)
         if not data or "matches" not in data:
             return []
-        return [
-            self._parse_match(m, "worldcup", str(year))
-            for m in data["matches"]
-        ]
+        return [self._parse_match(m, "worldcup", str(year)) for m in data["matches"]]

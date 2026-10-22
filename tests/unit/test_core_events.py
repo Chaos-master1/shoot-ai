@@ -1,8 +1,6 @@
 """Tests for the typed event model."""
 
-import pytest
 from kawkab.core.events import (
-    AssistType,
     BaseEvent,
     BodyPart,
     CarryEvent,

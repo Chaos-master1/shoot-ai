@@ -16,6 +16,7 @@ Stored baseline format (JSON):
         "processing_time_s": 780.0
     }
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,15 +28,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kawkab.core.model_manager import ModelManager
 from kawkab.services.cv_service import CVService
 
 # Default tolerances (relative, e.g., 0.15 = 15% tolerance)
 DEFAULT_TOLERANCES = {
-    "tracks": 0.25,          # 25% — most variable
-    "fragmentation": 0.30,   # 30%
-    "ball_detections": 0.20, # 20%
-    "id_stability": 0.15,    # 15%
+    "tracks": 0.25,  # 25% — most variable
+    "fragmentation": 0.30,  # 30%
+    "ball_detections": 0.20,  # 20%
+    "id_stability": 0.15,  # 15%
     "homography_success_pct": 0.10,
     "processing_time_s": 0.30,
 }
@@ -75,9 +75,7 @@ async def run_regression(video_path: str, baseline_path: str | None = None, upda
 
     # Count ball detections
     ball_count = sum(
-        1 for fd in result.frames
-        for d in (fd.detections or [])
-        if d.class_name == "sports ball"
+        1 for fd in result.frames for d in (fd.detections or []) if d.class_name == "sports ball"
     )
 
     # Compute ID stability
@@ -87,7 +85,7 @@ async def run_regression(video_path: str, baseline_path: str | None = None, upda
     for fd in result.frames:
         if fd.frame_number not in track_ids_by_frame:
             track_ids_by_frame[fd.frame_number] = set()
-        for d in (fd.detections or []):
+        for d in fd.detections or []:
             if d.class_name == "person" and d.track_id is not None:
                 track_ids_by_frame[fd.frame_number].add(d.track_id)
                 total_det_frames += 1
@@ -115,7 +113,7 @@ async def run_regression(video_path: str, baseline_path: str | None = None, upda
         "processing_time_s": round(elapsed, 1),
     }
 
-    print(f"\n=== RESULTS ===")
+    print("\n=== RESULTS ===")
     for k, v in results.items():
         print(f"  {k}: {v}")
 
@@ -136,17 +134,14 @@ async def run_regression(video_path: str, baseline_path: str | None = None, upda
 
     # Compare
     failures = 0
-    print(f"\n=== COMPARISON vs BASELINE ===")
+    print("\n=== COMPARISON vs BASELINE ===")
     for k, v in results.items():
         base_val = baseline.get(k)
         tol = DEFAULT_TOLERANCES.get(k, 0.25)
         if base_val is None:
             print(f"  {k}: {v} (no baseline)")
             continue
-        if base_val == 0:
-            rel_diff = abs(v - base_val)
-        else:
-            rel_diff = abs(v - base_val) / base_val
+        rel_diff = abs(v - base_val) if base_val == 0 else abs(v - base_val) / base_val
         status = "PASS" if rel_diff <= tol else "FAIL"
         if status == "FAIL":
             failures += 1
@@ -160,30 +155,42 @@ async def run_regression(video_path: str, baseline_path: str | None = None, upda
 def main():
     parser = argparse.ArgumentParser(description="Regression test for tracking pipeline")
     parser.add_argument("--video", type=str, default=None, help="Input video (single)")
-    parser.add_argument("--pattern", type=str, default=None, help="Glob pattern (e.g. '*.mp4') for multi-video")
-    parser.add_argument("--input-dir", type=str, default=".", help="Input directory for --pattern glob")
+    parser.add_argument(
+        "--pattern", type=str, default=None, help="Glob pattern (e.g. '*.mp4') for multi-video"
+    )
+    parser.add_argument(
+        "--input-dir", type=str, default=".", help="Input directory for --pattern glob"
+    )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline JSON path")
     parser.add_argument("--update-baseline", action="store_true", help="Update stored baseline")
     args = parser.parse_args()
 
     if args.video:
-        asyncio.run(run_regression(
-            args.video,
-            baseline_path=args.baseline,
-            update=args.update_baseline,
-        ))
+        asyncio.run(
+            run_regression(
+                args.video,
+                baseline_path=args.baseline,
+                update=args.update_baseline,
+            )
+        )
     elif args.pattern:
         input_dir = Path(args.input_dir)
         videos = sorted(input_dir.glob(args.pattern))
         if not videos:
             print(f"No videos matching '{args.pattern}' in {input_dir}")
             sys.exit(1)
-        print(f"Multi-match regression: {len(videos)} videos from {input_dir} (pattern: {args.pattern})\n")
+        print(
+            f"Multi-match regression: {len(videos)} videos from {input_dir} (pattern: {args.pattern})\n"
+        )
         all_results = []
         for i, video in enumerate(videos):
-            print(f"[{i+1}/{len(videos)}] {video.name}...")
+            print(f"[{i + 1}/{len(videos)}] {video.name}...")
             try:
-                asyncio.run(run_regression(str(video), baseline_path=args.baseline, update=args.update_baseline))
+                asyncio.run(
+                    run_regression(
+                        str(video), baseline_path=args.baseline, update=args.update_baseline
+                    )
+                )
                 all_results.append((video.name, "PASS"))
             except SystemExit as e:
                 all_results.append((video.name, "FAIL" if e.code != 0 else "PASS"))
@@ -210,7 +217,9 @@ def main():
         print(f"{'FAIL':<40} {failures:<10}")
         sys.exit(1 if failures > 0 else 0)
     else:
-        print("Provide --video for single video or --pattern/--input-dir for multi-video regression")
+        print(
+            "Provide --video for single video or --pattern/--input-dir for multi-video regression"
+        )
         sys.exit(1)
 
 

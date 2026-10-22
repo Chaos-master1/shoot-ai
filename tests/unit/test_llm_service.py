@@ -175,7 +175,7 @@ class TestGenerateCoachReport:
             p.is_available = AsyncMock(return_value=True)
             p.generate = AsyncMock(return_value="Clip report")
         ctx = {"is_clip": True, "duration_seconds": 120}
-        result = await svc.generate_coach_report("Data", match_context=ctx)
+        _ = await svc.generate_coach_report("Data", match_context=ctx)
         assert "IMPORTANT CONTEXT" in svc.providers[0].generate.call_args[0][0]
 
 
@@ -207,7 +207,11 @@ class TestOllamaProvider:
         prov = OllamaProvider(cfg)
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {"response": "This is the generated response text.", "eval_count": 15, "done_reason": "stop"}
+        mock_resp.json.return_value = {
+            "response": "This is the generated response text.",
+            "eval_count": 15,
+            "done_reason": "stop",
+        }
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.post.return_value = mock_resp
             result = await prov.generate("Hi")
@@ -219,7 +223,11 @@ class TestOllamaProvider:
         prov = OllamaProvider(cfg)
         resp_ok = MagicMock()
         resp_ok.status_code = 200
-        resp_ok.json.return_value = {"response": "Long enough response text.", "eval_count": 10, "done_reason": "stop"}
+        resp_ok.json.return_value = {
+            "response": "Long enough response text.",
+            "eval_count": 10,
+            "done_reason": "stop",
+        }
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.post.return_value = resp_ok
             result = await prov.generate("Hi")

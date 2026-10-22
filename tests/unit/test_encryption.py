@@ -7,23 +7,24 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from cryptography.fernet import Fernet
 
 from kawkab.core.encryption import (
     _derive_key,
-    encrypt,
     decrypt,
-    encrypt_dict,
     decrypt_dict,
-    init_fernet,
+    encrypt,
+    encrypt_dict,
     get_fernet,
+    init_fernet,
 )
-from cryptography.fernet import Fernet
 
 
 @pytest.fixture(autouse=True)
 def _reset_fernet():
     """Reset global Fernet instance and override key file path before each test."""
     import kawkab.core.encryption as enc_mod
+
     enc_mod._fernet = None
     # Redirect fallback key to temp dir
     tmp = tempfile.mkdtemp()
@@ -55,7 +56,9 @@ def test_encrypt_decrypt_roundtrip():
 def test_decrypt_invalid_ciphertext_raises():
     """decrypt raises on garbage ciphertext."""
     init_fernet("deadbeef" * 16)
-    with pytest.raises(Exception):
+    from cryptography.fernet import InvalidToken
+
+    with pytest.raises(InvalidToken):
         decrypt("not-valid-ciphertext!!")
 
 
@@ -150,7 +153,9 @@ def test_encrypt_decrypt_different_keys():
     init_fernet("aaaa" * 16)
     cipher = encrypt("secret data")
     init_fernet("bbbb" * 16)
-    with pytest.raises(Exception):
+    from cryptography.fernet import InvalidToken
+
+    with pytest.raises(InvalidToken):
         decrypt(cipher)
 
 

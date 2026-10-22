@@ -28,6 +28,7 @@
     <div id="app">
         <header class="app-header" role="banner">
             <div class="header-left">
+                <button class="hamburger-btn" id="hamburger-btn" title="Toggle navigation menu">☰</button>
                 <h1 class="app-title">⚽ Kawkab AI</h1>
                 <span class="app-subtitle" data-i18n="app_subtitle">Football Coach</span>
             </div>
@@ -108,24 +109,31 @@
           </div>
           <div class="nav-group">
             <span class="nav-group-title">Analysis</span>
-            <a href="#timeline-section" class="nav-item" data-section="timeline-section"><span data-i18n="navTimeline">Timeline</span></a>
-            <a href="#xg-section" class="nav-item" data-section="xg-section">xG</a>
-            <a href="#xt-section" class="nav-item" data-section="xt-section">xT</a>
-            <a href="#vaep-section" class="nav-item" data-section="vaep-section">VAEP</a>
-            <a href="#charts-section" class="nav-item" data-section="charts-section">Charts</a>
-            <a href="#heatmap-section" class="nav-item" data-section="heatmap-section">Heatmap</a>
-            <a href="#pass-network-section" class="nav-item" data-section="pass-network-section">Pass Network</a>
-            <a href="#momentum-section" class="nav-item" data-section="momentum-section">Momentum</a>
-            <a href="#transitions-section" class="nav-item" data-section="transitions-section">Transitions</a>
-            <a href="#finishing-section" class="nav-item" data-section="finishing-section">Finishing</a>
+            <!-- These views are panels INSIDE the Results page (charts, xG/xT
+                 cards, timeline sidebar, heatmap, pass network, momentum).
+                 The old links pointed at section ids that never existed, so
+                 clicking them hid every section (blank app). They now route
+                 to the section that actually hosts each view. -->
+            <a href="#results-section" class="nav-item" data-section="results-section"><span data-i18n="navTimeline">Timeline</span></a>
+            <a href="#results-section" class="nav-item" data-section="results-section">xG</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">xT</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">VAEP</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Charts</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Heatmap</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Pass Network</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Momentum</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Transitions</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Finishing</a>
           </div>
           <div class="nav-group">
             <span class="nav-group-title">Tactics</span>
             <a href="#tactics-section" class="nav-item" data-section="tactics-section">Formations</a>
-            <a href="#set-piece-section" class="nav-item" data-section="set-piece-section">Set Pieces</a>
-            <a href="#phases-section" class="nav-item" data-section="phases-section">Phases</a>
-            <a href="#tactics-report-section" class="nav-item" data-section="tactics-report-section">Report</a>
-            <a href="#game-plan-section" class="nav-item" data-section="game-plan-section">Game Plan</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Set Pieces</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Phases</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Report</a>
+            <a href="#briefing-section" class="nav-item" data-section="briefing-section">Briefing</a>
+            <a href="#proanalytics-section" class="nav-item" data-section="proanalytics-section">Pro Analytics</a>
+            <a href="#whiteboard-section" class="nav-item" data-section="whiteboard-section">Whiteboard</a>
           </div>
           <div class="nav-group">
             <span class="nav-group-title">Coding</span>
@@ -134,20 +142,22 @@
           <div class="nav-group">
             <span class="nav-group-title">Squad</span>
             <a href="#squad-section" class="nav-item" data-section="squad-section"><span data-i18n="navSquad">Squad</span></a>
-            <a href="#player-compare-section" class="nav-item" data-section="player-compare-section">Compare</a>
-            <a href="#shortlist-section" class="nav-item" data-section="shortlist-section">Shortlist</a>
-            <a href="#contracts-section" class="nav-item" data-section="contracts-section">Contracts</a>
-            <a href="#recruitment-section" class="nav-item" data-section="recruitment-section">Recruitment</a>
+            <a href="#professional-section" class="nav-item" data-section="professional-section">Compare</a>
+            <!-- The Training Planner existed as a section with no door: it had
+                 a router registration but no nav target, so no click could
+                 reach it. This is its entry point. -->
+            <a href="#training-section" class="nav-item" data-section="training-section"><span data-i18n="navMatchWeek">Match Week</span></a>
           </div>
           <div class="nav-group">
             <span class="nav-group-title">Admin</span>
-            <a href="#settings-section" class="nav-item" data-section="settings-section"><span data-i18n="navSettings">Settings</span></a>
             <a href="#calibration-section" class="nav-item" data-section="calibration-section">Calibration</a>
-            <a href="#search-section" class="nav-item" data-section="search-section">Search</a>
-            <a href="#import-section" class="nav-item" data-section="import-section">Import</a>
-            <a href="#data-export-section" class="nav-item" data-section="data-export-section">Data</a>
+            <a href="#settings-section" class="nav-item" data-section="settings-section">Settings</a>
+            <!-- Search removed: the global search box is permanently visible
+                 in the app header on every section. -->
+            <a href="#results-section" class="nav-item" data-section="results-section">Import</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Data</a>
             <a href="#ai-section" class="nav-item" data-section="ai-section">AI Coach</a>
-            <a href="#tactical-sandbox-section" class="nav-item" data-section="tactical-sandbox-section">Sandbox</a>
+            <a href="#results-section" class="nav-item" data-section="results-section">Sandbox</a>
           </div>
         </nav>
 
@@ -172,7 +182,7 @@
                         <option value="90" data-i18n="dashboardLast90">Last 90 Days</option>
                     </select>
                 </div>
-                <div class="kpi-grid" id="dashboard-kpis">
+                <div class="kpi-grid" id="dashboard-kpis" aria-live="polite">
                     <div class="kpi-card" data-tooltip="Total number of matches analyzed in the system">
                         <div class="kpi-icon">📅</div>
                         <div class="kpi-value" id="kpi-matches">0</div>
@@ -207,7 +217,11 @@
                 <div class="dashboard-grid">
                     <div class="dashboard-card" id="dashboard-recent-matches">
                         <h3 data-i18n="recentMatches">📋 Recent Matches</h3>
-                        <div id="dashboard-recent-list" class="dashboard-empty" data-i18n="noMatches">No matches yet. Upload your first match above!</div>
+                        <div id="dashboard-recent-list" class="dashboard-empty" data-i18n="noMatches" aria-live="polite">No matches yet. Upload your first match above!</div>
+                    </div>
+                    <div class="dashboard-card" id="dashboard-form-card" data-tooltip="Recent results, current streak, and points-per-game across all analyzed matches">
+                        <h3 data-i18n="recentForm">📈 Recent Form</h3>
+                        <div id="dashboard-form-content" class="dashboard-empty" data-i18n="noMatches" aria-live="polite">No matches yet. Upload your first match above!</div>
                     </div>
                     <div class="dashboard-card">
                         <h3 data-i18n="quickActions">⚡ Quick Actions</h3>
@@ -284,6 +298,11 @@
 
             <section id="results-section" class="section hidden" aria-live="polite">
                 <h2 data-i18n="resultsTitle">📊 Analysis Results</h2>
+                <div id="calibration-status-banner" class="calibration-banner hidden" role="status">
+                    <span class="calibration-banner-icon"></span>
+                    <span class="calibration-banner-text"></span>
+                    <button id="calibration-banner-action" class="btn btn-sm btn-secondary" data-i18n="calibrateNow">Calibrate Now</button>
+                </div>
                 <div class="results-layout">
                     <div class="results-main">
                         <div class="video-player-container">
@@ -590,6 +609,52 @@
                                 <div id="sb-lineups-result" class="feedback-result" style="margin-top:8px"></div>
                                 <div id="sb-import-result" class="feedback-result" style="margin-top:8px"></div>
                             </div>
+                        </div>
+
+                        <div id="vendor-import-section" class="benchmark-section">
+                            <h3>📥 Vendor Data Import (season / tracking / events)</h3>
+                            <div class="form-row">
+                                <input type="text" id="season-dir" placeholder="Folder of StatsBomb event JSONs (e.g., data/statsbomb_corpus)" class="input" style="flex:1">
+                                <input type="text" id="season-competition" placeholder="Competition (optional)" class="input" style="flex:0.5">
+                                <input type="number" id="season-id" placeholder="Season ID" class="input" style="flex:0.3">
+                                <button id="season-import-btn" class="btn btn-primary">Import Season</button>
+                            </div>
+                            <div id="season-progress" class="feedback-result" style="margin-top:6px"></div>
+                            <div id="season-import-result" class="feedback-result" style="margin-top:4px"></div>
+                            <hr style="margin: 12px 0; border-color: #e2e8f0;">
+                            <div class="form-row">
+                                <input type="text" id="tracking-path" placeholder="Tracking file (SkillCorner .json / EPTS .xml / Metrica home .csv)" class="input" style="flex:1">
+                                <select id="tracking-vendor" class="input" style="flex:0.4">
+                                    <option value="">Auto-detect</option>
+                                    <option value="skillcorner">SkillCorner</option>
+                                    <option value="epts">EPTS XML</option>
+                                    <option value="metrica">Metrica CSV</option>
+                                </select>
+                                <input type="text" id="tracking-away-csv" placeholder="Metrica away CSV (optional)" class="input" style="flex:0.6">
+                                <button id="tracking-import-btn" class="btn btn-primary">Import Tracking</button>
+                            </div>
+                            <div id="tracking-import-result" class="feedback-result" style="margin-top:6px"></div>
+                            <hr style="margin: 12px 0; border-color: #e2e8f0;">
+                            <div class="form-row">
+                                <input type="text" id="event-path" placeholder="Event file (Opta F24 .xml / Wyscout .json)" class="input" style="flex:1">
+                                <input type="text" id="event-f7-path" placeholder="Opta F7 (optional)" class="input" style="flex:0.6">
+                                <button id="event-import-btn" class="btn btn-primary">Import Events</button>
+                            </div>
+                            <div id="event-import-result" class="feedback-result" style="margin-top:6px"></div>
+                            <hr style="margin: 12px 0; border-color: #e2e8f0;">
+                            <div class="form-row">
+                                <input type="text" id="kloppy-sb-path" placeholder="StatsBomb events JSON via kloppy (e.g., data/statsbomb_corpus/3825872.json)" class="input" style="flex:1">
+                                <input type="text" id="kloppy-sb-lineup" placeholder="Lineup JSON (optional; synthesized from events if empty)" class="input" style="flex:0.6">
+                                <button id="kloppy-sb-btn" class="btn btn-primary">Import Events via kloppy</button>
+                            </div>
+                            <div id="kloppy-sb-result" class="feedback-result" style="margin-top:6px"></div>
+                            <hr style="margin: 12px 0; border-color: #e2e8f0;">
+                            <div class="form-row">
+                                <input type="text" id="kloppy-sc-meta" placeholder="SkillCorner meta JSON (kloppy)" class="input" style="flex:1">
+                                <input type="text" id="kloppy-sc-raw" placeholder="SkillCorner raw JSONL (kloppy)" class="input" style="flex:1">
+                                <button id="kloppy-sc-btn" class="btn btn-primary">Import Tracking via kloppy</button>
+                            </div>
+                            <div id="kloppy-sc-result" class="feedback-result" style="margin-top:6px"></div>
                         </div>
 
                         <div id="openfootball-section" class="benchmark-section">
@@ -984,6 +1049,32 @@
                             <button id="edit-event-save" class="btn btn-primary" data-i18n="btnSave">Save</button>
                             <button id="edit-event-cancel" class="btn btn-secondary" data-i18n="btnCancel">Cancel</button>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="settings-section" class="section hidden">
+                <h2 data-i18n="settingsTitle">⚙️ Settings</h2>
+                <div class="pro-card">
+                    <h3 data-i18n="settingsSystemTitle">System</h3>
+                    <div id="settings-overview" class="settings-overview">
+                        <p class="hint">Loading system information…</p>
+                    </div>
+                </div>
+                <div class="pro-card">
+                    <h3 data-i18n="settingsModelsTitle">AI Models (download on demand)</h3>
+                    <p class="hint" data-i18n="settingsModelsHint">Models download on first use. Remove unused variants to reclaim disk space; the pinned checksum protects every download.</p>
+                    <div id="settings-model-list" class="settings-model-list" aria-live="polite">
+                        <p class="hint">Loading model cache…</p>
+                    </div>
+                    <div class="form-row" style="margin-top:0.5rem">
+                        <span id="settings-cache-size" class="hint"></span>
+                    </div>
+                </div>
+                <div class="pro-card">
+                    <h3 data-i18n="settingsContractsTitle">Contract Alerts</h3>
+                    <div id="settings-contract-alerts" aria-live="polite">
+                        <p class="hint">No contract alerts.</p>
                     </div>
                 </div>
             </section>
@@ -1911,6 +2002,37 @@
                  ============================================================ -->
             <section id="training-section" class="section hidden">
                 <h2 data-i18n="trainingTitle">🏋️ Training Planner</h2>
+
+                <!-- Match Week: diagnosis -> plan -> re-check. Composed by
+                     services/match_week_service.py, rendered by
+                     app-matchweek.js. The service's refusals (pending window,
+                     unobservable metric) are rendered as states, never as
+                     numbers. -->
+                <div id="matchweek-panel" class="matchweek-panel" aria-live="polite">
+                    <div class="mw-header">
+                        <h3 data-i18n="mwTitle">📅 Match Week</h3>
+                        <span id="mw-stage" class="mw-stage"></span>
+                        <button id="mw-refresh" class="btn btn-sm btn-secondary" data-i18n="mwRefresh">Refresh</button>
+                    </div>
+                    <p id="mw-note" class="hint"></p>
+                    <div class="mw-steps">
+                        <div class="mw-step">
+                            <h4 data-i18n="mwDiagnose">Diagnose</h4>
+                            <div id="mw-diagnoses"></div>
+                        </div>
+                        <div class="mw-step">
+                            <h4 data-i18n="mwPlan">Plan</h4>
+                            <div id="mw-plan"></div>
+                            <button id="mw-generate" class="btn btn-primary btn-sm hidden" data-i18n="mwGenerate">Generate this week's plan</button>
+                        </div>
+                        <div class="mw-step">
+                            <h4 data-i18n="mwRecheck">Re-check</h4>
+                            <div id="mw-recheck"></div>
+                        </div>
+                    </div>
+                    <div id="mw-provenance"></div>
+                </div>
+
                 <div class="training-layout">
                     <div class="training-drills-panel">
                         <h3 data-i18n="trainingDrillLibrary">📚 Drill Library</h3>
@@ -1929,10 +2051,6 @@
                         </div>
                         <div id="training-drill-list" class="training-drill-list">
                             <p class="hint" data-i18n="trainingLoadHint">Load drills to see library.</p>
-                        </div>
-                        <div style="margin-top:12px">
-                            <button id="training-generate-plan-btn" class="btn btn-primary" data-i18n="trainingGeneratePlan">🤖 Generate from Match</button>
-                            <span id="training-gen-status" class="hint" style="margin-left:8px"></span>
                         </div>
                     </div>
                     <div class="training-session-panel">
@@ -2397,6 +2515,7 @@
                         <button id="live-clear-btn" class="btn btn-secondary" data-i18n="liveClear">🗑 Clear Tags</button>
                         <button id="live-export-btn" class="btn btn-secondary" data-i18n="liveExport">📥 Export</button>
                         <button id="live-dashboard-toggle" class="btn btn-secondary hidden" data-i18n="liveDashboardToggle">📊 Dashboard</button>
+                        <button id="live-fullscreen-btn" class="btn btn-secondary hidden" data-i18n="liveFullscreen">⛶ Fullscreen</button>
                     </div>
                     <div class="form-row" style="margin-top:6px">
                         <span data-i18n="livePeriod">Period:</span>
@@ -2692,6 +2811,123 @@
                 <input type="file" id="ma-source-file-input" accept="video/*" multiple class="hidden">
                 <div id="ma-result" class="ma-result hidden"></div>
             </section>
+
+            <!-- ============================================================
+                 Pre-Match Briefing
+                 ============================================================ -->
+            <section id="briefing-section" class="section hidden">
+                <h2 data-i18n="briefingTitle">📋 Pre-Match Briefing</h2>
+                <div class="briefing-toolbar">
+                    <select id="briefing-match-select" class="input">
+                        <option value="">-- Select Match --</option>
+                    </select>
+                    <button id="briefing-generate-btn" class="btn btn-primary" data-i18n="briefingGenerate">📄 Generate Briefing</button>
+                    <button id="briefing-export-btn" class="btn btn-secondary" data-i18n="briefingExport">📥 Export Markdown</button>
+                    <span id="briefing-status" class="briefing-status"></span>
+                </div>
+                <div id="briefing-content" class="briefing-content">
+                    <p class="hint" data-i18n="briefingHint">Select a match and click "Generate Briefing" to see the pre-match analysis.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Pro Analytics (elite module suite)
+                 ============================================================ -->
+            <section id="proanalytics-section" class="section hidden">
+                <h2>🔬 Pro Analytics</h2>
+                <div class="briefing-toolbar">
+                    <select id="proanalytics-match-select" class="input">
+                        <option value="">-- Select Match --</option>
+                    </select>
+                    <button id="proanalytics-load-btn" class="btn btn-primary">🧮 Run Elite Suite</button>
+                    <button id="proanalytics-season-btn" class="btn btn-secondary">📅 Season Report</button>
+                    <button id="proanalytics-gameplan-btn" class="btn btn-secondary">📋 Game Plan</button>
+                    <span id="proanalytics-status" class="briefing-status"></span>
+                </div>
+                <div id="proanalytics-content" class="briefing-content">
+                    <p class="hint">Runs 12 elite analytical models (EPV, OBV, pass flow, pressing clusters, duels, ball recovery, box entries, switches, crossing, set pieces, through balls, off-ball) on the selected match. Cards report honest availability — tracking-frame models need a video-analyzed match.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================
+                 Tactical Whiteboard (coach drawing board)
+                 ============================================================ -->
+            <section id="whiteboard-section" class="section hidden">
+                <h2 data-i18n="whiteboardTitle">🖊 Tactical Whiteboard</h2>
+                <div class="briefing-toolbar">
+                    <select id="wb-board-select" class="input" aria-label="Saved boards">
+                        <option value="">-- Saved Boards --</option>
+                    </select>
+                    <button id="wb-new-btn" class="btn btn-primary">➕ New Board</button>
+                    <button id="wb-delete-btn" class="btn btn-secondary">🗑 Delete</button>
+                    <span id="wb-status" class="briefing-status" aria-live="polite"></span>
+                </div>
+                <div id="wb-unnamed" class="whiteboard-setup hidden">
+                    <div class="pro-card">
+                        <h3>Name this board</h3>
+                        <div class="form-row">
+                            <input id="wb-name-input" class="input" type="text" placeholder="e.g. Pressing triggers vs high line" maxlength="80">
+                            <select id="wb-formation-select" class="input" aria-label="Home formation"></select>
+                            <button id="wb-create-btn" class="btn btn-primary">Create</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="wb-board" class="whiteboard-board hidden">
+                    <div class="whiteboard-toolbar" role="toolbar" aria-label="Drawing tools">
+                        <div class="form-row">
+                            <label for="wb-tool-select">Tool</label>
+                            <select id="wb-tool-select" class="input">
+                                <option value="arrow">Arrow</option>
+                                <option value="run">Run (solid orange)</option>
+                                <option value="pass">Pass (dashed green)</option>
+                                <option value="line">Line</option>
+                                <option value="freehand">Freehand</option>
+                                <option value="circle">Circle</option>
+                                <option value="rectangle">Rectangle</option>
+                                <option value="zone">Zone</option>
+                                <option value="text">Text</option>
+                            </select>
+                            <label for="wb-color-select">Color</label>
+                            <select id="wb-color-select" class="input">
+                                <option value="#ffffff">White</option>
+                                <option value="#f39c12">Run (orange)</option>
+                                <option value="#2ecc71">Pass (green)</option>
+                                <option value="#e74c3c">Shot (red)</option>
+                                <option value="#f1c40f">Yellow</option>
+                                <option value="#3498db">Blue</option>
+                            </select>
+                            <button id="wb-undo-btn" class="btn btn-secondary">Undo</button>
+                            <button id="wb-clear-btn" class="btn btn-secondary">Clear Drawings</button>
+                            <button id="wb-ball-btn" class="btn btn-secondary">⚽ Place Ball</button>
+                        </div>
+                        <div class="form-row">
+                            <label for="wb-home-formation">Home</label>
+                            <select id="wb-home-formation" class="input" aria-label="Home formation"></select>
+                            <label for="wb-away-formation">Away</label>
+                            <select id="wb-away-formation" class="input" aria-label="Away formation"></select>
+                            <button id="wb-apply-formations-btn" class="btn btn-secondary">Apply Formations</button>
+                            <button id="wb-template-both-btn" class="btn btn-secondary">⚖ Template Both Teams</button>
+                            <button id="wb-move-btn" class="btn btn-toggle" aria-pressed="false">✥ Move Players</button>
+                            <button id="wb-save-btn" class="btn btn-primary">💾 Save</button>
+                            <button id="wb-export-btn" class="btn btn-secondary">🖼 Export SVG</button>
+                        </div>
+                    </div>
+                    <div id="wb-canvas-wrap" class="whiteboard-canvas-wrap">
+                        <svg id="wb-canvas" class="whiteboard-canvas" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Tactics board pitch" data-testid="wb-canvas">
+                            <rect x="0" y="0" width="100" height="100" fill="#1a5c2a" stroke="white" stroke-width="0.4" vector-effect="non-scaling-stroke"></rect>
+                            <line x1="50" y1="0" x2="50" y2="100" stroke="white" stroke-width="0.3" stroke-dasharray="1.5,1" vector-effect="non-scaling-stroke"></line>
+                            <circle cx="50" cy="50" r="8" fill="none" stroke="white" stroke-width="0.3" vector-effect="non-scaling-stroke"></circle>
+                            <rect x="0" y="30" width="8" height="40" fill="none" stroke="white" stroke-width="0.3" vector-effect="non-scaling-stroke"></rect>
+                            <rect x="92" y="30" width="8" height="40" fill="none" stroke="white" stroke-width="0.3" vector-effect="non-scaling-stroke"></rect>
+                            <g id="wb-layer-zones"></g>
+                            <g id="wb-layer-annotations"></g>
+                            <g id="wb-layer-players"></g>
+                            <g id="wb-layer-draft"></g>
+                        </svg>
+                    </div>
+                    <p class="hint" id="wb-hint">Pick a tool, then drag on the pitch. Use "Move Players" to drag players; Save stores the board in the app database.</p>
+                </div>
+            </section>
         </main>
 
         <footer class="app-footer">
@@ -2757,25 +2993,58 @@
         </div>
     </div>
 
-    <!-- First-run wizard modal -->
-    <div id="first-run-modal" class="modal hidden">
-        <div class="modal-content" style="max-width:500px">
+    <!-- First-run wizard modal (real onboarding flow, see app-onboarding.js) -->
+    <div id="first-run-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="first-run-title">
+        <div class="modal-content" style="max-width:560px">
             <div class="modal-header">
-                <h2 data-i18n="firstRunTitle">🚀 Welcome to Kawkab AI!</h2>
+                <h2 id="first-run-title" data-i18n="firstRunTitle">🚀 Welcome to Kawkab AI!</h2>
             </div>
             <div class="modal-body">
-                <p data-i18n="firstRunIntro">Your private, offline AI football coach. Here's how to get started:</p>
-                <ol style="line-height:2;font-size:0.9rem">
-                    <li data-i18n="firstRunStep1"><strong>Import a match</strong> — Load your video and event data</li>
-                    <li data-i18n="firstRunStep2"><strong>Analyze automatically</strong> — xG, pass networks, formations, and more</li>
-                    <li data-i18n="firstRunStep3"><strong>Tag key moments</strong> — Use the Live Tagging or Coding workspace</li>
-                    <li data-i18n="firstRunStep4"><strong>Share with your team</strong> — Export projects and collaborate</li>
-                </ol>
-                <p style="margin-top:12px;font-size:0.82rem;color:var(--text-muted)" data-i18n="firstRunTip">💡 All processing happens offline on your machine. No data ever leaves your computer.</p>
+                <div id="onboarding-steps" class="onboarding-steps" aria-label="Progress">
+                    <span class="onboarding-step-dot active" data-step="1"></span>
+                    <span class="onboarding-step-dot" data-step="2"></span>
+                    <span class="onboarding-step-dot" data-step="3"></span>
+                    <span class="onboarding-step-dot" data-step="4"></span>
+                </div>
+                <div id="onboarding-pane-1">
+                    <p data-i18n="firstRunIntro">Your private, offline AI football coach. Here's how to get started:</p>
+                    <ol style="line-height:2;font-size:0.9rem">
+                        <li data-i18n="firstRunStep1"><strong>Import a match</strong> — Load your video and event data</li>
+                        <li data-i18n="firstRunStep2"><strong>Analyze automatically</strong> — xG, pass networks, formations, and more</li>
+                        <li data-i18n="firstRunStep3"><strong>Tag key moments</strong> — Use the Live Tagging or Coding workspace</li>
+                        <li data-i18n="firstRunStep4"><strong>Share with your team</strong> — Export projects and collaborate</li>
+                    </ol>
+                    <p style="margin-top:12px;font-size:0.82rem;color:var(--text-muted)" data-i18n="firstRunTip">💡 All processing happens offline on your machine. No data ever leaves your computer.</p>
+                </div>
+                <div id="onboarding-pane-2" class="hidden">
+                    <p style="font-weight:600">System check</p>
+                    <div id="onboarding-system" aria-live="polite"><p class="hint">Checking GPU and model cache…</p></div>
+                    <div id="onboarding-model-action" style="margin-top:10px"></div>
+                </div>
+                <div id="onboarding-pane-3" class="hidden">
+                    <p style="font-weight:600">Load your first match</p>
+                    <p class="hint" style="margin-top:4px">Import a video now, or load generated sample data to explore every workspace instantly.</p>
+                    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                        <button id="onboarding-import-btn" class="btn btn-primary">📼 Import a video</button>
+                        <button id="onboarding-sample-btn" class="btn btn-secondary">🧪 Load sample match</button>
+                    </div>
+                    <div id="onboarding-sample-status" style="margin-top:8px" aria-live="polite"></div>
+                </div>
+                <div id="onboarding-pane-4" class="hidden">
+                    <p style="font-weight:600">You're set! 🎉</p>
+                    <p class="hint" style="margin-top:4px">A quick tour of where things live:</p>
+                    <ul style="line-height:1.9;font-size:0.88rem;margin:6px 0 0 18px">
+                        <li><strong>Analysis</strong> — timeline, xG/xT, charts after a match is analyzed</li>
+                        <li><strong>Tactics</strong> — formations, Pro Analytics, and the Whiteboard</li>
+                        <li><strong>Squad</strong> — player profiles, shortlist, contracts</li>
+                        <li><strong>Settings</strong> — GPU info and model downloads</li>
+                    </ul>
+                </div>
             </div>
             <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end">
-                <button id="first-run-dismiss" class="btn btn-secondary" data-i18n="firstRunDismiss">Dismiss</button>
-                <button id="first-run-start" class="btn btn-primary" data-i18n="firstRunStart">Let's Go!</button>
+                <button id="first-run-dismiss" class="btn btn-secondary" data-i18n="firstRunDismiss">Skip</button>
+                <button id="onboarding-back" class="btn btn-secondary hidden">← Back</button>
+                <button id="first-run-start" class="btn btn-primary" data-i18n="firstRunStart">Next →</button>
             </div>
         </div>
     </div>
@@ -2816,6 +3085,306 @@
     
     
     
+  <!-- Fullscreen Live Tagging Overlay -->
+  <div id="fullscreen-tagging" class="fullscreen-tagging hidden">
+    <div class="fullscreen-header">
+      <div class="fullscreen-team home-team">
+        <span class="fullscreen-team-name" id="fs-home-name">Home</span>
+        <span class="fullscreen-score" id="fs-home-score">0</span>
+      </div>
+      <div class="fullscreen-center">
+        <div class="fullscreen-timer" id="fs-timer">00:00</div>
+        <div class="fullscreen-period" id="fs-period">1st Half</div>
+        <div class="fullscreen-away-score-label">Away</div>
+      </div>
+      <div class="fullscreen-team away-team">
+        <span class="fullscreen-score" id="fs-away-score">0</span>
+        <span class="fullscreen-team-name" id="fs-away-name">Away</span>
+      </div>
+    </div>
+    <div class="fullscreen-btn-grid" id="fs-btn-grid">
+      <button class="fs-btn fs-btn-goal" data-event="goal">⚽ Goal</button>
+      <button class="fs-btn fs-btn-shot" data-event="shot">🎯 Shot</button>
+      <button class="fs-btn fs-btn-pass" data-event="pass">➡️ Pass</button>
+      <button class="fs-btn fs-btn-tackle" data-event="tackle">🛡️ Tackle</button>
+      <button class="fs-btn fs-btn-foul" data-event="foul">🟨 Foul</button>
+      <button class="fs-btn fs-btn-corner" data-event="corner">🚩 Corner</button>
+      <button class="fs-btn fs-btn-save" data-event="save">🧤 Save</button>
+      <button class="fs-btn fs-btn-card" data-event="card_yellow">🟡 Card</button>
+      <button class="fs-btn fs-btn-secondary" data-event="offside">🚩 Offside</button>
+      <button class="fs-btn fs-btn-secondary" data-event="free_kick">🆓 FK</button>
+      <button class="fs-btn fs-btn-secondary" data-event="cross">🔄 Cross</button>
+      <button class="fs-btn fs-btn-secondary" data-event="throw_in">📬 Throw</button>
+      <button class="fs-btn fs-btn-secondary" data-event="dribble">💨 Dribble</button>
+      <button class="fs-btn fs-btn-secondary" data-event="substitution">🔄 Sub</button>
+      <button class="fs-btn fs-btn-secondary" data-event="card_red">🔴 Red</button>
+      <button class="fs-btn fs-btn-secondary" data-event="clearance">🧹 Clear</button>
+    </div>
+    <div class="fullscreen-footer">
+      <button class="fs-period-btn active" data-fs-period="1">1st</button>
+      <button class="fs-period-btn" data-fs-period="2">2nd</button>
+      <button class="fs-period-btn" data-fs-period="3">ET1</button>
+      <button class="fs-period-btn" data-fs-period="4">ET2</button>
+      <span class="fs-tag-counter" id="fs-tag-counter">Tags: 0</span>
+      <button class="fs-team-toggle" id="fs-team-toggle">👤 Home</button>
+      <button class="fs-exit-btn" id="fs-exit-fullscreen">✕ Exit</button>
+    </div>
+  </div>
+  <!-- Mobile Bottom Navigation -->
+  <nav class="bottom-nav" id="bottom-nav" role="navigation" aria-label="Mobile navigation">
+    <button class="bottom-nav-item active" data-section="dashboard-section" title="Dashboard">
+      <span class="bottom-nav-icon">📊</span>
+      <span class="bottom-nav-label" data-i18n="navDashboard">Dashboard</span>
+    </button>
+    <button class="bottom-nav-item" data-section="results-section" title="Results">
+      <span class="bottom-nav-icon">📋</span>
+      <span class="bottom-nav-label">Results</span>
+    </button>
+    <button class="bottom-nav-item" data-section="coding-section" title="Coding">
+      <span class="bottom-nav-icon">🎬</span>
+      <span class="bottom-nav-label" data-i18n="navCoding">Coding</span>
+    </button>
+    <button class="bottom-nav-item" data-section="squad-section" title="Squad">
+      <span class="bottom-nav-icon">👥</span>
+      <span class="bottom-nav-label" data-i18n="navSquad">Squad</span>
+    </button>
+    <button class="bottom-nav-item" data-section="calibration-section" title="Calibration">
+      <span class="bottom-nav-icon">🎯</span>
+      <span class="bottom-nav-label">Calibration</span>
+    </button>
+  </nav>
+  <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
   <script defer src="dist/app.bundle.min.js"></script>
+  <script defer src="js/app-briefing.js"></script>
+  <script>
+  /* Mobile nav handler (independent of router bundle) */
+  (function() {
+    'use strict';
+    function initMobileNav() {
+      var bottomNav = document.getElementById('bottom-nav');
+      if (!bottomNav) return;
+      bottomNav.addEventListener('click', function(e) {
+        var btn = e.target.closest('.bottom-nav-item');
+        if (!btn || !btn.dataset.section) return;
+        var targetId = btn.dataset.section;
+        document.querySelectorAll('.section').forEach(function(s) {
+          s.classList.toggle('hidden', s.id !== targetId);
+        });
+        document.querySelectorAll('.bottom-nav-item').forEach(function(b) {
+          b.classList.toggle('active', b === btn);
+        });
+        var sidebar = document.querySelector('.nav-tabs');
+        if (sidebar) sidebar.classList.remove('open');
+        var overlay = document.getElementById('sidebar-overlay');
+        if (overlay) { overlay.classList.remove('visible'); overlay.classList.add('hidden'); }
+      });
+    }
+    function initHamburger() {
+      var btn = document.getElementById('hamburger-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function() {
+        var nav = document.querySelector('.nav-tabs');
+        var overlay = document.getElementById('sidebar-overlay');
+        if (!nav) return;
+        var opening = !nav.classList.contains('open');
+        nav.classList.toggle('open', opening);
+        if (overlay) {
+          overlay.classList.toggle('hidden', !opening);
+          overlay.classList.toggle('visible', opening);
+        }
+      });
+    }
+    function initOverlay() {
+      var overlay = document.getElementById('sidebar-overlay');
+      if (!overlay) return;
+      overlay.addEventListener('click', function() {
+        var nav = document.querySelector('.nav-tabs');
+        if (nav) nav.classList.remove('open');
+        overlay.classList.remove('visible');
+        overlay.classList.add('hidden');
+      });
+    }
+    function syncSidebarClicks() {
+      document.addEventListener('click', function(e) {
+        var item = e.target.closest('.nav-item[data-section]');
+        if (!item) return;
+        var sectionId = item.dataset.section;
+        if (sectionId) {
+          document.querySelectorAll('.section').forEach(function(s) {
+            s.classList.toggle('hidden', s.id !== sectionId);
+          });
+          document.querySelectorAll('.bottom-nav-item').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.section === sectionId);
+          });
+        }
+        var nav = document.querySelector('.nav-tabs');
+        var overlay = document.getElementById('sidebar-overlay');
+        if (nav) nav.classList.remove('open');
+        if (overlay) { overlay.classList.remove('visible'); overlay.classList.add('hidden'); }
+      });
+    }
+    var _timer;
+    function waitForApp() {
+      if (document.querySelector('.section')) {
+        initMobileNav();
+        initHamburger();
+        initOverlay();
+        syncSidebarClicks();
+      } else {
+        _timer = setTimeout(waitForApp, 100);
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', waitForApp);
+    } else {
+      waitForApp();
+    }
+  })();
+
+  /* Fullscreen Live Tagging */
+  (function() {
+    'use strict';
+    var _fsActive = false;
+    var _fsTeam = 'home';
+    var _fsTimerInterval = null;
+    var _fsElapsed = 0;
+
+    function initFullscreenTagging() {
+      var fsBtn = document.getElementById('live-fullscreen-btn');
+      var exitBtn = document.getElementById('fs-exit-fullscreen');
+      var overlay = document.getElementById('fullscreen-tagging');
+      if (!fsBtn || !exitBtn || !overlay) return;
+
+      fsBtn.addEventListener('click', function() {
+        var startBtn = document.getElementById('live-start-btn');
+        var stopBtn = document.getElementById('live-stop-btn');
+        if (startBtn && !startBtn.disabled && !stopBtn.classList.contains('hidden')) {
+          // Session already started
+        }
+        document.getElementById('fullscreen-tagging').classList.remove('hidden');
+        _fsActive = true;
+        syncFullscreenState();
+        startFullscreenTimer();
+        document.body.style.overflow = 'hidden';
+      });
+
+      exitBtn.addEventListener('click', exitFullscreen);
+
+      // Fullscreen event buttons
+      overlay.addEventListener('click', function(e) {
+        var btn = e.target.closest('.fs-btn[data-event]');
+        if (!btn || !_fsActive) return;
+        var eventType = btn.dataset.event;
+        var team = _fsTeam === 'home' ? 'Home' : 'Away';
+        // Flash feedback
+        btn.style.transform = 'scale(0.9)';
+        setTimeout(function() { btn.style.transform = ''; }, 150);
+        window.liveBridgeTagEvent && window.liveBridgeTagEvent(eventType, team);
+      });
+
+      // Period buttons
+      overlay.addEventListener('click', function(e) {
+        var btn = e.target.closest('.fs-period-btn[data-fs-period]');
+        if (!btn) return;
+        document.querySelectorAll('.fs-period-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        setPeriod(parseInt(btn.dataset.fsPeriod));
+      });
+
+      // Team toggle
+      var teamToggle = document.getElementById('fs-team-toggle');
+      if (teamToggle) {
+        teamToggle.addEventListener('click', function() {
+          _fsTeam = _fsTeam === 'home' ? 'away' : 'home';
+          teamToggle.textContent = _fsTeam === 'home' ? '👤 Home' : '👤 Away';
+        });
+      }
+
+      // Expose bridge helper
+      window.liveBridgeTagEvent = function(eventType, team) {
+        if (window.bridge && window.bridge.live_tag_event) {
+          window.bridge.live_tag_event(eventType, team, 0, '', -1, -1);
+          refreshFullscreenStats();
+        }
+      };
+    }
+
+    function exitFullscreen() {
+      document.getElementById('fullscreen-tagging').classList.add('hidden');
+      _fsActive = false;
+      document.body.style.overflow = '';
+      if (_fsTimerInterval) { clearInterval(_fsTimerInterval); _fsTimerInterval = null; }
+    }
+
+    function syncFullscreenState() {
+      var homeName = document.getElementById('live-home-team');
+      var awayName = document.getElementById('live-away-team');
+      if (homeName) document.getElementById('fs-home-name').textContent = homeName.value || 'Home';
+      if (awayName) document.getElementById('fs-away-name').textContent = awayName.value || 'Away';
+    }
+
+    function startFullscreenTimer() {
+      _fsElapsed = 0;
+      updateTimerDisplay(0);
+      if (_fsTimerInterval) clearInterval(_fsTimerInterval);
+      _fsTimerInterval = setInterval(function() {
+        _fsElapsed++;
+        updateTimerDisplay(_fsElapsed);
+      }, 1000);
+    }
+
+    function updateTimerDisplay(seconds) {
+      var m = String(Math.floor(seconds / 60)).padStart(2, '0');
+      var s = String(seconds % 60).padStart(2, '0');
+      var el = document.getElementById('fs-timer');
+      if (el) el.textContent = m + ':' + s;
+    }
+
+    function setPeriod(period) {
+      var labels = {1:'1st Half',2:'2nd Half',3:'ET 1',4:'ET 2'};
+      var el = document.getElementById('fs-period');
+      if (el) el.textContent = labels[period] || 'Period ' + period;
+      // Also sync with main toolbar period buttons
+      document.querySelectorAll('.live-period-btn').forEach(function(b) {
+        b.classList.toggle('active', parseInt(b.dataset.period) === period);
+      });
+      if (window.bridge && window.bridge.live_set_period) {
+        window.bridge.live_set_period(period);
+      }
+    }
+
+    function refreshFullscreenStats() {
+      if (window.bridge && window.bridge.live_get_stats) {
+        window.bridge.live_get_stats().then(function(raw) {
+          try {
+            var stats = JSON.parse(raw);
+            if (stats.success) {
+              document.getElementById('fs-home-score').textContent = stats.home_goals || 0;
+              document.getElementById('fs-away-score').textContent = stats.away_goals || 0;
+              document.getElementById('fs-tag-counter').textContent = 'Tags: ' + (stats.tags_count || 0);
+            }
+          } catch(e) {}
+        });
+      }
+    }
+
+    // Listen for session start to show fullscreen button
+    document.addEventListener('click', function(e) {
+      var startBtn = e.target.closest('#live-start-btn');
+      if (startBtn) {
+        setTimeout(function() {
+          var fsBtn = document.getElementById('live-fullscreen-btn');
+          if (fsBtn) fsBtn.classList.remove('hidden');
+        }, 500);
+      }
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFullscreenTagging);
+    } else {
+      initFullscreenTagging();
+    }
+  })();
+  </script>
 </body>
 </html>

@@ -23,25 +23,21 @@ import functools
 import json
 import logging
 import math
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from scipy.stats import beta
 
 logger = logging.getLogger(__name__)
 
-from kawkab.core.coordinate_validator import CoordinateValidator, ValidationResult
-from kawkab.core.perf_timing import timed
+from kawkab.core.coordinate_validator import CoordinateValidator
 from kawkab.core.events import (
-    AssistType,
-    BodyPart,
-    EventType,
     ShotEvent,
-    ShotType,
     event_from_dict,
 )
+from kawkab.core.perf_timing import timed
 
 # ── Named constants for magic numbers ────────────────────────────────────────
 
@@ -107,15 +103,26 @@ ENHANCED_COEFFICIENTS: dict[str, float] = {
 
 TRAINED_COEFFICIENTS: dict[str, float] = dict(ENHANCED_COEFFICIENTS)
 _TRAINED_COEFF_PATH = Path(__file__).parent / "trained_xg_coefficients.json"
+_TRAINED_LOADED_FROM_DISK = False
 if _TRAINED_COEFF_PATH.exists():
     try:
         with open(_TRAINED_COEFF_PATH) as _f:
             _trained = json.load(_f)
-        _trained_clean = {k: v for k, v in _trained.items() if isinstance(v, (int, float)) and not k.startswith("_")}
+        _trained_clean = {
+            k: v
+            for k, v in _trained.items()
+            if isinstance(v, (int, float)) and not k.startswith("_")
+        }
         if _trained_clean:
             TRAINED_COEFFICIENTS.update(_trained_clean)
+            _TRAINED_LOADED_FROM_DISK = True
     except Exception:
         pass
+
+
+def trained_model_available() -> bool:
+    """True when fitted weights (not the hand-tuned heuristic) are active."""
+    return _TRAINED_LOADED_FROM_DISK
 
 
 def _validate_trained_coefficients() -> None:
@@ -125,12 +132,15 @@ def _validate_trained_coefficients() -> None:
     if missing:
         logger.warning("TRAINED_COEFFICIENTS missing keys: %s", missing)
     if extra:
-        logger.warning("TRAINED_COEFFICIENTS has extra keys not in ENHANCED_COEFFICIENTS: %s", extra)
+        logger.warning(
+            "TRAINED_COEFFICIENTS has extra keys not in ENHANCED_COEFFICIENTS: %s", extra
+        )
 
 
 _validate_trained_coefficients()
 
 # ── Legacy functions (backward compatible) ──────────────────────────────────
+
 
 @functools.lru_cache(maxsize=64)
 @timed()
@@ -196,11 +206,75 @@ def compute_xg_from_shot_event(event: ShotEvent) -> float:
     )
 
 
+def compute_xg_trained_from_shot_event(
+    event: ShotEvent,
+    *,
+    gk_distance_m: float | None = None,
+) -> float:
+    """xG from a typed ShotEvent using the ACTIVE (trained) model.
+
+    This is the trained-model replacement for ``compute_xg_from_shot_event``
+    (which runs the legacy heuristic and is kept only for backward
+    compatibility). The live CV pipeline's ``analyze_match`` path must use
+    this one so trained weights actually reach video-derived shots.
+
+    Convention notes — read before touching:
+    - ``ShotEvent.angle_deg`` from the CV pipeline is in the
+      DEVIATION-from-central convention (0° = central), matching both the
+      trained coefficients (negative ``angle_sin`` on ``1 − cos(angle)``)
+      and the pipeline's own ``angle_to_goal_deg`` metadata. StatsBomb
+      imports store OPENING angle in metadata ``angle_deg`` and are
+      converted by ``statsbomb_import_service`` before storage — do not
+      feed opening-angle values here unconverted (the 2026-09-16
+      wrong-angle-convention bug taught the model that wide shots score
+      more; the sanity tests in tests/unit/test_xg_model.py pin this).
+    - ``gk_distance_m``: distance from the shot origin to the nearest
+      goalkeeper track, in meters. None/0 = feature absent (the trained
+      model skips the GK terms rather than treating 0 as a real value).
+    """
+    features = active_xg_model().extract_features(event)
+    if gk_distance_m is not None:
+        features.gk_distance_m = max(float(gk_distance_m), 0.0)
+    return active_xg_model().compute_single(features)
+
+
 def compute_xg_from_dict(event_dict: dict[str, Any]) -> float:
     """Compute xG from a raw event dict (legacy)."""
     CoordinateValidator.validate_event_spatial(event_dict)
     event = ShotEvent.from_dict(event_dict)
     return compute_xg_from_shot_event(event)
+
+
+# ── Trained-model access (the path live code should use) ────────────────────
+
+_ACTIVE_MODEL: EnhancedXgModel | None = None
+
+
+def active_xg_model() -> EnhancedXgModel:
+    """Module-level singleton exposing the best available xG model.
+
+    Returns the trained model (auto-loaded from
+    ``trained_xg_coefficients.json`` when present), falling back to the
+    enhanced heuristic. Check ``.coeffs_source`` for provenance.
+    """
+    global _ACTIVE_MODEL
+    if _ACTIVE_MODEL is None:
+        _ACTIVE_MODEL = EnhancedXgModel()
+    return _ACTIVE_MODEL
+
+
+def compute_xg_trained_from_dict(event_dict: dict[str, Any]) -> float:
+    """xG from a raw event dict using the ACTIVE (trained when available) model.
+
+    Same contract as ``compute_xg_from_dict`` but never the legacy model —
+    the legacy function is kept only for backward compatibility; new call
+    sites must use this one so trained weights actually reach the product.
+    """
+    model = active_xg_model()
+    raw: dict[str, Any] = dict(event_dict)
+    if raw.get("type") is None:
+        raw["type"] = "shot"
+    return model.compute(raw)
 
 
 def batch_compute_xg(
@@ -215,7 +289,7 @@ def batch_compute_xg(
         elif isinstance(ev, dict):
             if ev.get("type") == "shot":
                 try:
-                    shot_events.append(event_from_dict(ev))
+                    shot_events.append(cast(ShotEvent, event_from_dict(ev)))
                 except Exception:
                     results.append(0.0)
                     continue
@@ -225,15 +299,33 @@ def batch_compute_xg(
         return results + [0.0] * (len(events) - len(results))
 
     n_shots = len(shot_events)
-    distances = np.fromiter((max(s.distance_m or DEFAULT_DISTANCE_M, MIN_DISTANCE) for s in shot_events), dtype=np.float64, count=n_shots)
-    angles = np.fromiter((s.angle_deg or ANGLE_CENTRAL_DEG for s in shot_events), dtype=np.float64, count=n_shots)
-    is_header = np.fromiter(((s.body_part is not None and s.body_part.value == "head") for s in shot_events), dtype=np.float64, count=n_shots)
-    is_one_on_one = np.fromiter((getattr(s, "is_one_on_one", False) for s in shot_events), dtype=np.float64, count=n_shots)
-    was_pressed = np.fromiter((getattr(s, "was_pressed", False) for s in shot_events), dtype=np.float64, count=n_shots)
+    distances = np.fromiter(
+        (max(s.distance_m or DEFAULT_DISTANCE_M, MIN_DISTANCE) for s in shot_events),
+        dtype=np.float64,
+        count=n_shots,
+    )
+    angles = np.fromiter(
+        (s.angle_deg or ANGLE_CENTRAL_DEG for s in shot_events), dtype=np.float64, count=n_shots
+    )
+    is_header = np.fromiter(
+        ((s.body_part is not None and s.body_part.value == "head") for s in shot_events),
+        dtype=np.float64,
+        count=n_shots,
+    )
+    is_one_on_one = np.fromiter(
+        (getattr(s, "is_one_on_one", False) for s in shot_events), dtype=np.float64, count=n_shots
+    )
+    was_pressed = np.fromiter(
+        (getattr(s, "was_pressed", False) for s in shot_events), dtype=np.float64, count=n_shots
+    )
 
     shot_types = [s.shot_type.value if s.shot_type else "open_play" for s in shot_events]
-    is_volley = np.fromiter((t in ("volley", "half_volley") for t in shot_types), dtype=np.float64, count=n_shots)
-    is_free_kick = np.fromiter((t == "free_kick" for t in shot_types), dtype=np.float64, count=n_shots)
+    is_volley = np.fromiter(
+        (t in ("volley", "half_volley") for t in shot_types), dtype=np.float64, count=n_shots
+    )
+    is_free_kick = np.fromiter(
+        (t == "free_kick" for t in shot_types), dtype=np.float64, count=n_shots
+    )
     is_penalty = np.fromiter((t == "penalty" for t in shot_types), dtype=np.float64, count=n_shots)
 
     penalty_mask = is_penalty.astype(bool)
@@ -245,7 +337,7 @@ def batch_compute_xg(
         coef = XG_COEFFICIENTS
         d = distances[non_penalty]
         a = angles[non_penalty]
-        logit = np.full(np.sum(non_penalty), coef["intercept"], dtype=np.float64)
+        logit = np.full(int(np.sum(non_penalty)), coef["intercept"], dtype=np.float64)
         logit += coef["distance_m"] * d
         logit += coef["distance_m_sq"] * (d * d)
         angle_rad = np.radians(np.maximum(a, 0.0))
@@ -271,6 +363,7 @@ def batch_compute_xg(
 @dataclass
 class EnhancedXgFeatures:
     """Feature vector for the enhanced xG model."""
+
     distance_m: float = DEFAULT_DISTANCE_M
     angle_deg: float = ANGLE_CENTRAL_DEG
     is_header: bool = False
@@ -305,19 +398,46 @@ class EnhancedXgModel:
         coeffs_source: Label for coefficient provenance ("heuristic" or path).
     """
 
-    def __init__(self, coefficients: dict[str, float] | None = None,
-                 coeffs_source: str = "heuristic"):
-        self.coef = coefficients or TRAINED_COEFFICIENTS
+    def __init__(
+        self, coefficients: dict[str, float] | None = None, coeffs_source: str = "heuristic"
+    ):
+        if coefficients is not None:
+            self.coef = coefficients
+        else:
+            self.coef = TRAINED_COEFFICIENTS
+            # Provenance: "heuristic" is only honest when no fitted
+            # weights were found on disk. The old label always said
+            # "heuristic" even when trained coefficients had auto-loaded.
+            self.coeffs_source = (
+                "trained (trained_xg_coefficients.json)"
+                if _TRAINED_LOADED_FROM_DISK
+                else "heuristic"
+            )
+            return
         self.coeffs_source = coeffs_source
 
     @classmethod
     def load_trained(cls, path: str) -> EnhancedXgModel:
         from kawkab.core.xg_trainer import load_coefficients
+
         coeffs = load_coefficients(path)
         return cls(coefficients=coeffs, coeffs_source=path)
 
     def extract_features(self, event: ShotEvent | dict[str, Any]) -> EnhancedXgFeatures:
         """Extract feature vector from a shot event."""
+        # Dict-only extras must be read BEFORE the ShotEvent conversion
+        # below replaces `event` -- the old code's post-conversion
+        # `isinstance(event, dict)` rebound check was unreachable dead
+        # code, so dict-supplied gk_distance_m / is_rebound /
+        # is_big_chance were silently dropped (gk_distance is the
+        # strongest feature in the trained model; dropping it made every
+        # trained-model evaluation run ~0.3 logits hot).
+        raw: dict[str, Any] = event if isinstance(event, dict) else {}
+        gk_distance_raw = raw.get("gk_distance_m")
+        is_rebound_raw = raw.get("is_rebound", False)
+        is_big_chance_raw = raw.get("is_big_chance", False)
+        assist_raw = raw.get("assist_type", "")
+
         if isinstance(event, dict):
             event = ShotEvent.from_dict(event)
 
@@ -326,32 +446,59 @@ class EnhancedXgModel:
         body_part = event.body_part.value if event.body_part else "right_foot"
         shot_type = event.shot_type.value if event.shot_type else "open_play"
 
+        # gk_distance priority: explicit dict value > event field (None
+        # when absent -- ShotEvent has no gk_distance_m attribute) > 0.
+        gk_distance = (
+            float(gk_distance_raw)
+            if gk_distance_raw is not None
+            else float(getattr(event, "gk_distance_m", 0.0) or 0.0)
+        )
+
         features = EnhancedXgFeatures(
             distance_m=distance_m,
             angle_deg=angle_deg,
             is_header=(body_part == "head"),
+            is_through_ball_assist=(assist_raw == "through_ball"),
+            is_cross_assist=(assist_raw == "cross"),
             is_one_on_one=event.is_one_on_one,
             is_pressed=event.was_pressed,
             is_volley=(shot_type in ("volley", "half_volley")),
             is_free_kick=(shot_type == "free_kick"),
             is_penalty=(shot_type == "penalty"),
-            gk_distance_m=getattr(event, "gk_distance_m", 0.0),
+            gk_distance_m=gk_distance,
         )
 
-        # Extract rebound: shot following a goalie save within 3s
-        # This is set externally via the event dict
-        if isinstance(event, dict):
-            features.is_rebound = event.get("is_rebound", False)
-            features.is_big_chance = event.get("is_big_chance", False)
+        # Rebound/big-chance: from the raw dict when available, else any
+        # attribute the event object carries.
+        if raw:
+            features.is_rebound = bool(is_rebound_raw)
+            features.is_big_chance = bool(is_big_chance_raw)
         else:
-            features.is_rebound = getattr(event, "is_rebound", False)
-            features.is_big_chance = getattr(event, "is_big_chance", False)
+            features.is_rebound = bool(getattr(event, "is_rebound", False))
+            features.is_big_chance = bool(getattr(event, "is_big_chance", False))
 
         return features
 
-    @functools.lru_cache(maxsize=128)
     def compute_single(self, features: EnhancedXgFeatures) -> float:
-        """Compute xG for a single feature vector."""
+        """Compute xG for a single feature vector.
+
+        Results are memoized per model instance. A shared class-level
+        lru_cache here keyed on `features` alone leaked results across
+        model instances -- two EnhancedXgModels with different
+        coefficients could serve each other's cached xG values.
+        """
+        cache = self.__dict__.setdefault("_compute_single_cache", {})
+        try:
+            return cache[features]
+        except KeyError:
+            pass
+        value = self._compute_single_uncached(features)
+        if len(cache) >= 128:
+            cache.clear()
+        cache[features] = value
+        return value
+
+    def _compute_single_uncached(self, features: EnhancedXgFeatures) -> float:
         if features.is_penalty:
             return PENALTY_XG
 
@@ -384,7 +531,7 @@ class EnhancedXgModel:
 
         if features.gk_distance_m > 0:
             logit += c["gk_distance_m"] * features.gk_distance_m
-            logit += c["gk_distance_m_sq"] * (features.gk_distance_m ** 2)
+            logit += c["gk_distance_m_sq"] * (features.gk_distance_m**2)
 
         if features.is_rebound:
             logit += c["is_rebound"]
@@ -422,19 +569,43 @@ class EnhancedXgModel:
             return results + [0.0] * (len(events) - len(results))
 
         n = len(shot_events)
-        distances = np.fromiter((max(s.distance_m or DEFAULT_DISTANCE_M, MIN_DISTANCE) for s in shot_events), dtype=np.float64, count=n)
-        angles = np.fromiter((s.angle_deg or ANGLE_CENTRAL_DEG for s in shot_events), dtype=np.float64, count=n)
-        is_header = np.fromiter(((s.body_part is not None and s.body_part.value == "head") for s in shot_events), dtype=np.float64, count=n)
-        is_one_on_one = np.fromiter((getattr(s, "is_one_on_one", False) for s in shot_events), dtype=np.float64, count=n)
-        was_pressed = np.fromiter((getattr(s, "was_pressed", False) for s in shot_events), dtype=np.float64, count=n)
+        distances = np.fromiter(
+            (max(s.distance_m or DEFAULT_DISTANCE_M, MIN_DISTANCE) for s in shot_events),
+            dtype=np.float64,
+            count=n,
+        )
+        angles = np.fromiter(
+            (s.angle_deg or ANGLE_CENTRAL_DEG for s in shot_events), dtype=np.float64, count=n
+        )
+        is_header = np.fromiter(
+            ((s.body_part is not None and s.body_part.value == "head") for s in shot_events),
+            dtype=np.float64,
+            count=n,
+        )
+        is_one_on_one = np.fromiter(
+            (getattr(s, "is_one_on_one", False) for s in shot_events), dtype=np.float64, count=n
+        )
+        was_pressed = np.fromiter(
+            (getattr(s, "was_pressed", False) for s in shot_events), dtype=np.float64, count=n
+        )
         shot_types = [s.shot_type.value if s.shot_type else "open_play" for s in shot_events]
-        is_volley = np.fromiter((t in ("volley", "half_volley") for t in shot_types), dtype=np.float64, count=n)
-        is_free_kick = np.fromiter((t == "free_kick" for t in shot_types), dtype=np.float64, count=n)
+        is_volley = np.fromiter(
+            (t in ("volley", "half_volley") for t in shot_types), dtype=np.float64, count=n
+        )
+        is_free_kick = np.fromiter(
+            (t == "free_kick" for t in shot_types), dtype=np.float64, count=n
+        )
         is_penalty = np.fromiter((t == "penalty" for t in shot_types), dtype=np.float64, count=n)
 
-        gk_dist = np.fromiter((getattr(s, "gk_distance_m", 0.0) for s in shot_events), dtype=np.float64, count=n)
-        is_rebound = np.fromiter((getattr(s, "is_rebound", False) for s in shot_events), dtype=np.float64, count=n)
-        is_big_chance = np.fromiter((getattr(s, "is_big_chance", False) for s in shot_events), dtype=np.float64, count=n)
+        gk_dist = np.fromiter(
+            (getattr(s, "gk_distance_m", 0.0) for s in shot_events), dtype=np.float64, count=n
+        )
+        is_rebound = np.fromiter(
+            (getattr(s, "is_rebound", False) for s in shot_events), dtype=np.float64, count=n
+        )
+        is_big_chance = np.fromiter(
+            (getattr(s, "is_big_chance", False) for s in shot_events), dtype=np.float64, count=n
+        )
 
         c = self.coef
         xg_values = np.zeros(n, dtype=np.float64)
@@ -444,7 +615,7 @@ class EnhancedXgModel:
         if np.any(non_penalty):
             d = distances[non_penalty]
             a = angles[non_penalty]
-            logit = np.full(np.sum(non_penalty), c["intercept"], dtype=np.float64)
+            logit = np.full(int(np.sum(non_penalty)), c["intercept"], dtype=np.float64)
             logit += c["distance_m"] * d
             logit += c["distance_m_sq"] * (d * d)
             angle_rad = np.radians(np.maximum(a, 0.0))

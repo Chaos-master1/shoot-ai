@@ -25,14 +25,70 @@ def svc() -> PeriodizationService:
 
 def make_history() -> list[dict]:
     return [
-        {"week_start": "2024-01-01", "date": "2024-01-03", "source": "training", "duration_min": 60, "rpe": 5, "distance_m": 4000},
-        {"week_start": "2024-01-01", "date": "2024-01-05", "source": "training", "duration_min": 90, "rpe": 6, "distance_m": 6000},
-        {"week_start": "2024-01-01", "date": "2024-01-07", "source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000},
-        {"week_start": "2024-01-08", "date": "2024-01-10", "source": "training", "duration_min": 90, "rpe": 6, "distance_m": 6000},
-        {"week_start": "2024-01-08", "date": "2024-01-12", "source": "training", "duration_min": 90, "rpe": 7, "distance_m": 7000},
-        {"week_start": "2024-01-08", "date": "2024-01-14", "source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000},
-        {"week_start": "2024-01-15", "date": "2024-01-17", "source": "training", "duration_min": 60, "rpe": 4, "distance_m": 3000},
-        {"week_start": "2024-01-15", "date": "2024-01-19", "source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000},
+        {
+            "week_start": "2024-01-01",
+            "date": "2024-01-03",
+            "source": "training",
+            "duration_min": 60,
+            "rpe": 5,
+            "distance_m": 4000,
+        },
+        {
+            "week_start": "2024-01-01",
+            "date": "2024-01-05",
+            "source": "training",
+            "duration_min": 90,
+            "rpe": 6,
+            "distance_m": 6000,
+        },
+        {
+            "week_start": "2024-01-01",
+            "date": "2024-01-07",
+            "source": "match",
+            "duration_min": 90,
+            "rpe": 7,
+            "distance_m": 10000,
+        },
+        {
+            "week_start": "2024-01-08",
+            "date": "2024-01-10",
+            "source": "training",
+            "duration_min": 90,
+            "rpe": 6,
+            "distance_m": 6000,
+        },
+        {
+            "week_start": "2024-01-08",
+            "date": "2024-01-12",
+            "source": "training",
+            "duration_min": 90,
+            "rpe": 7,
+            "distance_m": 7000,
+        },
+        {
+            "week_start": "2024-01-08",
+            "date": "2024-01-14",
+            "source": "match",
+            "duration_min": 90,
+            "rpe": 7,
+            "distance_m": 10000,
+        },
+        {
+            "week_start": "2024-01-15",
+            "date": "2024-01-17",
+            "source": "training",
+            "duration_min": 60,
+            "rpe": 4,
+            "distance_m": 3000,
+        },
+        {
+            "week_start": "2024-01-15",
+            "date": "2024-01-19",
+            "source": "match",
+            "duration_min": 90,
+            "rpe": 7,
+            "distance_m": 10000,
+        },
     ]
 
 
@@ -66,9 +122,30 @@ class TestPeriodization:
 
     def test_taper_detected(self, svc: PeriodizationService) -> None:
         history = [
-            {"week_start": "2024-01-01", "date": "2024-01-03", "source": "training", "duration_min": 120, "rpe": 8, "distance_m": 8000},
-            {"week_start": "2024-01-01", "date": "2024-01-05", "source": "match", "duration_min": 90, "rpe": 8, "distance_m": 10000},
-            {"week_start": "2024-01-08", "date": "2024-01-10", "source": "training", "duration_min": 30, "rpe": 3, "distance_m": 1500},
+            {
+                "week_start": "2024-01-01",
+                "date": "2024-01-03",
+                "source": "training",
+                "duration_min": 120,
+                "rpe": 8,
+                "distance_m": 8000,
+            },
+            {
+                "week_start": "2024-01-01",
+                "date": "2024-01-05",
+                "source": "match",
+                "duration_min": 90,
+                "rpe": 8,
+                "distance_m": 10000,
+            },
+            {
+                "week_start": "2024-01-08",
+                "date": "2024-01-10",
+                "source": "training",
+                "duration_min": 30,
+                "rpe": 3,
+                "distance_m": 1500,
+            },
         ]
         report = svc.analyze(1, "Test", history)
         assert len(report.taper_weeks) >= 1
@@ -76,15 +153,36 @@ class TestPeriodization:
 
     def test_recovery_week(self, svc: PeriodizationService) -> None:
         history = [
-            {"week_start": "2024-01-01", "date": "2024-01-03", "source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000},
-            {"week_start": "2024-01-08", "date": "2024-01-10", "source": "training", "duration_min": 45, "rpe": 3, "distance_m": 2000},
+            {
+                "week_start": "2024-01-01",
+                "date": "2024-01-03",
+                "source": "match",
+                "duration_min": 90,
+                "rpe": 7,
+                "distance_m": 10000,
+            },
+            {
+                "week_start": "2024-01-08",
+                "date": "2024-01-10",
+                "source": "training",
+                "duration_min": 45,
+                "rpe": 3,
+                "distance_m": 2000,
+            },
         ]
         report = svc.analyze(1, "Test", history)
         assert report.weeks[1].is_recovery is True
 
     def test_overloaded_week(self, svc: PeriodizationService) -> None:
         history = [
-            {"week_start": "2024-01-01", "date": f"2024-01-{d:02}", "source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000}
+            {
+                "week_start": "2024-01-01",
+                "date": f"2024-01-{d:02}",
+                "source": "match",
+                "duration_min": 90,
+                "rpe": 7,
+                "distance_m": 10000,
+            }
             for d in range(1, 5)
         ]
         report = svc.analyze(1, "Test", history)
@@ -94,34 +192,48 @@ class TestPeriodization:
     def test_load_trend_increasing(self, svc: PeriodizationService) -> None:
         history = []
         for week_idx, base in enumerate([100, 200, 300, 400, 500]):
-            history.append({
-                "week_start": f"2024-01-{((week_idx) * 7 + 1):02}",
-                "date": f"2024-01-{((week_idx) * 7 + 1):02}",
-                "source": "training",
-                "duration_min": base,
-                "rpe": 7,
-                "distance_m": base * 50,
-            })
+            history.append(
+                {
+                    "week_start": f"2024-01-{((week_idx) * 7 + 1):02}",
+                    "date": f"2024-01-{((week_idx) * 7 + 1):02}",
+                    "source": "training",
+                    "duration_min": base,
+                    "rpe": 7,
+                    "distance_m": base * 50,
+                }
+            )
         report = svc.analyze(1, "Test", history)
         assert report.load_trend == "increasing"
 
     def test_macrocycle_classification_well_structured(self, svc: PeriodizationService) -> None:
         weeks = [
-            svc._build_week_summary("2024-01-01", [
-                {"source": "training", "duration_min": 120, "rpe": 7, "distance_m": 6000},
-                {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
-                {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
-            ]),
-            svc._build_week_summary("2024-01-08", [
-                {"source": "training", "duration_min": 120, "rpe": 7, "distance_m": 6000},
-                {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
-            ]),
-            svc._build_week_summary("2024-01-15", [
-                {"source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000},
-            ]),
-            svc._build_week_summary("2024-01-22", [
-                {"source": "training", "duration_min": 45, "rpe": 3, "distance_m": 2000},
-            ]),
+            svc._build_week_summary(
+                "2024-01-01",
+                [
+                    {"source": "training", "duration_min": 120, "rpe": 7, "distance_m": 6000},
+                    {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
+                    {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
+                ],
+            ),
+            svc._build_week_summary(
+                "2024-01-08",
+                [
+                    {"source": "training", "duration_min": 120, "rpe": 7, "distance_m": 6000},
+                    {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
+                ],
+            ),
+            svc._build_week_summary(
+                "2024-01-15",
+                [
+                    {"source": "match", "duration_min": 90, "rpe": 7, "distance_m": 10000},
+                ],
+            ),
+            svc._build_week_summary(
+                "2024-01-22",
+                [
+                    {"source": "training", "duration_min": 45, "rpe": 3, "distance_m": 2000},
+                ],
+            ),
         ]
         result = svc.classify_macrocycle(weeks)
         assert result["cycle_type"] in ("well-structured", "irregular")
@@ -129,11 +241,16 @@ class TestPeriodization:
     def test_macrocycle_build_heavy(self, svc: PeriodizationService) -> None:
         weeks = []
         for i in range(5):
-            weeks.append(svc._build_week_summary(f"2024-01-{(i*7+1):02}", [
-                {"source": "training", "duration_min": 120, "rpe": 7, "distance_m": 6000},
-                {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
-                {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
-            ]))
+            weeks.append(
+                svc._build_week_summary(
+                    f"2024-01-{(i * 7 + 1):02}",
+                    [
+                        {"source": "training", "duration_min": 120, "rpe": 7, "distance_m": 6000},
+                        {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
+                        {"source": "training", "duration_min": 90, "rpe": 7, "distance_m": 5000},
+                    ],
+                )
+            )
         result = svc.classify_macrocycle(weeks)
         assert result["cycle_type"] == "build-heavy"
 

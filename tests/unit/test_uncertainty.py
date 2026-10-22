@@ -1,7 +1,6 @@
 """Tests for uncertainty intervals — bootstrap confidence intervals."""
 
 import numpy as np
-import pytest
 
 from kawkab.core.uncertainty import (
     bootstrap_comparison,

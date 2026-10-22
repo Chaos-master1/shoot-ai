@@ -54,19 +54,19 @@ def analyze_fixture_difficulty(
             score = strength * (1.0 + home_advantage * 0.5)
         score = max(1.0, min(100.0, score))
         color = _difficulty_color(score)
-        enriched.append({
-            "opponent": opp_id,
-            "venue": venue,
-            "date": f.get("date", ""),
-            "difficulty_score": round(score, 2),
-            "color": color,
-            "weight": round(score / 100.0, 3),
-        })
+        enriched.append(
+            {
+                "opponent": opp_id,
+                "venue": venue,
+                "date": f.get("date", ""),
+                "difficulty_score": round(score, 2),
+                "color": color,
+                "weight": round(score / 100.0, 3),
+            }
+        )
 
     avg_difficulty = (
-        round(sum(e["difficulty_score"] for e in enriched) / len(enriched), 2)
-        if enriched
-        else 0.0
+        round(sum(e["difficulty_score"] for e in enriched) / len(enriched), 2) if enriched else 0.0
     )
 
     home_count = sum(1 for e in enriched if e["venue"] == "home")
@@ -78,6 +78,7 @@ def analyze_fixture_difficulty(
     if len(dates) >= 2:
         try:
             from datetime import datetime
+
             parsed = [datetime.fromisoformat(d) for d in dates]
             gaps = [(parsed[i + 1] - parsed[i]).days for i in range(len(parsed) - 1)]
             schedule_density = round(sum(gaps) / len(gaps), 1) if gaps else 0.0
@@ -100,10 +101,10 @@ def analyze_fixture_difficulty(
                 best_sum = total_score
                 best_idx = i
         hardest_stretch = _describe_stretch(
-            enriched[worst_idx:worst_idx + 3], "Hardest 3-match block"
+            enriched[worst_idx : worst_idx + 3], "Hardest 3-match block"
         )
         easiest_stretch = _describe_stretch(
-            enriched[best_idx:best_idx + 3], "Easiest 3-match block"
+            enriched[best_idx : best_idx + 3], "Easiest 3-match block"
         )
     else:
         hardest_stretch = "Insufficient fixtures (need >=3) for stretch analysis"

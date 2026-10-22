@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum, auto
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 from kawkab.core.logging import get_logger
@@ -175,25 +175,27 @@ class PassEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "pass_type": self.pass_type.value,
-            "to_track_id": self.to_track_id,
-            "start_x": self.start_x,
-            "start_y": self.start_y,
-            "end_x": self.end_x,
-            "end_y": self.end_y,
-            "completed": self.completed,
-            "length_m": round(self.length_m, 1),
-            "speed_mps": round(self.speed_mps, 2),
-            "body_part": self.body_part.value,
-            "is_through_ball": self.is_through_ball,
-            "is_cross": self.is_cross,
-            "is_switch": self.is_switch,
-            "is_key_pass": self.is_key_pass,
-            "is_assist": self.is_assist,
-            "is_progressive": self.is_progressive,
-            "assist_type": self.assist_type.value,
-        })
+        base.update(
+            {
+                "pass_type": self.pass_type.value,
+                "to_track_id": self.to_track_id,
+                "start_x": self.start_x,
+                "start_y": self.start_y,
+                "end_x": self.end_x,
+                "end_y": self.end_y,
+                "completed": self.completed,
+                "length_m": round(self.length_m, 1),
+                "speed_mps": round(self.speed_mps, 2),
+                "body_part": self.body_part.value,
+                "is_through_ball": self.is_through_ball,
+                "is_cross": self.is_cross,
+                "is_switch": self.is_switch,
+                "is_key_pass": self.is_key_pass,
+                "is_assist": self.is_assist,
+                "is_progressive": self.is_progressive,
+                "assist_type": self.assist_type.value,
+            }
+        )
         return base
 
     @classmethod
@@ -207,7 +209,14 @@ class PassEvent(BaseEvent):
         kwargs["completed"] = d.get("completed", True)
         kwargs["length_m"] = float(d.get("length_m", 0))
         kwargs["speed_mps"] = float(d.get("speed_mps", 0))
-        for bool_field in ("is_through_ball", "is_cross", "is_switch", "is_key_pass", "is_assist", "is_progressive"):
+        for bool_field in (
+            "is_through_ball",
+            "is_cross",
+            "is_switch",
+            "is_key_pass",
+            "is_assist",
+            "is_progressive",
+        ):
             kwargs[bool_field] = d.get(bool_field, False)
         return cls(**kwargs)
 
@@ -215,8 +224,11 @@ class PassEvent(BaseEvent):
 @dataclass
 class ShotEvent(BaseEvent):
     on_target: bool = False
-    distance_m: float = 0.0
-    angle_deg: float = 0.0
+    # Honest-absent: None means the position was never known (no
+    # homography / no metadata). Consumers fall back via `or` — a
+    # fabricated 0.0 would silently poison xG feature vectors.
+    distance_m: float | None = None
+    angle_deg: float | None = None
     body_part: BodyPart = BodyPart.RIGHT_FOOT
     shot_type: ShotType = ShotType.OPEN_PLAY
     is_one_on_one: bool = False
@@ -233,21 +245,23 @@ class ShotEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "on_target": self.on_target,
-            "distance_m": round(self.distance_m, 1),
-            "angle_deg": round(self.angle_deg, 1),
-            "body_part": self.body_part.value,
-            "shot_type": self.shot_type.value,
-            "is_one_on_one": self.is_one_on_one,
-            "is_volley": self.is_volley,
-            "xg": round(self.xg, 4),
-            "psxg": round(self.psxg, 4),
-            "gk_position_x": self.gk_position_x,
-            "gk_position_y": self.gk_position_y,
-            "was_pressed": self.was_pressed,
-            "previous_action": self.previous_action,
-        })
+        base.update(
+            {
+                "on_target": self.on_target,
+                "distance_m": round(self.distance_m, 1) if self.distance_m is not None else None,
+                "angle_deg": round(self.angle_deg, 1) if self.angle_deg is not None else None,
+                "body_part": self.body_part.value,
+                "shot_type": self.shot_type.value,
+                "is_one_on_one": self.is_one_on_one,
+                "is_volley": self.is_volley,
+                "xg": round(self.xg, 4),
+                "psxg": round(self.psxg, 4),
+                "gk_position_x": self.gk_position_x,
+                "gk_position_y": self.gk_position_y,
+                "was_pressed": self.was_pressed,
+                "previous_action": self.previous_action,
+            }
+        )
         return base
 
     @classmethod
@@ -256,8 +270,8 @@ class ShotEvent(BaseEvent):
         kwargs["body_part"] = _parse_enum(d, "body_part", BodyPart, BodyPart.RIGHT_FOOT)
         kwargs["shot_type"] = _parse_enum(d, "shot_type", ShotType, ShotType.OPEN_PLAY)
         kwargs["on_target"] = d.get("on_target", False)
-        kwargs["distance_m"] = float(d.get("distance_m", 0))
-        kwargs["angle_deg"] = float(d.get("angle_deg", 0))
+        kwargs["distance_m"] = float(d["distance_m"]) if d.get("distance_m") is not None else None
+        kwargs["angle_deg"] = float(d["angle_deg"]) if d.get("angle_deg") is not None else None
         kwargs["is_one_on_one"] = d.get("is_one_on_one", False)
         kwargs["is_volley"] = d.get("is_volley", False)
         kwargs["xg"] = float(d.get("xg", 0))
@@ -286,17 +300,19 @@ class CarryEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "start_x": self.start_x,
-            "start_y": self.start_y,
-            "end_x": self.end_x,
-            "end_y": self.end_y,
-            "distance_m": round(self.distance_m, 1),
-            "is_progressive": self.is_progressive,
-            "end_zone_threat": round(self.end_zone_threat, 4),
-            "direction_change_deg": round(self.direction_change_deg, 1),
-            "body_part": self.body_part.value,
-        })
+        base.update(
+            {
+                "start_x": self.start_x,
+                "start_y": self.start_y,
+                "end_x": self.end_x,
+                "end_y": self.end_y,
+                "distance_m": round(self.distance_m, 1),
+                "is_progressive": self.is_progressive,
+                "end_zone_threat": round(self.end_zone_threat, 4),
+                "direction_change_deg": round(self.direction_change_deg, 1),
+                "body_part": self.body_part.value,
+            }
+        )
         return base
 
     @classmethod
@@ -323,11 +339,13 @@ class TackleEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "tackle_type": self.tackle_type.value,
-            "succeeded": self.succeeded,
-            "opponent_track_id": self.opponent_track_id,
-        })
+        base.update(
+            {
+                "tackle_type": self.tackle_type.value,
+                "succeeded": self.succeeded,
+                "opponent_track_id": self.opponent_track_id,
+            }
+        )
         return base
 
     @classmethod
@@ -350,11 +368,13 @@ class InterceptionEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "opponent_pass_from": self.opponent_pass_from,
-            "opponent_pass_to": self.opponent_pass_to,
-            "led_to_attack": self.led_to_attack,
-        })
+        base.update(
+            {
+                "opponent_pass_from": self.opponent_pass_from,
+                "opponent_pass_to": self.opponent_pass_to,
+                "led_to_attack": self.led_to_attack,
+            }
+        )
         return base
 
     @classmethod
@@ -377,11 +397,13 @@ class GoalEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "shot_xg": round(self.shot_xg, 4),
-            "assist_player_id": self.assist_player_id,
-            "body_part": self.body_part.value,
-        })
+        base.update(
+            {
+                "shot_xg": round(self.shot_xg, 4),
+                "assist_player_id": self.assist_player_id,
+                "body_part": self.body_part.value,
+            }
+        )
         return base
 
     @classmethod
@@ -403,10 +425,12 @@ class FoulEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "foul_type": self.foul_type,
-            "card_color": self.card_color,
-        })
+        base.update(
+            {
+                "foul_type": self.foul_type,
+                "card_color": self.card_color,
+            }
+        )
         return base
 
     @classmethod
@@ -446,10 +470,12 @@ class FreeKickEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "kick_type": self.kick_type,
-            "wall_size": self.wall_size,
-        })
+        base.update(
+            {
+                "kick_type": self.kick_type,
+                "wall_size": self.wall_size,
+            }
+        )
         return base
 
     @classmethod
@@ -489,10 +515,12 @@ class SubstitutionEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "player_off": self.player_off,
-            "player_on": self.player_on,
-        })
+        base.update(
+            {
+                "player_off": self.player_off,
+                "player_on": self.player_on,
+            }
+        )
         return base
 
     @classmethod
@@ -514,11 +542,13 @@ class SaveEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "shot_xg": round(self.shot_xg, 4),
-            "save_type": self.save_type,
-            "rebound": self.rebound,
-        })
+        base.update(
+            {
+                "shot_xg": round(self.shot_xg, 4),
+                "save_type": self.save_type,
+                "rebound": self.rebound,
+            }
+        )
         return base
 
     @classmethod
@@ -540,10 +570,12 @@ class CardEvent(BaseEvent):
 
     def to_dict(self) -> dict[str, Any]:
         base = super().to_dict()
-        base.update({
-            "card_color": self.card_color,
-            "card_reason": self.card_reason,
-        })
+        base.update(
+            {
+                "card_color": self.card_color,
+                "card_reason": self.card_reason,
+            }
+        )
         return base
 
     @classmethod
@@ -611,7 +643,9 @@ def event_from_dict(d: dict[str, Any]) -> BaseEvent:
         logger = get_logger(__name__)
         logger.warning(f"Spatial coordinates clamped for event type={type_str}: {result.warnings}")
 
-    cls = _EVENT_CLASSES.get(etype, PassEvent)
+    # Every concrete event class defines from_dict; the shared base class
+    # deliberately does not (its from_dict helpers live per-subclass).
+    cls: type[PassEvent] = _EVENT_CLASSES.get(etype, PassEvent)  # type: ignore[assignment]
     return cls.from_dict(d)
 
 

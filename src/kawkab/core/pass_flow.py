@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from kawkab.core.coords import PitchConfig, STANDARD_PITCH
+from kawkab.core.coords import STANDARD_PITCH, PitchConfig
 from kawkab.core.game_constants import GAME
 
 
@@ -83,7 +83,7 @@ def compute_pass_flow(
         link.count += 1
         if ev.get("completed", False):
             link.completed += 1
-        link.avg_progress += (ex - sx)
+        link.avg_progress += ex - sx
 
     for link in links.values():
         link.avg_progress /= max(link.count, 1)

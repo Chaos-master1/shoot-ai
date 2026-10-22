@@ -27,7 +27,9 @@ def detect_gpu() -> GPUBackend:
         try:
             result = subprocess.run(
                 ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0 and result.stdout.strip():
                 gpu_name = result.stdout.strip().split("\n")[0]
@@ -39,9 +41,8 @@ def detect_gpu() -> GPUBackend:
     elif system == "Darwin":
         try:
             import ctypes
-            lib = ctypes.cdll.LoadLibrary(
-                "/System/Library/Frameworks/Metal.framework/Metal"
-            )
+
+            lib = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Metal.framework/Metal")
             if lib:
                 logger.info("Apple Metal (MPS) backend detected")
                 return "mps"
@@ -50,15 +51,16 @@ def detect_gpu() -> GPUBackend:
 
     try:
         import cv2
+
         if cv2.cuda.getCudaEnabledDeviceCount() > 0:
             logger.info("OpenCV CUDA enabled device found")
             return "cuda"
     except (ImportError, AttributeError):
         pass
 
-    import os
     try:
         import cv2
+
         if hasattr(cv2, "ocl") and cv2.ocl.haveOpenCL():
             logger.info("OpenCL backend available via OpenCV")
             return "opencl"
@@ -69,21 +71,23 @@ def detect_gpu() -> GPUBackend:
     return "cpu"
 
 
+_FFMPEG_GPU_ARGS: dict[str, list[str]] = {
+    "cuda": [
+        "-hwaccel",
+        "cuda",
+        "-hwaccel_output_format",
+        "cuda",
+        "-extra_hw_frames",
+        "8",
+    ],
+    "mps": ["-hwaccel", "videotoolbox"],
+    "opencl": ["-hwaccel", "opencl"],
+}
+
+
 def get_ffmpeg_gpu_args() -> list[str]:
     """Get FFmpeg GPU acceleration arguments for the detected backend."""
-    backend = detect_gpu()
-
-    if backend == "cuda":
-        return [
-            "-hwaccel", "cuda",
-            "-hwaccel_output_format", "cuda",
-            "-extra_hw_frames", "8",
-        ]
-    elif backend == "mps":
-        return ["-hwaccel", "videotoolbox"]
-    elif backend == "opencl":
-        return ["-hwaccel", "opencl"]
-    return []
+    return _FFMPEG_GPU_ARGS.get(detect_gpu(), [])
 
 
 def get_opencv_gpu_backend() -> int | None:
@@ -91,14 +95,14 @@ def get_opencv_gpu_backend() -> int | None:
     backend = detect_gpu()
     try:
         import cv2
+
         if backend == "cuda":
             return cv2.CAP_FFMPEG
         elif backend == "mps":
             if hasattr(cv2, "CAP_AVFOUNDATION"):
                 return cv2.CAP_AVFOUNDATION
-        elif backend == "opencl":
-            if hasattr(cv2, "CAP_OPENCV_MJPEG"):
-                return cv2.CAP_OPENCV_MJPEG
+        elif backend == "opencl" and hasattr(cv2, "CAP_OPENCV_MJPEG"):
+            return cv2.CAP_OPENCV_MJPEG
     except ImportError:
         pass
     return None
@@ -168,7 +172,9 @@ def detect_gpu_tier() -> GPUTier:
         try:
             result = _sub.run(
                 ["system_profiler", "SPHardwareDataType"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0 and "Apple M" in result.stdout:
                 return "high"
@@ -180,7 +186,9 @@ def detect_gpu_tier() -> GPUTier:
     try:
         result = _sub.run(
             ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             mem_mb = int(result.stdout.strip().split("\n")[0])

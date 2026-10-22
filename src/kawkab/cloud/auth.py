@@ -4,9 +4,7 @@ import hashlib
 import hmac
 import os
 import secrets
-import time
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -15,6 +13,8 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from kawkab.cloud.database import get_cloud_db
 
 _jwt_secret: str | None = None
+MIN_JWT_SECRET_LENGTH = 32  # bytes; matches HS256's recommended minimum HMAC key length
+
 
 def _get_jwt_secret() -> str:
     global _jwt_secret
@@ -24,11 +24,19 @@ def _get_jwt_secret() -> str:
     if not val:
         raise RuntimeError(
             "KAWKAB_JWT_SECRET environment variable is not set. "
-            "Generate a strong secret (e.g., `python -c \"import secrets; print(secrets.token_hex(32))\"`) "
+            'Generate a strong secret (e.g., `python -c "import secrets; print(secrets.token_hex(32))"`) '
             "and export KAWKAB_JWT_SECRET before starting the cloud server."
+        )
+    if len(val) < MIN_JWT_SECRET_LENGTH:
+        raise RuntimeError(
+            f"KAWKAB_JWT_SECRET is only {len(val)} characters -- HS256 needs at least "
+            f"{MIN_JWT_SECRET_LENGTH} to resist brute-force forgery of session tokens. "
+            'Generate a strong secret (e.g., `python -c "import secrets; print(secrets.token_hex(32))"`) '
+            "and export it as KAWKAB_JWT_SECRET before starting the cloud server."
         )
     _jwt_secret = val
     return val
+
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
@@ -51,12 +59,21 @@ def verify_password(password: str, stored: str) -> bool:
         return False
 
 
-def create_access_token(user_id: int, role: str = "analyst") -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    return jwt.encode({"sub": str(user_id), "role": role, "exp": expire}, _get_jwt_secret(), algorithm=ALGORITHM)
+def create_access_token(user_id: int, role: str = "analyst", token_version: int = 0) -> str:
+    expire = datetime.now(UTC) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    # "tv" (token_version) lets a 30-day token be revoked before it
+    # naturally expires: get_current_user() below rejects any token whose
+    # tv doesn't match the user's *current* token_version in the DB.
+    # Bumping that column (e.g. on password change) instantly invalidates
+    # every token issued before the bump, with no denylist to maintain.
+    return jwt.encode(
+        {"sub": str(user_id), "role": role, "tv": token_version, "exp": expire},
+        _get_jwt_secret(),
+        algorithm=ALGORITHM,
+    )
 
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> dict | None:
     try:
         return jwt.decode(token, _get_jwt_secret(), algorithms=[ALGORITHM])
     except jwt.PyJWTError:
@@ -64,7 +81,7 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -72,9 +89,23 @@ async def get_current_user(
     if payload is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     db = get_cloud_db()
-    user = db.execute("SELECT id, username, email, display_name, role, is_active, created_at FROM users WHERE id = ?", (int(payload["sub"]),)).fetchone()
+    user = db.execute(
+        "SELECT id, username, email, display_name, role, is_active, token_version, created_at FROM users WHERE id = ?",
+        (int(payload["sub"]),),
+    ).fetchone()
     if user is None or not user["is_active"]:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive"
+        )
+    # A token minted before create_access_token() carried "tv" (e.g. one
+    # issued before this fix shipped) has no "tv" claim at all -- treat
+    # that as version 0 rather than erroring, so already-issued tokens
+    # for users who've never had their token_version bumped keep working.
+    if payload.get("tv", 0) != user["token_version"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked, please log in again",
+        )
     return dict(user)
 
 
@@ -134,18 +165,18 @@ _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 async def get_current_user_or_api_key(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    api_key: Optional[str] = Depends(_api_key_header),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    api_key: str | None = Depends(_api_key_header),
 ) -> dict:
     if credentials:
         payload = decode_token(credentials.credentials)
         if payload:
             db = get_cloud_db()
             user = db.execute(
-                "SELECT id, username, email, display_name, role, is_active, created_at FROM users WHERE id = ?",
+                "SELECT id, username, email, display_name, role, is_active, token_version, created_at FROM users WHERE id = ?",
                 (int(payload["sub"]),),
             ).fetchone()
-            if user and user["is_active"]:
+            if user and user["is_active"] and payload.get("tv", 0) == user["token_version"]:
                 return dict(user)
     if api_key:
         key_data = APIKeyManager.validate_api_key(api_key)

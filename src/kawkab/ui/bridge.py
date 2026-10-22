@@ -1047,6 +1047,14 @@ class Bridge(QObject):
         return await self._training.get_kpi_snapshot()
 
     # ================================================================
+    # Match Week loop: the persisted diagnosis -> plan -> re-check state
+    # ================================================================
+
+    @Slot(str, result=str)
+    async def get_match_week_state(self, match_id: str) -> str:
+        return await self._training.get_match_week_state(match_id)
+
+    # ================================================================
     # Opposition intelligence (delegated to OppositionHandler, Phase D)
     # ================================================================
 

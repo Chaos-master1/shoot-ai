@@ -841,3 +841,32 @@ class TrainingHandler(BridgeHandlerBase):
         except Exception as e:
             logger.error(f"get_kpi_snapshot failed: {e}")
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})
+
+    # ------------------------------------------------------------------
+    # Match Week loop: diagnosis -> plan -> re-check
+    # ------------------------------------------------------------------
+
+    async def _match_week_service(self):
+        """Lazily built; one instance per handler so the KB loads once."""
+        service = getattr(self, "_match_week", None)
+        if service is None:
+            from kawkab.services.match_week_service import MatchWeekService
+
+            service = MatchWeekService(
+                self._services.get("storage_service"),
+                await self._knowledge(),
+                self._services.get("homography_service"),
+            )
+            self._match_week = service
+        return service
+
+    async def get_match_week_state(self, match_id):
+        """The persisted loop state for one match (stage, plan, re-check)."""
+        try:
+            self._check_rate_limit("training")
+            mid = SecurityValidator.validate_match_id(match_id)
+            state = await (await self._match_week_service()).state(mid)
+            return json.dumps({"success": True, **state.to_dict()}, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"get_match_week_state failed: {e}")
+            return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})

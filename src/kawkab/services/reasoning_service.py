@@ -329,6 +329,81 @@ class ReasoningService:
 
         return stats
 
+    def _run_checker(
+        self,
+        rule: TacticalRule,
+        analysis: MatchAnalysis,
+        event_stats: dict,
+        match_count: int = 1,
+    ) -> tuple[float, dict] | None:
+        """Run a rule's pattern checker and return its raw observation.
+
+        This is the *observation* half of ``_test_rule``: no confidence
+        gate, no volume gate, no hypothesis boosts. Measurement code that
+        must compare the same quantity before and after an intervention
+        uses ``observe_rule`` (which wraps this) rather than re-deriving
+        the metric from a different bucket, so the number it compares is
+        the number the diagnosis actually observed.
+
+        Returns ``(confidence, evidence)`` or ``None`` when the rule's
+        pattern type has no checker.
+        """
+        pattern_type = rule.pattern_signature.get("type", "")
+        checker = self._dispatch_map().get(pattern_type)
+        if checker is None:
+            return None
+        confidence, evidence = checker(self, rule, analysis, event_stats, match_count)
+        return float(confidence), evidence
+
+    async def observe_rule(
+        self,
+        rule_id: str,
+        analysis: MatchAnalysis,
+        events: list[dict] | None = None,
+        match_count: int = 1,
+    ) -> dict[str, Any] | None:
+        """Evaluate one rule's checker on one match, without the gates.
+
+        Used by intervention efficacy: the delta it reports must be the
+        rule's own observed quantity, computed by the same checker the
+        diagnosis used. Deliberately bypasses the confidence and volume
+        gates -- those decide whether a *diagnosis* is claimable, not
+        whether a quantity can be measured.
+
+        Returns None when the rule or its pattern checker is unknown
+        (that is a contract gap, not a zero). Otherwise:
+
+            {
+              "rule_id", "pattern_type", "confidence",
+              "evidence": {...},
+              "hypotheses": [evaluate_hypothesis(...), ...],
+              "event_stats": {...},
+            }
+        """
+        await self.initialize()
+        rule = self.kb.get_rule(rule_id)
+        if rule is None:
+            return None
+
+        event_stats = precompute_event_stats(events or [])
+        observed = self._run_checker(rule, analysis, event_stats, match_count)
+        if observed is None:
+            return None
+        confidence, evidence = observed
+        hypotheses = [
+            evaluate_hypothesis(h, evidence, event_stats)
+            for h in (rule.hypotheses or [])
+            if isinstance(h, dict)
+        ]
+        return {
+            "rule_id": rule.rule_id,
+            "pattern_type": str(rule.pattern_signature.get("type", "")),
+            "confidence": round(confidence, 3),
+            "evidence": evidence,
+            "hypotheses": hypotheses,
+            "event_stats": event_stats,
+        }
+
     async def _test_rule(
         self,
         rule: TacticalRule,
@@ -345,10 +420,10 @@ class ReasoningService:
         sig = rule.pattern_signature
         pattern_type = sig.get("type", "")
 
-        checker = self._dispatch_map().get(pattern_type)
-        if checker is None:
+        observed = self._run_checker(rule, analysis, event_stats, match_count)
+        if observed is None:
             return None
-        confidence, evidence = checker(self, rule, analysis, event_stats, match_count)
+        confidence, evidence = observed
 
         if confidence < 0.3:
             return None

@@ -241,3 +241,121 @@ msgstr "تم الحفظ"
 
 msgid "msg_loaded"
 msgstr "تم التحميل"
+
+# Match Week loop (app-matchweek.js)
+msgid "navMatchWeek"
+msgstr "أسبوع المباراة"
+
+msgid "mwTitle"
+msgstr "أسبوع المباراة"
+
+msgid "mwRefresh"
+msgstr "تحديث"
+
+msgid "mwDiagnose"
+msgstr "التشخيص"
+
+msgid "mwPlan"
+msgstr "الخطة"
+
+msgid "mwRecheck"
+msgstr "إعادة القياس"
+
+msgid "mwGenerate"
+msgstr "أنشئ خطة هذا الأسبوع"
+
+msgid "mwGenerating"
+msgstr "جارٍ الإنشاء…"
+
+msgid "mwPlanGenerated"
+msgstr "تم إنشاء خطة التدريب"
+
+msgid "mwNoDiagnoses"
+msgstr "لا يوجد تشخيص محفوظ بعد. إنشاء الخطة يشغّل محرك التحليل ويحفظ تشخيصاته."
+
+msgid "mwNoPlan"
+msgstr "لا توجد خطة بعد."
+
+msgid "mwWeeks"
+msgstr "أسابيع"
+
+msgid "mwDrills"
+msgstr "تدريبات"
+
+msgid "mwExpected"
+msgstr "المتوقع"
+
+msgid "mwRetest"
+msgstr "إعادة الاختبار"
+
+msgid "mwImproved"
+msgstr "تحسّن"
+
+msgid "mwWorse"
+msgstr "تراجع"
+
+msgid "mwAwaiting"
+msgstr "بانتظار المباراتين القادمتين. الفارق من مباراة واحدة ضجيج وليس دليلاً."
+
+msgid "mwNoRecheck"
+msgstr "لا يوجد قياس بعد."
+
+msgid "mwNoRules"
+msgstr "الخطة لا تحمل تشخيصاً قابلاً للقياس."
+
+msgid "mwCalibrated"
+msgstr "معايَر — الإحصاءات المكانية بالأمتار"
+
+msgid "mwUncalibrated"
+msgstr "غير معايَر — الإحصاءات المكانية تقديرات بالبكسل"
+
+msgid "mwCalibrationUnknown"
+msgstr "حالة المعايرة غير معروفة"
+
+msgid "mwBasedOn"
+msgstr "الخطة مبنية على المباريات"
+
+msgid "mwWindow"
+msgstr "نافذة ما بعد الخطة"
+
+msgid "mwSelectMatch"
+msgstr "اختر مباراة أو حلّلها لعرض أسبوعها."
+
+msgid "mwBridgeUnavailable"
+msgstr "جسر الواجهة الخلفية غير متاح."
+
+msgid "mwUnresolvedDrills"
+msgstr "تدريبات مذكورة غير موجودة في قاعدة المعرفة: "
+
+msgid "mwStage_no_analysis"
+msgstr "لا يوجد تحليل"
+
+msgid "mwStage_no_plan"
+msgstr "لا توجد خطة"
+
+msgid "mwStage_awaiting_matches"
+msgstr "بانتظار المباريات"
+
+msgid "mwStage_measured"
+msgstr "تم القياس"
+
+msgid "mwStage_not_observed"
+msgstr "لم تُرصد"
+
+msgid "mwStage_error"
+msgstr "خطأ"
+
+msgid "mwState_measured"
+msgstr "تم القياس"
+
+msgid "mwState_insufficient_sample"
+msgstr "عينة غير كافية"
+
+msgid "mwState_unmeasurable"
+msgstr "غير قابل للقياس"
+
+msgid "mwState_rule_not_found"
+msgstr "القاعدة غير موجودة"
+
+msgid "mwState_no_declared_metric"
+msgstr "لا يوجد مقياس معلن"

@@ -11,6 +11,10 @@ from kawkab.core.logging import get_logger
 from kawkab.core.observability import metrics
 from kawkab.core.paths import get_paths
 from kawkab.core.security import ErrorSanitizer, SecurityValidator
+from kawkab.services.reasoning.inputs import (
+    build_match_analysis,
+    normalize_storage_events,
+)
 from kawkab.ui.bridge_handlers.base import BridgeHandlerBase
 
 logger = get_logger(__name__)
@@ -2398,77 +2402,6 @@ class AnalysisHandler(BridgeHandlerBase):
     # Training Plan Auto-Generate (real reasoning engine — façade removed)
     # ================================================================
 
-    @staticmethod
-    def _normalize_storage_events(events) -> list[dict]:
-        """Storage rows -> event shape ReasoningService expects.
-
-        "event_type" -> "type", plus metadata-merged zone/situation/
-        outcome fields the rule checkers read. Shared by the single-
-        and multi-match plan slots (same boundary normalization
-        v0.13.2 applied to the xA/pressing reports).
-        """
-        normalized: list[dict] = []
-        for ev in events or []:
-            if not isinstance(ev, dict):
-                continue
-            item = dict(ev)
-            if "type" not in item:
-                item["type"] = item.get("event_type", "")
-            meta = item.get("metadata")
-            if isinstance(meta, str) and meta:
-                try:
-                    parsed = json.loads(meta)
-                    if isinstance(parsed, dict):
-                        for k, v in parsed.items():
-                            item.setdefault(k, v)
-                except json.JSONDecodeError:
-                    pass
-            normalized.append(item)
-        return normalized
-
-    @staticmethod
-    def _build_match_analysis(match_id: int, match_data: dict, normalized_events: list[dict]):
-        """Build the MatchAnalysis the reasoning engine consumes, from
-        real stored data. No diagnoses are ever invented here: if the
-        match has no events, the engine simply returns none."""
-        from kawkab.services.analysis_service import MatchAnalysis, TeamStats
-
-        home = TeamStats(team_name=str((match_data or {}).get("home_team", "Home")))
-        away = TeamStats(team_name=str((match_data or {}).get("away_team", "Away")))
-        away_name = str((match_data or {}).get("away_team", ""))
-        for ev in normalized_events:
-            etype = str(ev.get("type", ""))
-            team = str(ev.get("team", "home"))
-            target = away if team == "away" or team == away_name else home
-            if etype == "pass":
-                target.passes_attempted += 1
-                if ev.get("completed"):
-                    target.passes_completed += 1
-            elif etype == "shot":
-                target.shots += 1
-            elif etype == "tackle":
-                target.tackles += 1
-            elif etype == "corner":
-                target.corners += 1
-            elif etype == "foul":
-                target.fouls += 1
-
-        duration = float((match_data or {}).get("duration") or 0.0)
-        if duration <= 0 and normalized_events:
-            duration = max(
-                (float(e.get("timestamp", 0) or 0) for e in normalized_events),
-                default=0.0,
-            )
-
-        return MatchAnalysis(
-            match_id=match_id,
-            duration_seconds=duration,
-            home_team=home,
-            away_team=away,
-            players={},
-            events=normalized_events,
-        )
-
     async def generate_training_plan(self, match_id):
         # Facade fix: this handler used to fabricate five hardcoded
         # diagnoses (R001-R005) from raw event-type counts with constant
@@ -2489,8 +2422,8 @@ class AnalysisHandler(BridgeHandlerBase):
             from kawkab.services.reasoning_service import ReasoningService
             from kawkab.services.training_plan_service import TrainingPlanGenerator
 
-            normalized_events = self._normalize_storage_events(events)
-            analysis = self._build_match_analysis(match_id, match_data, normalized_events)
+            normalized_events = normalize_storage_events(events)
+            analysis = build_match_analysis(match_id, match_data, normalized_events)
 
             kb = KnowledgeService()
             await kb.initialize()
@@ -2585,8 +2518,8 @@ class AnalysisHandler(BridgeHandlerBase):
             for mid in match_ids:
                 events = await self.storage_service.get_match_events(mid, limit=5000)
                 match_data = await self.storage_service.get_match(mid) or {}
-                normalized = self._normalize_storage_events(events)
-                analyses.append(self._build_match_analysis(mid, match_data, normalized))
+                normalized = normalize_storage_events(events)
+                analyses.append(build_match_analysis(mid, match_data, normalized))
                 pooled_events.extend(normalized)
 
             kb = KnowledgeService()

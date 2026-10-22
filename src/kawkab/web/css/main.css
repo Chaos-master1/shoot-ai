@@ -4296,6 +4296,50 @@ body {
    Wave C — Training Planner
    ═══════════════════════════════════════════════════════════════ */
 .training-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── Match Week loop (diagnosis -> plan -> re-check) ─────────────── */
+.matchweek-panel {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px; margin-bottom: 16px;
+}
+.matchweek-panel.mw-loading { opacity: 0.65; }
+.mw-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mw-header h3 { margin: 0; font-size: 0.95rem; flex: 1; }
+.mw-stage {
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 999px; background: var(--bg-secondary);
+  color: var(--text-muted); border: 1px solid var(--border);
+}
+.mw-stage[data-stage="measured"] { color: var(--success); border-color: var(--success); }
+.mw-stage[data-stage="awaiting_matches"] { color: var(--warning); border-color: var(--warning); }
+.mw-stage[data-stage="error"] { color: var(--danger); border-color: var(--danger); }
+.mw-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+.mw-step { background: var(--bg-secondary); border-radius: var(--radius); padding: 10px; min-width: 0; }
+.mw-step h4 { margin: 0 0 8px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.mw-diagnosis { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.mw-diagnosis:last-child { border-bottom: 0; }
+.mw-diagnosis strong { font-size: 0.82rem; }
+.mw-confidence { font-size: 0.7rem; color: var(--text-muted); }
+.mw-plan-summary { display: flex; flex-direction: column; gap: 2px; }
+.mw-meta { font-size: 0.7rem; color: var(--text-muted); }
+.mw-priorities { font-size: 0.76rem; margin-top: 4px; }
+.mw-warning { font-size: 0.72rem; color: var(--warning); }
+.mw-rule { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.mw-rule:last-child { border-bottom: 0; }
+.mw-rule-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.mw-rule-head strong { font-size: 0.8rem; }
+.mw-delta { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; margin-top: 4px; flex-wrap: wrap; }
+.mw-arrow { color: var(--text-muted); }
+.mw-delta-value { font-weight: 700; }
+.mw-improved { color: var(--success); font-size: 0.7rem; }
+.mw-worse { color: var(--danger); font-size: 0.7rem; }
+.mw-state { font-size: 0.68rem; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+.mw-line { font-size: 0.76rem; color: var(--text-muted); }
+.mw-session { padding: 6px; border-radius: 4px; background: var(--bg-elevated); margin: 4px 0; }
+.mw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mw-chip { font-size: 0.68rem; padding: 2px 8px; border-radius: 999px; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-muted); }
+.mw-chip-ok { color: var(--success); border-color: var(--success); }
+.mw-chip-warn { color: var(--warning); border-color: var(--warning); }
 .training-drills-panel, .training-session-panel {
   background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); padding: 12px;
 }
@@ -4488,6 +4532,7 @@ body {
 
 @media (max-width: 768px) {
   .training-layout { grid-template-columns: 1fr; }
+  .mw-steps { grid-template-columns: 1fr; }
   .season-summary-bar { flex-direction: column; align-items: stretch; }
   .season-stat-card { flex-direction: row; justify-content: space-between; min-width: 0; }
   .pres-slide-content h1 { font-size: 1.8rem; }

@@ -143,6 +143,10 @@
             <span class="nav-group-title">Squad</span>
             <a href="#squad-section" class="nav-item" data-section="squad-section"><span data-i18n="navSquad">Squad</span></a>
             <a href="#professional-section" class="nav-item" data-section="professional-section">Compare</a>
+            <!-- The Training Planner existed as a section with no door: it had
+                 a router registration but no nav target, so no click could
+                 reach it. This is its entry point. -->
+            <a href="#training-section" class="nav-item" data-section="training-section"><span data-i18n="navMatchWeek">Match Week</span></a>
           </div>
           <div class="nav-group">
             <span class="nav-group-title">Admin</span>
@@ -1998,6 +2002,37 @@
                  ============================================================ -->
             <section id="training-section" class="section hidden">
                 <h2 data-i18n="trainingTitle">🏋️ Training Planner</h2>
+
+                <!-- Match Week: diagnosis -> plan -> re-check. Composed by
+                     services/match_week_service.py, rendered by
+                     app-matchweek.js. The service's refusals (pending window,
+                     unobservable metric) are rendered as states, never as
+                     numbers. -->
+                <div id="matchweek-panel" class="matchweek-panel" aria-live="polite">
+                    <div class="mw-header">
+                        <h3 data-i18n="mwTitle">📅 Match Week</h3>
+                        <span id="mw-stage" class="mw-stage"></span>
+                        <button id="mw-refresh" class="btn btn-sm btn-secondary" data-i18n="mwRefresh">Refresh</button>
+                    </div>
+                    <p id="mw-note" class="hint"></p>
+                    <div class="mw-steps">
+                        <div class="mw-step">
+                            <h4 data-i18n="mwDiagnose">Diagnose</h4>
+                            <div id="mw-diagnoses"></div>
+                        </div>
+                        <div class="mw-step">
+                            <h4 data-i18n="mwPlan">Plan</h4>
+                            <div id="mw-plan"></div>
+                            <button id="mw-generate" class="btn btn-primary btn-sm hidden" data-i18n="mwGenerate">Generate this week's plan</button>
+                        </div>
+                        <div class="mw-step">
+                            <h4 data-i18n="mwRecheck">Re-check</h4>
+                            <div id="mw-recheck"></div>
+                        </div>
+                    </div>
+                    <div id="mw-provenance"></div>
+                </div>
+
                 <div class="training-layout">
                     <div class="training-drills-panel">
                         <h3 data-i18n="trainingDrillLibrary">📚 Drill Library</h3>
@@ -2016,10 +2051,6 @@
                         </div>
                         <div id="training-drill-list" class="training-drill-list">
                             <p class="hint" data-i18n="trainingLoadHint">Load drills to see library.</p>
-                        </div>
-                        <div style="margin-top:12px">
-                            <button id="training-generate-plan-btn" class="btn btn-primary" data-i18n="trainingGeneratePlan">🤖 Generate from Match</button>
-                            <span id="training-gen-status" class="hint" style="margin-left:8px"></span>
                         </div>
                     </div>
                     <div class="training-session-panel">

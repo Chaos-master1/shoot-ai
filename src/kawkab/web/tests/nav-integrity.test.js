@@ -56,6 +56,13 @@ describe('nav integrity', () => {
     expect(dead).toEqual([]);
   });
 
+  test('the training section is reachable from the sidebar', () => {
+    // It had a router registration but no nav target, so no click could
+    // reach the Training Planner. One-directional link checks did not
+    // catch it; this pins the door.
+    expect(dataSectionTargets('nav-item')).toContain('training-section');
+  });
+
   test('no nav link still points at a removed/never-built section id', () => {
     // These ids were never real <section> elements. If a future change
     // re-adds them as real sections, update this list deliberately.

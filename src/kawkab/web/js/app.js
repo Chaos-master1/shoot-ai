@@ -94,6 +94,20 @@
         return (dict && dict[key]) || key;
     }
 
+    // Only a real dictionary entry counts as a translation. t() returns the
+    // key itself when a label is missing, which is useful for developer
+    // greps but must never be written into the DOM: the UI ships 498
+    // data-i18n labels against a far smaller dictionary, so using t()
+    // directly replaced every untranslated label with a camelCase key on
+    // language switch. Missing translations now leave the authored text
+    // (English) alone.
+    function translation(key) {
+        if (!key) return '';
+        var dict = _kawkabAppLocaleCache[currentLanguage] || _kawkabAppLocaleCache['en'];
+        var value = dict && dict[key];
+        return typeof value === 'string' ? value : '';
+    }
+
     function formatNumber(n, decimals) {
         decimals = decimals !== undefined ? decimals : 2;
         var locale = currentLanguage === 'ar' ? 'ar-SA' : 'en-US';
@@ -105,29 +119,24 @@
         currentLanguage = lang;
         document.documentElement.lang = lang;
         document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-        document.title = t('appTitle');
+        var appTitle = translation('appTitle');
+        if (appTitle) document.title = appTitle;
 
         loadAppLocale(lang).then(function () {
             // Update all data-i18n elements
             document.querySelectorAll('[data-i18n]').forEach(function (el) {
-                var key = el.getAttribute('data-i18n');
-                if (key && t(key)) {
-                    el.textContent = t(key);
-                }
+                var value = translation(el.getAttribute('data-i18n'));
+                if (value) el.textContent = value;
             });
             // Update all data-i18n-placeholder elements
             document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
-                var key = el.getAttribute('data-i18n-placeholder');
-                if (key && t(key)) {
-                    el.setAttribute('placeholder', t(key));
-                }
+                var value = translation(el.getAttribute('data-i18n-placeholder'));
+                if (value) el.setAttribute('placeholder', value);
             });
             // Update select option labels
             document.querySelectorAll('option[data-i18n]').forEach(function (el) {
-                var key = el.getAttribute('data-i18n');
-                if (key && t(key)) {
-                    el.textContent = t(key);
-                }
+                var value = translation(el.getAttribute('data-i18n'));
+                if (value) el.textContent = value;
             });
 
             if (currentMatchId) {
@@ -566,6 +575,9 @@
         if (!bridge) return;
         currentMatchId = matchId;
         if (window.__kawkab._onMatchLoaded) window.__kawkab._onMatchLoaded(matchId);
+        // Additive pub/sub seam for modules that need the current match but
+        // must not fight over the single _onMatchLoaded hook.
+        document.dispatchEvent(new CustomEvent('kawkab:match-loaded', { detail: { matchId: matchId } }));
 
         try {
             const pathData = JSON.parse(await bridge.get_video_path(matchId));
@@ -4250,70 +4262,6 @@
 
         // Make drill list items draggable
         setupTrainingDragDrop();
-
-        // Training plan generation button
-        var genBtn = document.getElementById('training-generate-plan-btn');
-        var genStatus = document.getElementById('training-gen-status');
-        if (genBtn) {
-            genBtn.addEventListener('click', function() {
-                var matchSelect = document.getElementById('match-select');
-                var matchId = matchSelect ? parseInt(matchSelect.value, 10) : 0;
-                if (!matchId) {
-                    matchSelect = document.getElementById('squad-match-select');
-                    matchId = matchSelect ? parseInt(matchSelect.value, 10) : 0;
-                }
-                if (!matchId) { showToast('Select a match first.', 'warning'); return; }
-                genStatus.textContent = 'Generating...';
-                genBtn.disabled = true;
-                if (typeof bridge === 'undefined' || !bridge) {
-                    genStatus.textContent = 'Bridge not available';
-                    genBtn.disabled = false;
-                    return;
-                }
-                bridge.generate_training_plan(matchId, function(result) {
-                    try {
-                        var data = typeof result === 'string' ? JSON.parse(result) : result;
-                        if (data.error) { showToast('Plan error: ' + data.error, 'error'); genStatus.textContent = 'Error'; genBtn.disabled = false; return; }
-                        renderTrainingPlan(data.plan);
-                        genStatus.textContent = 'Done';
-                        showToast('Training plan generated!', 'success');
-                    } catch(e) { genStatus.textContent = 'Error'; showToast('Failed to parse plan.', 'error'); console.warn(e); }
-                    genBtn.disabled = false;
-                });
-            });
-        }
-    }
-
-    function renderTrainingPlan(plan) {
-        var container = document.getElementById('training-plan-preview');
-        var weeksContainer = document.getElementById('training-plan-weeks');
-        if (!container || !weeksContainer) return;
-        container.classList.remove('hidden');
-        var html = '<div class="training-plan-summary" style="margin-bottom:10px;padding:8px;background:var(--bg-card);border-radius:var(--radius)">' +
-            '<strong>' + plan.duration_weeks + '-Week Plan</strong> &middot; ' +
-            plan.total_drills + ' unique drills &middot; ' +
-            'Priority: ' + escapeHtml((plan.priority_addressed || []).join(', ')) + '<br>' +
-            '<em>' + escapeHtml(plan.expected_overall_improvement || '') + '</em>' +
-            '</div>';
-        (plan.weeks || []).forEach(function(w) {
-            html += '<div class="pro-card collapsible collapsed" style="margin-bottom:6px">' +
-                '<div class="pro-card-header" onclick="this.parentElement.classList.toggle(\'collapsed\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center">' +
-                '<strong>Week ' + w.week_number + ': ' + escapeHtml(w.theme || '') + '</strong>' +
-                '<span style="font-size:0.78rem;color:var(--text-muted)">' + escapeHtml(w.primary_focus || '') + '</span>' +
-                '</div>' +
-                '<div class="pro-card-body" style="margin-top:8px">' +
-                '<div style="font-size:0.82rem;margin-bottom:6px">Expected: ' + escapeHtml((w.expected_improvements || []).join(', ')) + '</div>' +
-                '<div style="font-size:0.82rem;margin-bottom:6px">Re-test: ' + escapeHtml(w.re_test_focus || '') + '</div>';
-            (w.sessions || []).forEach(function(s) {
-                html += '<div style="padding:6px 8px;background:var(--bg-elevated);border-radius:4px;margin:4px 0">' +
-                    '<div style="display:flex;justify-content:space-between"><strong>' + escapeHtml(s.day || '') + '</strong> <span class="risk-badge risk-' + (s.intensity === 'low' ? 'low' : s.intensity === 'medium' || s.intensity === 'moderate' ? 'moderate' : 'high') + '" style="font-size:0.65rem">' + escapeHtml(s.intensity || '') + '</span></div>' +
-                    '<div style="font-size:0.78rem">Focus: ' + escapeHtml(s.focus || '') + ' &middot; ' + (s.total_duration_min || 0) + ' min</div>' +
-                    '<div style="font-size:0.72rem;color:var(--text-muted)">Drills: ' + escapeHtml((s.drills || []).join(', ')) + '</div>' +
-                    '</div>';
-            });
-            html += '</div></div>';
-        });
-        weeksContainer.innerHTML = html;
     }
 
     function loadDrills() {

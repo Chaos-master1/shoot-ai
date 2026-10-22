@@ -26,6 +26,7 @@
     "js/app-marketplace.js",
     "js/app-highlight.js",
     "js/app.js",
+    "js/app-matchweek.js",
     "js/app-data-providers.js",
     "js/app-import.js",
     "js/app-search-compare.js",

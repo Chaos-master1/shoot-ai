@@ -8,7 +8,19 @@
 
     var escapeHtml = window.__kawkab.escapeHtml;
 
+    // i18n lookup that never replaces an authored English label with a
+    // bare key: t() returns the key itself when a translation is missing.
+    function label(key, fallback) {
+        var t = window.t;
+        if (typeof t === 'function') {
+            var value = t(key);
+            if (value && value !== key) return value;
+        }
+        return fallback;
+    }
+
     var BLOCK_META = {
+        elite_benchmark: { title: 'Elite Benchmark', titleKey: 'ebTitle', icon: '📊', desc: 'This match against a defined elite reference population' },
         epv:             { title: 'EPV — Expected Possession Value', icon: '📊', desc: 'Possession value by control phase' },
         obv:             { title: 'OBV — Off-Ball Value', icon: '🏃', desc: 'Off-ball contribution (needs tracking frames)' },
         off_ball:        { title: 'Off-Ball Metrics', icon: '🧿', desc: 'Space creation & movement (needs tracking frames)' },
@@ -36,7 +48,7 @@
         lineup_optimizer: { title: 'Lineup Optimizer', icon: '📋', desc: 'Best-X suggestions (needs season history)' },
     };
 
-    var ORDER = ['epv', 'obv', 'off_ball', 'pass_flow', 'pressing_clusters',
+    var ORDER = ['elite_benchmark', 'epv', 'obv', 'off_ball', 'pass_flow', 'pressing_clusters',
                  'duels', 'ball_recovery', 'box_entries', 'switch_of_play',
                  'crossing', 'set_pieces', 'through_balls', 'carry_xt',
                  'xg_chain', 'game_state', 'flank_analysis', 'defensive_xt',
@@ -164,6 +176,7 @@
         var html = '<div class="proanalytics-summary" style="margin-bottom:12px">' +
             '<span class="pro-badge">' + Number(data.n_matches || 0) + ' matches analyzed</span></div>';
         var meta = {
+            benchmark_trend: { title: 'Season Benchmark', titleKey: 'sbTitle', icon: '📊' },
             formation_trends: { title: 'Formation Trends', icon: '📐' },
             discipline: { title: 'Discipline & Suspension Risk', icon: '🟨' },
             fixture_difficulty: { title: 'Fixture Difficulty', icon: '📅' },
@@ -177,11 +190,89 @@
                 '<span class="pro-badge ' + (ok ? 'pro-badge-ok' : 'pro-badge-empty') + '" style="float:right">' +
                 (ok ? 'available' : 'no data') + '</span>' +
                 '<div style="margin-top:8px;font-size:0.82rem">' +
-                (ok ? '<pre style="white-space:pre-wrap;margin:0">' + escapeHtml(summaryKv(block)) + '</pre>'
-                    : '<span class="hint">' + escapeHtml(block.reason || '') + '</span>') +
+                (!ok ? '<span class="hint">' + escapeHtml(block.reason || '') + '</span>'
+                    : key === 'benchmark_trend' ? renderSeasonBenchmark(block)
+                    : '<pre style="white-space:pre-wrap;margin:0">' + escapeHtml(summaryKv(block)) + '</pre>') +
                 '</div></div>';
         });
         content.innerHTML = html;
+    }
+
+    // The season block is the same comparison over N matches, ranked
+    // against N-match blocks of the cohort rather than single matches.
+    function renderSeasonBenchmark(block) {
+        var pop = block.population || {};
+        var metrics = block.metrics || {};
+        var size = Number((block.block || {}).size || block.n_matches || 0);
+        var html = '<div>' + escapeHtml(label('ebReference', 'Reference population')) + ': ' +
+            '<strong>' + escapeHtml(pop.label || '') + '</strong> — ' +
+            escapeHtml(String(pop.n_team_matches || 0)) + ' ' +
+            escapeHtml(label('ebTeamMatches', 'elite team-matches')) + ', ' +
+            escapeHtml(String(pop.n_matches || 0)) + ' ' +
+            escapeHtml(label('ebMatches', 'matches')) +
+            '</div>';
+        html += '<div style="margin-top:6px"><strong>' + escapeHtml(String(block.team || '—')) +
+            '</strong> — ' + Number(block.n_matches || 0) + ' ' + escapeHtml(label('sbMatches', 'matches')) +
+            ' · ' + fmt(block.minutes, 0) + ' ' + escapeHtml(label('sbMinutes', 'minutes')) + '</div>';
+        html += '<div class="hint" style="font-size:0.75rem">' +
+            escapeHtml(label(
+                'sbMatchedNote',
+                'percentiles compare your {n}-match block against {n}-match blocks drawn from the cohort'
+            ).replace(/\{n\}/g, String(size))) + '</div>';
+
+        METRIC_GROUPS.forEach(function(group) {
+            var rows = '';
+            METRIC_ORDER.forEach(function(spec) {
+                if (spec.group !== group.key) return;
+                var metric = metrics[spec.key];
+                if (!metric) return;
+                var definition = ((pop.definitions || {})[spec.key] || {}).definition || '';
+                rows += renderMetricRow({
+                    value: metric.value,
+                    percentile: metric.percentile,
+                    band: metric.band,
+                    population: metric.population,
+                    comparable: metric.comparable,
+                    reason: metric.reason,
+                    label: label(spec.labelKey, spec.fallback),
+                    digits: spec.digits,
+                    definition: definition,
+                    interval: metric.interval
+                });
+            });
+            if (rows) {
+                html += '<div style="margin-top:8px;font-weight:600;font-size:0.78rem;color:var(--text-muted)">' +
+                    escapeHtml(label(group.labelKey, group.fallback)) + '</div>' + rows;
+            }
+        });
+
+        var trend = block.trend || {};
+        html += '<div style="margin-top:8px;font-size:0.8rem">';
+        if (trend.available) {
+            var delta = Number(trend.delta || 0);
+            html += '<strong>' + escapeHtml(label('sbTrend', 'Trend across the block')) + ':</strong> ' +
+                escapeHtml(label('ebXg90', 'xG / 90')) + ' ' + fmt(trend.before, 2) + ' → ' +
+                fmt(trend.after, 2) + ' (' + (delta >= 0 ? '+' : '') + delta.toFixed(2) + ') ' +
+                '<span class="hint">' + escapeHtml(trend.note || '') + '</span>';
+        } else {
+            html += '<span class="hint">' + escapeHtml(trend.reason || '') + '</span>';
+        }
+        html += '</div>';
+        html += renderLimitations(block.limitations || []);
+        return html;
+    }
+
+    function renderLimitations(limits) {
+        if (!limits.length) return '';
+        var html = '<div style="margin-top:10px;color:var(--text-muted);font-size:0.75rem">' +
+            '<strong>' + escapeHtml(label('ebLimits', 'What this comparison cannot tell you')) + '</strong>' +
+            '<ul style="margin:4px 0 0 16px">';
+        limits.forEach(function(limit) {
+            var key = (limit && typeof limit === 'object') ? limit.key : null;
+            var text = (limit && typeof limit === 'object') ? limit.text : limit;
+            html += '<li>' + escapeHtml(key ? label('ebLim_' + key, String(text || '')) : String(limit)) + '</li>';
+        });
+        return html + '</ul></div>';
     }
 
     function loadProAnalyticsMatches(select) {
@@ -259,9 +350,10 @@
     function renderBlock(key, block) {
         var meta = BLOCK_META[key] || { title: key, icon: '📈', desc: '' };
         var available = block && block.data_available;
+        var title = meta.titleKey ? label(meta.titleKey, meta.title) : meta.title;
 
         var header = '<div class="pro-card-header" style="display:flex;justify-content:space-between;align-items:center">' +
-            '<strong>' + meta.icon + ' ' + escapeHtml(meta.title) + '</strong>' +
+            '<strong>' + meta.icon + ' ' + escapeHtml(title) + '</strong>' +
             '<span class="pro-badge ' + (available ? 'pro-badge-ok' : 'pro-badge-empty') + '">' +
             (available ? 'available' : 'no data') + '</span>' +
             '</div>';
@@ -376,9 +468,168 @@
                 return '<div>Home win: <strong>' + fmt(op.home_win || op.win_home, 3) + '</strong> · Draw: <strong>' + fmt(op.draw, 3) + '</strong> · Away win: <strong>' + fmt(op.away_win || op.win_away, 3) + '</strong></div>' +
                     '<div style="color:var(--text-muted)">Entropy ' + fmt(block.scoreline_entropy, 2) + ' bits</div>';
             }
+            case 'elite_benchmark':
+                return renderEliteBenchmark(block);
             default:
                 return '<pre style="white-space:pre-wrap;margin:0">' + escapeHtml(summaryKv(block)) + '</pre>';
         }
+    }
+
+    // ── Elite benchmark rendering ─────────────────────────────────────
+    //
+    // The block answers "compared with whom?" — so the population is
+    // rendered with the numbers, and every metric that could not be
+    // measured says why instead of showing a zero.
+
+    // Output is what a team produced; style is how it played while
+    // producing it. The definitions come from the block's own
+    // `population.definitions`, so the card can never describe a metric
+    // differently from how it was measured.
+    var METRIC_GROUPS = [
+        { key: 'output', labelKey: 'ebGroupOutput', fallback: 'Output' },
+        { key: 'style', labelKey: 'ebGroupStyle', fallback: 'Style' }
+    ];
+
+    var METRIC_ORDER = [
+        { key: 'shots', group: 'output', labelKey: 'ebShots', fallback: 'Shots', digits: 0 },
+        { key: 'shots_per_90', group: 'output', labelKey: 'ebShots90', fallback: 'Shots / 90', digits: 1 },
+        { key: 'xg', group: 'output', labelKey: 'ebXg', fallback: 'xG', digits: 2 },
+        { key: 'xg_per_90', group: 'output', labelKey: 'ebXg90', fallback: 'xG / 90', digits: 2 },
+        { key: 'goals', group: 'output', labelKey: 'ebGoals', fallback: 'Goals', digits: 0 },
+        { key: 'ppda', group: 'style', labelKey: 'ebPpda', fallback: 'PPDA', digits: 2 },
+        { key: 'field_tilt', group: 'style', labelKey: 'ebFieldTilt', fallback: 'Field tilt', digits: 3 },
+        { key: 'progressive_passes_per_90', group: 'style', labelKey: 'ebProgressive', fallback: 'Progressive passes / 90', digits: 1 },
+        { key: 'final_third_entries_per_90', group: 'style', labelKey: 'ebEntries', fallback: 'Final-third entries / 90', digits: 1 },
+        { key: 'high_turnovers_per_90', group: 'style', labelKey: 'ebHighTurnovers', fallback: 'High turnovers / 90', digits: 1 },
+        { key: 'pass_completion_pct', group: 'style', labelKey: 'ebCompletion', fallback: 'Pass completion', digits: 1 }
+    ];
+
+    var BAND_LABELS = {
+        top_decile: { key: 'ebBand_top_decile', fallback: 'top 10% of the cohort' },
+        top_quartile: { key: 'ebBand_top_quartile', fallback: 'top 25% of the cohort' },
+        above_median: { key: 'ebBand_above_median', fallback: 'above the cohort median' },
+        lower_half: { key: 'ebBand_lower_half', fallback: 'lower half of the cohort' },
+        bottom_quartile: { key: 'ebBand_bottom_quartile', fallback: 'bottom 25% of the cohort' },
+        bottom_decile: { key: 'ebBand_bottom_decile', fallback: 'bottom 10% of the cohort' }
+    };
+
+    // "better than 74% of the cohort" — the percentile said in words. That is
+    // what the number means, and unlike an ordinal suffix it survives
+    // translation.
+    function beatsText(percentile) {
+        var pattern = label('ebBeatsShare', 'better than {n}% of the cohort');
+        return pattern.replace('{n}', String(Math.round(percentile)));
+    }
+
+    function percentileBar(percentile) {
+        var filled = Math.max(0, Math.min(10, Math.round((percentile / 100) * 10)));
+        var out = '';
+        for (var i = 0; i < 10; i++) {
+            out += i < filled ? '▮' : '▯';
+        }
+        return out;
+    }
+
+    function renderMetricRow(metric) {
+        var name = escapeHtml(metric.label);
+        if (metric.definition) {
+            name = '<span title="' + escapeHtml(metric.definition) + '">' + name + '</span>';
+        }
+        if (!metric.comparable || metric.percentile === null || metric.percentile === undefined) {
+            var reason = escapeHtml(metric.reason || label('ebNotAvailable', 'not available'));
+            return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0">' +
+                '<span>' + name + '</span>' +
+                '<span style="color:var(--text-muted)">— ' + reason + '</span>' +
+                '</div>';
+        }
+        var pop = metric.population || {};
+        var median = (pop.median === undefined || pop.median === null) ? null : pop.median;
+        var medianText = median === null ? '' :
+            ' · ' + label('ebEliteMedian', 'cohort median') + ' ' + fmt(median, metric.digits);
+        var band = BAND_LABELS[metric.band];
+        var bandText = band ? label(band.key, band.fallback) : '';
+        var intervalText = '';
+        if (metric.interval && metric.interval.length === 2) {
+            var half = Math.round((metric.interval[1] - metric.interval[0]) / 2);
+            if (half > 0) {
+                intervalText = ' <span class="hint" title="' +
+                    escapeHtml(label('ebIntervalNote', 'sampling band from the cohort size — not a range for the team')) +
+                    '">±' + half + '</span>';
+            }
+        }
+        return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0">' +
+            '<span>' + name + '</span>' +
+            '<span><strong>' + fmt(metric.value, metric.digits) + '</strong> ' +
+            percentileBar(metric.percentile) + ' ' +
+            escapeHtml(beatsText(metric.percentile)) + intervalText + medianText + '</span>' +
+            '</div>' +
+            (bandText ? '<div style="color:var(--text-muted);font-size:0.75rem;padding-bottom:2px">' +
+                escapeHtml(bandText) + '</div>' : '');
+    }
+
+    function renderEliteBenchmark(block) {
+        var pop = block.population || {};
+        var competitions = (pop.competitions || []).map(function(c) {
+            return typeof c === 'string' ? c : c.name;
+        }).filter(Boolean);
+        var html = '<div>' + escapeHtml(label('ebReference', 'Reference population')) + ': ' +
+            '<strong>' + escapeHtml(pop.label || '') + '</strong> — ' +
+            escapeHtml(String(pop.n_team_matches || 0)) + ' ' +
+            escapeHtml(label('ebTeamMatches', 'elite team-matches')) + ', ' +
+            escapeHtml(String(pop.n_matches || 0)) + ' ' +
+            escapeHtml(label('ebMatches', 'matches')) + ', ' +
+            escapeHtml(String(pop.n_teams || 0)) + ' ' +
+            escapeHtml(label('ebTeams', 'teams')) +
+            (competitions.length ? ', ' + escapeHtml(competitions.join(', ')) : '') +
+            '</div>';
+
+        var card = pop.model_card || {};
+        if (card.available && card.n_shots) {
+            html += '<div class="hint" style="font-size:0.75rem">' +
+                escapeHtml(
+                    label(
+                        'ebModelCheck',
+                        'Model check: Brier {b} on {n} shots (lower is better)'
+                    )
+                        .replace('{b}', Number(card.brier).toFixed(3))
+                        .replace('{n}', Number(card.n_shots).toLocaleString())
+                ) + '</div>';
+        }
+
+        var teams = block.teams || [];
+        teams.forEach(function(team) {
+            html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">' +
+                '<strong>' + escapeHtml(String(team.team || '—')) + '</strong>';
+            METRIC_GROUPS.forEach(function(group) {
+                var rows = '';
+                METRIC_ORDER.forEach(function(spec) {
+                    if (spec.group !== group.key) return;
+                    var metric = (team.metrics || {})[spec.key];
+                    if (!metric) return;
+                    var definition = ((pop.definitions || {})[spec.key] || {}).definition || '';
+                    rows += renderMetricRow({
+                        value: metric.value,
+                        percentile: metric.percentile,
+                        band: metric.band,
+                        population: metric.population,
+                        comparable: metric.comparable,
+                        reason: metric.reason,
+                        label: label(spec.labelKey, spec.fallback),
+                        digits: spec.digits,
+                        definition: definition,
+                        interval: metric.interval
+                    });
+                });
+                if (rows) {
+                    html += '<div style="margin-top:8px;font-weight:600;font-size:0.78rem;color:var(--text-muted)">' +
+                        escapeHtml(label(group.labelKey, group.fallback)) + '</div>' + rows;
+                }
+            });
+            html += '</div>';
+        });
+
+        html += renderLimitations(block.limitations || []);
+        return html;
     }
 
     function summaryKv(obj, skip) {

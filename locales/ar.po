@@ -359,3 +359,128 @@ msgstr "القاعدة غير موجودة"
 
 msgid "mwState_no_declared_metric"
 msgstr "لا يوجد مقياس معلن"
+# Elite benchmark (elite reference population)
+msgid "ebTitle"
+msgstr "المعيار النخبي"
+
+msgid "ebReference"
+msgstr "سكان المرجع"
+
+msgid "ebTeamMatches"
+msgstr "مباراة-فريق نخبة"
+
+msgid "ebMatches"
+msgstr "مباريات"
+
+msgid "ebTeams"
+msgstr "فرق"
+
+msgid "ebShots"
+msgstr "التسديدات"
+
+msgid "ebShots90"
+msgstr "التسديدات / 90"
+
+msgid "ebXg"
+msgstr "الأهداف المتوقعة"
+
+msgid "ebXg90"
+msgstr "الأهداف المتوقعة / 90"
+
+msgid "ebGoals"
+msgstr "الأهداف"
+
+
+msgid "ebBeatsShare"
+msgstr "أفضل من {n}% من المجموعة المرجعية"
+
+msgid "ebEliteMedian"
+msgstr "وسط المجموعة"
+
+msgid "ebNotAvailable"
+msgstr "غير متاح"
+
+msgid "ebLimits"
+msgstr "ما لا تخبرك به هذه المقارنة"
+
+msgid "ebBand_top_decile"
+msgstr "أفضل 10% في المجموعة"
+
+msgid "ebBand_top_quartile"
+msgstr "أفضل 25% في المجموعة"
+
+msgid "ebBand_above_median"
+msgstr "أعلى من وسط المجموعة"
+
+msgid "ebBand_lower_half"
+msgstr "النصف الأدنى في المجموعة"
+
+msgid "ebBand_bottom_quartile"
+msgstr "أسوأ 25% في المجموعة"
+
+msgid "ebBand_bottom_decile"
+msgstr "أسوأ 10% في المجموعة"
+
+msgid "ebLim_single_match"
+msgstr "المباراة الواحدة 90 دقيقة من كرة القدم — اقرأ المئين كأداء وحيد لا كموسم كامل."
+
+msgid "ebLim_sample_not_league"
+msgstr "المرجع عيّنة من مباريات النخبة، لا كل مباريات النخبة، وليس متوسط دوري."
+
+msgid "ebLim_reduced_feature_model"
+msgstr "الأهداف المتوقعة في المعيار من نموذج مُدرَّب على هذه المجموعة بخصائص الكاميرا فقط؛ ليس رقم الأهداف المتوقعة الأساسي في التطبيق."
+
+msgid "ebLim_in_sample_cohort"
+msgstr "نموذج المعيار مُدرَّب على المجموعة التي يقيسها، لذا قيم المجموعة داخل العينة وتسديدات المستخدم خارج العينة."
+
+
+msgid "ebGroupOutput"
+msgstr "الإنتاج الهجومي"
+
+msgid "ebGroupStyle"
+msgstr "الأسلوب"
+
+msgid "ebPpda"
+msgstr "PPDA"
+
+msgid "ebFieldTilt"
+msgstr "السيطرة الميدانية"
+
+msgid "ebProgressive"
+msgstr "التمريرات التقدمية / 90"
+
+msgid "ebEntries"
+msgstr "الدخول إلى الثلث الأخير / 90"
+
+msgid "ebHighTurnovers"
+msgstr "الكرات المستعادة عالياً / 90"
+
+msgid "ebCompletion"
+msgstr "دقة التمرير"
+
+msgid "sbTitle"
+msgstr "معيار الموسم"
+
+msgid "sbMatches"
+msgstr "مباريات"
+
+msgid "sbMinutes"
+msgstr "دقيقة"
+
+msgid "sbMatchedNote"
+msgstr "المئينات تقارن مجموعتك من {n} مباريات بمجموعات من {n} مباريات مسحوبة من المرجع"
+
+msgid "sbTrend"
+msgstr "الاتجاه عبر المجموعة"
+
+msgid "ebLim_block_not_season"
+msgstr "مجموعة من N مباريات هي لمحة عن المستوى، لا موسم كامل: الفريق نفسه قد يقدم مجموعات مختلفة في أشهر مختلفة."
+
+msgid "ebLim_matched_block_size"
+msgstr "المئين يقارن متوسط مجموعتك من N مباريات بمجموعات من N مباريات مسحوبة من المرجع، لذا يجيب على سؤال أدق من مقارنة مباراة واحدة."
+
+msgid "ebModelCheck"
+msgstr "فحص النموذج: مؤشر برير {b} على {n} تسديدة (الأقل أفضل)"
+
+msgid "ebIntervalNote"
+msgstr "هامش أخذ العينات بحسب حجم المجموعة — ليس نطاقاً لقدرة الفريق"

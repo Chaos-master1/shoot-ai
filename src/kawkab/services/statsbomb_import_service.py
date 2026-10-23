@@ -72,10 +72,13 @@ _SB_TYPE_MAP: dict[str, str | None] = {
     # 297-match corpus): mapped to the core/ conventions the recovery /
     # pressing / duel modules expect.
     "Pressure": "pressure",
-    "Ball Recovery": "interception",  # SB 'Ball Recovery' = won loose ball;
-    #   core/ RECOVERY_EVENT_TYPES uses {interception, tackle, loose_ball,
-    #   goal_kick, clearance} — mapping to interception keeps it countable
-    #   there without inventing a new event type the models don't read.
+    # SB 'Ball Recovery' is a won loose ball, NOT an interception. It kept
+    # its own type once the style benchmark measured both sides with the
+    # same definitions: aliasing it to "interception" silently inflated
+    # every defensive-action count on imported matches. core/
+    # RECOVERY_EVENT_TYPES and BallRecoveryAnalyzer already read
+    # "ball_recovery", so the distinction is preserved end to end.
+    "Ball Recovery": "ball_recovery",
     "Block": "block",
     "Dribbled Past": "dribbled_past",
     "Shield": "shield",
@@ -389,6 +392,10 @@ class StatsBombImportService:
         elif type_name == "Duel":
             duel = ev.get("duel") or {}
             completed = duel.get("outcome", {}).get("name") == "Won"
+
+        elif type_name == "50/50":
+            contest = ev.get("50_50") or {}
+            completed = contest.get("outcome", {}).get("name") == "Won"
 
         elif type_name == "Goal Keeper":
             gk = ev.get("goalkeeper") or {}

@@ -1,0 +1,2680 @@
+{
+ "matches": {
+  "18245": {
+   "away_team": "Liverpool",
+   "competition": "Champions League",
+   "country": "Europe",
+   "home_team": "Real Madrid",
+   "match_date": "2018-05-26",
+   "match_id": "18245",
+   "season": "2017/2018"
+  },
+  "22912": {
+   "away_team": "Liverpool",
+   "competition": "Champions League",
+   "country": "Europe",
+   "home_team": "Tottenham Hotspur",
+   "match_date": "2019-06-01",
+   "match_id": "22912",
+   "season": "2018/2019"
+  },
+  "266056": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Eibar",
+   "match_date": "2016-03-06",
+   "match_id": "266056",
+   "season": "2015/2016"
+  },
+  "266653": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Rayo Vallecano",
+   "match_date": "2016-03-03",
+   "match_id": "266653",
+   "season": "2015/2016"
+  },
+  "267422": {
+   "away_team": "M\u00e1laga",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2015-08-29",
+   "match_id": "267422",
+   "season": "2015/2016"
+  },
+  "267533": {
+   "away_team": "Real Madrid",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2016-04-02",
+   "match_id": "267533",
+   "season": "2015/2016"
+  },
+  "3753972": {
+   "away_team": "AFC Bournemouth",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Swansea City",
+   "match_date": "2015-11-21",
+   "match_id": "3753972",
+   "season": "2015/2016"
+  },
+  "3753982": {
+   "away_team": "Southampton",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Leicester City",
+   "match_date": "2016-04-03",
+   "match_id": "3753982",
+   "season": "2015/2016"
+  },
+  "3753989": {
+   "away_team": "Everton",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Sunderland",
+   "match_date": "2016-05-11",
+   "match_id": "3753989",
+   "season": "2015/2016"
+  },
+  "3753996": {
+   "away_team": "Norwich City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Chelsea",
+   "match_date": "2015-11-21",
+   "match_id": "3753996",
+   "season": "2015/2016"
+  },
+  "3754004": {
+   "away_team": "Norwich City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "AFC Bournemouth",
+   "match_date": "2016-01-16",
+   "match_id": "3754004",
+   "season": "2015/2016"
+  },
+  "3754005": {
+   "away_team": "Newcastle United",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Stoke City",
+   "match_date": "2016-03-02",
+   "match_id": "3754005",
+   "season": "2015/2016"
+  },
+  "3754009": {
+   "away_team": "Crystal Palace",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Arsenal",
+   "match_date": "2016-04-17",
+   "match_id": "3754009",
+   "season": "2015/2016"
+  },
+  "3754027": {
+   "away_team": "Sunderland",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Tottenham Hotspur",
+   "match_date": "2016-01-16",
+   "match_id": "3754027",
+   "season": "2015/2016"
+  },
+  "3754068": {
+   "away_team": "West Bromwich Albion",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Aston Villa",
+   "match_date": "2015-09-19",
+   "match_id": "3754068",
+   "season": "2015/2016"
+  },
+  "3754073": {
+   "away_team": "AFC Bournemouth",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Chelsea",
+   "match_date": "2015-12-05",
+   "match_id": "3754073",
+   "season": "2015/2016"
+  },
+  "3754094": {
+   "away_team": "Stoke City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Manchester United",
+   "match_date": "2016-02-02",
+   "match_id": "3754094",
+   "season": "2015/2016"
+  },
+  "3754108": {
+   "away_team": "Chelsea",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Sunderland",
+   "match_date": "2016-05-07",
+   "match_id": "3754108",
+   "season": "2015/2016"
+  },
+  "3754139": {
+   "away_team": "Southampton",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Swansea City",
+   "match_date": "2016-02-13",
+   "match_id": "3754139",
+   "season": "2015/2016"
+  },
+  "3754145": {
+   "away_team": "Manchester City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "West Bromwich Albion",
+   "match_date": "2015-08-10",
+   "match_id": "3754145",
+   "season": "2015/2016"
+  },
+  "3754149": {
+   "away_team": "Manchester City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Swansea City",
+   "match_date": "2016-05-15",
+   "match_id": "3754149",
+   "season": "2015/2016"
+  },
+  "3754151": {
+   "away_team": "Norwich City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Swansea City",
+   "match_date": "2016-03-05",
+   "match_id": "3754151",
+   "season": "2015/2016"
+  },
+  "3754170": {
+   "away_team": "Crystal Palace",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Newcastle United",
+   "match_date": "2016-04-30",
+   "match_id": "3754170",
+   "season": "2015/2016"
+  },
+  "3754194": {
+   "away_team": "Everton",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "West Ham United",
+   "match_date": "2015-11-07",
+   "match_id": "3754194",
+   "season": "2015/2016"
+  },
+  "3754208": {
+   "away_team": "Liverpool",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Manchester City",
+   "match_date": "2015-11-21",
+   "match_id": "3754208",
+   "season": "2015/2016"
+  },
+  "3754209": {
+   "away_team": "Manchester United",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Tottenham Hotspur",
+   "match_date": "2016-04-10",
+   "match_id": "3754209",
+   "season": "2015/2016"
+  },
+  "3754211": {
+   "away_team": "Leicester City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Newcastle United",
+   "match_date": "2015-11-21",
+   "match_id": "3754211",
+   "season": "2015/2016"
+  },
+  "3754222": {
+   "away_team": "Crystal Palace",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Tottenham Hotspur",
+   "match_date": "2015-09-20",
+   "match_id": "3754222",
+   "season": "2015/2016"
+  },
+  "3754230": {
+   "away_team": "Southampton",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Liverpool",
+   "match_date": "2015-10-25",
+   "match_id": "3754230",
+   "season": "2015/2016"
+  },
+  "3754280": {
+   "away_team": "Chelsea",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Norwich City",
+   "match_date": "2016-03-01",
+   "match_id": "3754280",
+   "season": "2015/2016"
+  },
+  "3754294": {
+   "away_team": "Everton",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Liverpool",
+   "match_date": "2016-04-20",
+   "match_id": "3754294",
+   "season": "2015/2016"
+  },
+  "3754312": {
+   "away_team": "Arsenal",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Crystal Palace",
+   "match_date": "2015-08-16",
+   "match_id": "3754312",
+   "season": "2015/2016"
+  },
+  "3754313": {
+   "away_team": "Manchester City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Norwich City",
+   "match_date": "2016-03-12",
+   "match_id": "3754313",
+   "season": "2015/2016"
+  },
+  "3754317": {
+   "away_team": "Tottenham Hotspur",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Norwich City",
+   "match_date": "2016-02-02",
+   "match_id": "3754317",
+   "season": "2015/2016"
+  },
+  "3754322": {
+   "away_team": "Manchester City",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Chelsea",
+   "match_date": "2016-04-16",
+   "match_id": "3754322",
+   "season": "2015/2016"
+  },
+  "3754345": {
+   "away_team": "Manchester United",
+   "competition": "Premier League",
+   "country": "England",
+   "home_team": "Liverpool",
+   "match_date": "2016-01-17",
+   "match_id": "3754345",
+   "season": "2015/2016"
+  },
+  "3788741": {
+   "away_team": "Italy",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Turkey",
+   "match_date": "2021-06-11",
+   "match_id": "3788741",
+   "season": "2020"
+  },
+  "3788742": {
+   "away_team": "Finland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Denmark",
+   "match_date": "2021-06-12",
+   "match_id": "3788742",
+   "season": "2020"
+  },
+  "3788743": {
+   "away_team": "Russia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Belgium",
+   "match_date": "2021-06-12",
+   "match_id": "3788743",
+   "season": "2020"
+  },
+  "3788744": {
+   "away_team": "Switzerland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Wales",
+   "match_date": "2021-06-12",
+   "match_id": "3788744",
+   "season": "2020"
+  },
+  "3788745": {
+   "away_team": "Croatia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "England",
+   "match_date": "2021-06-13",
+   "match_id": "3788745",
+   "season": "2020"
+  },
+  "3788746": {
+   "away_team": "Ukraine",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Netherlands",
+   "match_date": "2021-06-13",
+   "match_id": "3788746",
+   "season": "2020"
+  },
+  "3788747": {
+   "away_team": "North Macedonia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Austria",
+   "match_date": "2021-06-13",
+   "match_id": "3788747",
+   "season": "2020"
+  },
+  "3788748": {
+   "away_team": "Czech Republic",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Scotland",
+   "match_date": "2021-06-14",
+   "match_id": "3788748",
+   "season": "2020"
+  },
+  "3788749": {
+   "away_team": "Slovakia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Poland",
+   "match_date": "2021-06-14",
+   "match_id": "3788749",
+   "season": "2020"
+  },
+  "3788750": {
+   "away_team": "Sweden",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Spain",
+   "match_date": "2021-06-14",
+   "match_id": "3788750",
+   "season": "2020"
+  },
+  "3788751": {
+   "away_team": "Germany",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "France",
+   "match_date": "2021-06-15",
+   "match_id": "3788751",
+   "season": "2020"
+  },
+  "3788752": {
+   "away_team": "Portugal",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Hungary",
+   "match_date": "2021-06-15",
+   "match_id": "3788752",
+   "season": "2020"
+  },
+  "3788753": {
+   "away_team": "Russia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Finland",
+   "match_date": "2021-06-16",
+   "match_id": "3788753",
+   "season": "2020"
+  },
+  "3788754": {
+   "away_team": "Switzerland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Italy",
+   "match_date": "2021-06-16",
+   "match_id": "3788754",
+   "season": "2020"
+  },
+  "3788755": {
+   "away_team": "Wales",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Turkey",
+   "match_date": "2021-06-16",
+   "match_id": "3788755",
+   "season": "2020"
+  },
+  "3788756": {
+   "away_team": "Austria",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Netherlands",
+   "match_date": "2021-06-17",
+   "match_id": "3788756",
+   "season": "2020"
+  },
+  "3788757": {
+   "away_team": "Belgium",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Denmark",
+   "match_date": "2021-06-17",
+   "match_id": "3788757",
+   "season": "2020"
+  },
+  "3788758": {
+   "away_team": "North Macedonia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Ukraine",
+   "match_date": "2021-06-17",
+   "match_id": "3788758",
+   "season": "2020"
+  },
+  "3788759": {
+   "away_team": "Scotland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "England",
+   "match_date": "2021-06-18",
+   "match_id": "3788759",
+   "season": "2020"
+  },
+  "3788760": {
+   "away_team": "Czech Republic",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Croatia",
+   "match_date": "2021-06-18",
+   "match_id": "3788760",
+   "season": "2020"
+  },
+  "3788761": {
+   "away_team": "Slovakia",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Sweden",
+   "match_date": "2021-06-18",
+   "match_id": "3788761",
+   "season": "2020"
+  },
+  "3788762": {
+   "away_team": "Poland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Spain",
+   "match_date": "2021-06-19",
+   "match_id": "3788762",
+   "season": "2020"
+  },
+  "3788763": {
+   "away_team": "France",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Hungary",
+   "match_date": "2021-06-19",
+   "match_id": "3788763",
+   "season": "2020"
+  },
+  "3788764": {
+   "away_team": "Germany",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Portugal",
+   "match_date": "2021-06-19",
+   "match_id": "3788764",
+   "season": "2020"
+  },
+  "3788765": {
+   "away_team": "Turkey",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Switzerland",
+   "match_date": "2021-06-20",
+   "match_id": "3788765",
+   "season": "2020"
+  },
+  "3788766": {
+   "away_team": "Wales",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Italy",
+   "match_date": "2021-06-20",
+   "match_id": "3788766",
+   "season": "2020"
+  },
+  "3788767": {
+   "away_team": "Austria",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Ukraine",
+   "match_date": "2021-06-21",
+   "match_id": "3788767",
+   "season": "2020"
+  },
+  "3788768": {
+   "away_team": "Belgium",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Finland",
+   "match_date": "2021-06-21",
+   "match_id": "3788768",
+   "season": "2020"
+  },
+  "3788769": {
+   "away_team": "Denmark",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Russia",
+   "match_date": "2021-06-21",
+   "match_id": "3788769",
+   "season": "2020"
+  },
+  "3788770": {
+   "away_team": "Netherlands",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "North Macedonia",
+   "match_date": "2021-06-21",
+   "match_id": "3788770",
+   "season": "2020"
+  },
+  "3788771": {
+   "away_team": "Scotland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Croatia",
+   "match_date": "2021-06-22",
+   "match_id": "3788771",
+   "season": "2020"
+  },
+  "3788772": {
+   "away_team": "England",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Czech Republic",
+   "match_date": "2021-06-22",
+   "match_id": "3788772",
+   "season": "2020"
+  },
+  "3788773": {
+   "away_team": "France",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Portugal",
+   "match_date": "2021-06-23",
+   "match_id": "3788773",
+   "season": "2020"
+  },
+  "3788774": {
+   "away_team": "Hungary",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Germany",
+   "match_date": "2021-06-23",
+   "match_id": "3788774",
+   "season": "2020"
+  },
+  "3788775": {
+   "away_team": "Spain",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Slovakia",
+   "match_date": "2021-06-23",
+   "match_id": "3788775",
+   "season": "2020"
+  },
+  "3788776": {
+   "away_team": "Poland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Sweden",
+   "match_date": "2021-06-23",
+   "match_id": "3788776",
+   "season": "2020"
+  },
+  "3794685": {
+   "away_team": "Austria",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Italy",
+   "match_date": "2021-06-26",
+   "match_id": "3794685",
+   "season": "2020"
+  },
+  "3794686": {
+   "away_team": "Spain",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Croatia",
+   "match_date": "2021-06-28",
+   "match_id": "3794686",
+   "season": "2020"
+  },
+  "3794687": {
+   "away_team": "Portugal",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Belgium",
+   "match_date": "2021-06-27",
+   "match_id": "3794687",
+   "season": "2020"
+  },
+  "3794688": {
+   "away_team": "Germany",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "England",
+   "match_date": "2021-06-29",
+   "match_id": "3794688",
+   "season": "2020"
+  },
+  "3794689": {
+   "away_team": "Denmark",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Wales",
+   "match_date": "2021-06-26",
+   "match_id": "3794689",
+   "season": "2020"
+  },
+  "3794690": {
+   "away_team": "Czech Republic",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Netherlands",
+   "match_date": "2021-06-27",
+   "match_id": "3794690",
+   "season": "2020"
+  },
+  "3794691": {
+   "away_team": "Switzerland",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "France",
+   "match_date": "2021-06-28",
+   "match_id": "3794691",
+   "season": "2020"
+  },
+  "3794692": {
+   "away_team": "Ukraine",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Sweden",
+   "match_date": "2021-06-29",
+   "match_id": "3794692",
+   "season": "2020"
+  },
+  "3795107": {
+   "away_team": "Italy",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Belgium",
+   "match_date": "2021-07-02",
+   "match_id": "3795107",
+   "season": "2020"
+  },
+  "3795108": {
+   "away_team": "Spain",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Switzerland",
+   "match_date": "2021-07-02",
+   "match_id": "3795108",
+   "season": "2020"
+  },
+  "3795109": {
+   "away_team": "Denmark",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Czech Republic",
+   "match_date": "2021-07-03",
+   "match_id": "3795109",
+   "season": "2020"
+  },
+  "3795187": {
+   "away_team": "England",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Ukraine",
+   "match_date": "2021-07-03",
+   "match_id": "3795187",
+   "season": "2020"
+  },
+  "3795220": {
+   "away_team": "Spain",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Italy",
+   "match_date": "2021-07-06",
+   "match_id": "3795220",
+   "season": "2020"
+  },
+  "3795221": {
+   "away_team": "Denmark",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "England",
+   "match_date": "2021-07-07",
+   "match_id": "3795221",
+   "season": "2020"
+  },
+  "3795506": {
+   "away_team": "England",
+   "competition": "UEFA Euro",
+   "country": "Europe",
+   "home_team": "Italy",
+   "match_date": "2021-07-11",
+   "match_id": "3795506",
+   "season": "2020"
+  },
+  "3825569": {
+   "away_team": "Celta Vigo",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Levante UD",
+   "match_date": "2015-08-23",
+   "match_id": "3825569",
+   "season": "2015/2016"
+  },
+  "3825572": {
+   "away_team": "Real Betis",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Real Madrid",
+   "match_date": "2015-08-29",
+   "match_id": "3825572",
+   "season": "2015/2016"
+  },
+  "3825578": {
+   "away_team": "Athletic Club",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Eibar",
+   "match_date": "2015-08-30",
+   "match_id": "3825578",
+   "season": "2015/2016"
+  },
+  "3825614": {
+   "away_team": "RC Deportivo La Coru\u00f1a",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Granada",
+   "match_date": "2015-10-03",
+   "match_id": "3825614",
+   "season": "2015/2016"
+  },
+  "3825629": {
+   "away_team": "Celta Vigo",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Villarreal",
+   "match_date": "2015-10-18",
+   "match_id": "3825629",
+   "season": "2015/2016"
+  },
+  "3825652": {
+   "away_team": "Real Sociedad",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Las Palmas",
+   "match_date": "2015-11-06",
+   "match_id": "3825652",
+   "season": "2015/2016"
+  },
+  "3825706": {
+   "away_team": "Athletic Club",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Celta Vigo",
+   "match_date": "2015-12-30",
+   "match_id": "3825706",
+   "season": "2015/2016"
+  },
+  "3825721": {
+   "away_team": "Villarreal",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "RC Deportivo La Coru\u00f1a",
+   "match_date": "2016-01-03",
+   "match_id": "3825721",
+   "season": "2015/2016"
+  },
+  "3825728": {
+   "away_team": "Atl\u00e9tico Madrid",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Celta Vigo",
+   "match_date": "2016-01-10",
+   "match_id": "3825728",
+   "season": "2015/2016"
+  },
+  "3825730": {
+   "away_team": "Valencia",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Real Sociedad",
+   "match_date": "2016-01-10",
+   "match_id": "3825730",
+   "season": "2015/2016"
+  },
+  "3825734": {
+   "away_team": "RC Deportivo La Coru\u00f1a",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Real Sociedad",
+   "match_date": "2016-01-16",
+   "match_id": "3825734",
+   "season": "2015/2016"
+  },
+  "3825736": {
+   "away_team": "Rayo Vallecano",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Valencia",
+   "match_date": "2016-01-17",
+   "match_id": "3825736",
+   "season": "2015/2016"
+  },
+  "3825754": {
+   "away_team": "Celta Vigo",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Las Palmas",
+   "match_date": "2016-01-31",
+   "match_id": "3825754",
+   "season": "2015/2016"
+  },
+  "3825762": {
+   "away_team": "RC Deportivo La Coru\u00f1a",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Sporting Gij\u00f3n",
+   "match_date": "2016-02-06",
+   "match_id": "3825762",
+   "season": "2015/2016"
+  },
+  "3825772": {
+   "away_team": "Espanyol",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Valencia",
+   "match_date": "2016-02-13",
+   "match_id": "3825772",
+   "season": "2015/2016"
+  },
+  "3825783": {
+   "away_team": "Real Sociedad",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Athletic Club",
+   "match_date": "2016-02-21",
+   "match_id": "3825783",
+   "season": "2015/2016"
+  },
+  "3825811": {
+   "away_team": "Rayo Vallecano",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Espanyol",
+   "match_date": "2016-03-07",
+   "match_id": "3825811",
+   "season": "2015/2016"
+  },
+  "3825819": {
+   "away_team": "Celta Vigo",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Valencia",
+   "match_date": "2016-03-20",
+   "match_id": "3825819",
+   "season": "2015/2016"
+  },
+  "3825821": {
+   "away_team": "Athletic Club",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Espanyol",
+   "match_date": "2016-03-20",
+   "match_id": "3825821",
+   "season": "2015/2016"
+  },
+  "3825834": {
+   "away_team": "Granada",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Atl\u00e9tico Madrid",
+   "match_date": "2016-04-17",
+   "match_id": "3825834",
+   "season": "2015/2016"
+  },
+  "3825854": {
+   "away_team": "Eibar",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Sporting Gij\u00f3n",
+   "match_date": "2016-04-29",
+   "match_id": "3825854",
+   "season": "2015/2016"
+  },
+  "3825870": {
+   "away_team": "Celta Vigo",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Athletic Club",
+   "match_date": "2016-05-01",
+   "match_id": "3825870",
+   "season": "2015/2016"
+  },
+  "3825872": {
+   "away_team": "Real Betis",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Atl\u00e9tico Madrid",
+   "match_date": "2016-04-02",
+   "match_id": "3825872",
+   "season": "2015/2016"
+  },
+  "3825873": {
+   "away_team": "Villarreal",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Valencia",
+   "match_date": "2016-05-01",
+   "match_id": "3825873",
+   "season": "2015/2016"
+  },
+  "3825886": {
+   "away_team": "Real Madrid",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Rayo Vallecano",
+   "match_date": "2016-04-23",
+   "match_id": "3825886",
+   "season": "2015/2016"
+  },
+  "3825898": {
+   "away_team": "RC Deportivo La Coru\u00f1a",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Celta Vigo",
+   "match_date": "2016-04-02",
+   "match_id": "3825898",
+   "season": "2015/2016"
+  },
+  "3829424": {
+   "away_team": "Bordeaux",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Saint-\u00c9tienne",
+   "match_date": "2015-08-15",
+   "match_id": "3829424",
+   "season": "2015/2016"
+  },
+  "3829426": {
+   "away_team": "Lyon",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Guingamp",
+   "match_date": "2015-08-15",
+   "match_id": "3829426",
+   "season": "2015/2016"
+  },
+  "3829443": {
+   "away_team": "Olympique de Marseille",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Guingamp",
+   "match_date": "2015-08-28",
+   "match_id": "3829443",
+   "season": "2015/2016"
+  },
+  "3829465": {
+   "away_team": "Paris Saint-Germain",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Stade de Reims",
+   "match_date": "2015-09-19",
+   "match_id": "3829465",
+   "season": "2015/2016"
+  },
+  "3829476": {
+   "away_team": "Bastia",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Lyon",
+   "match_date": "2015-09-23",
+   "match_id": "3829476",
+   "season": "2015/2016"
+  },
+  "3829478": {
+   "away_team": "Rennes",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Gaz\u00e9lec Ajaccio",
+   "match_date": "2015-09-23",
+   "match_id": "3829478",
+   "season": "2015/2016"
+  },
+  "3829480": {
+   "away_team": "Saint-\u00c9tienne",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Troyes",
+   "match_date": "2015-09-23",
+   "match_id": "3829480",
+   "season": "2015/2016"
+  },
+  "3829506": {
+   "away_team": "Lille",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Guingamp",
+   "match_date": "2015-10-17",
+   "match_id": "3829506",
+   "season": "2015/2016"
+  },
+  "3829517": {
+   "away_team": "OGC Nice",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Gaz\u00e9lec Ajaccio",
+   "match_date": "2015-10-24",
+   "match_id": "3829517",
+   "season": "2015/2016"
+  },
+  "3829522": {
+   "away_team": "Nantes",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "OGC Nice",
+   "match_date": "2015-11-04",
+   "match_id": "3829522",
+   "season": "2015/2016"
+  },
+  "3878551": {
+   "away_team": "Empoli",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "AC Milan",
+   "match_date": "2015-08-29",
+   "match_id": "3878551",
+   "season": "2015/2016"
+  },
+  "3878596": {
+   "away_team": "Torino",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Hellas Verona",
+   "match_date": "2015-09-13",
+   "match_id": "3878596",
+   "season": "2015/2016"
+  },
+  "3878601": {
+   "away_team": "Bologna",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Sampdoria",
+   "match_date": "2015-09-14",
+   "match_id": "3878601",
+   "season": "2015/2016"
+  },
+  "3878604": {
+   "away_team": "Lazio",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Napoli",
+   "match_date": "2015-09-20",
+   "match_id": "3878604",
+   "season": "2015/2016"
+  },
+  "3878608": {
+   "away_team": "Frosinone",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Bologna",
+   "match_date": "2015-09-20",
+   "match_id": "3878608",
+   "season": "2015/2016"
+  },
+  "3879545": {
+   "away_team": "AS Roma",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Sampdoria",
+   "match_date": "2015-09-23",
+   "match_id": "3879545",
+   "season": "2015/2016"
+  },
+  "3879553": {
+   "away_team": "Chievo",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Sassuolo",
+   "match_date": "2015-09-27",
+   "match_id": "3879553",
+   "season": "2015/2016"
+  },
+  "3879564": {
+   "away_team": "AS Roma",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Palermo",
+   "match_date": "2015-10-04",
+   "match_id": "3879564",
+   "season": "2015/2016"
+  },
+  "3879598": {
+   "away_team": "AS Roma",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Inter Milan",
+   "match_date": "2015-10-31",
+   "match_id": "3879598",
+   "season": "2015/2016"
+  },
+  "3879629": {
+   "away_team": "Hellas Verona",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Frosinone",
+   "match_date": "2015-11-29",
+   "match_id": "3879629",
+   "season": "2015/2016"
+  },
+  "3879642": {
+   "away_team": "AC Milan",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Carpi",
+   "match_date": "2015-12-06",
+   "match_id": "3879642",
+   "season": "2015/2016"
+  },
+  "3879643": {
+   "away_team": "Sassuolo",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Sampdoria",
+   "match_date": "2015-12-06",
+   "match_id": "3879643",
+   "season": "2015/2016"
+  },
+  "3879649": {
+   "away_team": "Frosinone",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Palermo",
+   "match_date": "2015-12-12",
+   "match_id": "3879649",
+   "season": "2015/2016"
+  },
+  "3879669": {
+   "away_team": "Torino",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Napoli",
+   "match_date": "2016-01-06",
+   "match_id": "3879669",
+   "season": "2015/2016"
+  },
+  "3879674": {
+   "away_team": "Bologna",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "AC Milan",
+   "match_date": "2016-01-06",
+   "match_id": "3879674",
+   "season": "2015/2016"
+  },
+  "3879696": {
+   "away_team": "Torino",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Sassuolo",
+   "match_date": "2016-01-20",
+   "match_id": "3879696",
+   "season": "2015/2016"
+  },
+  "3879714": {
+   "away_team": "Empoli",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Napoli",
+   "match_date": "2016-01-31",
+   "match_id": "3879714",
+   "season": "2015/2016"
+  },
+  "3879715": {
+   "away_team": "Hellas Verona",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Torino",
+   "match_date": "2016-01-31",
+   "match_id": "3879715",
+   "season": "2015/2016"
+  },
+  "3879716": {
+   "away_team": "Fiorentina",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Genoa",
+   "match_date": "2016-01-31",
+   "match_id": "3879716",
+   "season": "2015/2016"
+  },
+  "3879724": {
+   "away_team": "Carpi",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Fiorentina",
+   "match_date": "2016-02-03",
+   "match_id": "3879724",
+   "season": "2015/2016"
+  },
+  "3879727": {
+   "away_team": "Lazio",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Genoa",
+   "match_date": "2016-02-06",
+   "match_id": "3879727",
+   "season": "2015/2016"
+  },
+  "3879749": {
+   "away_team": "Sampdoria",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Inter Milan",
+   "match_date": "2016-02-20",
+   "match_id": "3879749",
+   "season": "2015/2016"
+  },
+  "3879765": {
+   "away_team": "Napoli",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Fiorentina",
+   "match_date": "2016-02-29",
+   "match_id": "3879765",
+   "season": "2015/2016"
+  },
+  "3879780": {
+   "away_team": "Hellas Verona",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Fiorentina",
+   "match_date": "2016-03-13",
+   "match_id": "3879780",
+   "season": "2015/2016"
+  },
+  "3879782": {
+   "away_team": "Frosinone",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Carpi",
+   "match_date": "2016-03-13",
+   "match_id": "3879782",
+   "season": "2015/2016"
+  },
+  "3879852": {
+   "away_team": "Sampdoria",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Palermo",
+   "match_date": "2016-05-01",
+   "match_id": "3879852",
+   "season": "2015/2016"
+  },
+  "3879855": {
+   "away_team": "Atalanta",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Napoli",
+   "match_date": "2016-05-02",
+   "match_id": "3879855",
+   "season": "2015/2016"
+  },
+  "3879857": {
+   "away_team": "Empoli",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Inter Milan",
+   "match_date": "2016-05-07",
+   "match_id": "3879857",
+   "season": "2015/2016"
+  },
+  "3879864": {
+   "away_team": "Juventus",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Hellas Verona",
+   "match_date": "2016-05-08",
+   "match_id": "3879864",
+   "season": "2015/2016"
+  },
+  "3879871": {
+   "away_team": "Carpi",
+   "competition": "Serie A",
+   "country": "Italy",
+   "home_team": "Udinese",
+   "match_date": "2016-05-15",
+   "match_id": "3879871",
+   "season": "2015/2016"
+  },
+  "3890273": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Hannover 96",
+   "match_date": "2015-08-22",
+   "match_id": "3890273",
+   "season": "2015/2016"
+  },
+  "3890278": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayern Munich",
+   "match_date": "2015-08-29",
+   "match_id": "3890278",
+   "season": "2015/2016"
+  },
+  "3890288": {
+   "away_team": "Darmstadt 98",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-09-12",
+   "match_id": "3890288",
+   "season": "2015/2016"
+  },
+  "3890301": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Borussia Dortmund",
+   "match_date": "2015-09-20",
+   "match_id": "3890301",
+   "season": "2015/2016"
+  },
+  "3890312": {
+   "away_team": "FSV Mainz 05",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-09-23",
+   "match_id": "3890312",
+   "season": "2015/2016"
+  },
+  "3890315": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Werder Bremen",
+   "match_date": "2015-09-26",
+   "match_id": "3890315",
+   "season": "2015/2016"
+  },
+  "3890330": {
+   "away_team": "Augsburg",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-10-04",
+   "match_id": "3890330",
+   "season": "2015/2016"
+  },
+  "3890337": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Hamburger SV",
+   "match_date": "2015-10-17",
+   "match_id": "3890337",
+   "season": "2015/2016"
+  },
+  "3890346": {
+   "away_team": "VfB Stuttgart",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-10-24",
+   "match_id": "3890346",
+   "season": "2015/2016"
+  },
+  "3890350": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Wolfsburg",
+   "match_date": "2015-10-31",
+   "match_id": "3890350",
+   "season": "2015/2016"
+  },
+  "3890359": {
+   "away_team": "FC K\u00f6ln",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-11-07",
+   "match_id": "3890359",
+   "season": "2015/2016"
+  },
+  "3890370": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Eintracht Frankfurt",
+   "match_date": "2015-11-21",
+   "match_id": "3890370",
+   "season": "2015/2016"
+  },
+  "3890382": {
+   "away_team": "Schalke 04",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-11-29",
+   "match_id": "3890382",
+   "season": "2015/2016"
+  },
+  "3890390": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Hertha Berlin",
+   "match_date": "2015-12-05",
+   "match_id": "3890390",
+   "season": "2015/2016"
+  },
+  "3890395": {
+   "away_team": "Borussia M\u00f6nchengladbach",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2015-12-12",
+   "match_id": "3890395",
+   "season": "2015/2016"
+  },
+  "3890415": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Hoffenheim",
+   "match_date": "2016-01-23",
+   "match_id": "3890415",
+   "season": "2015/2016"
+  },
+  "3890427": {
+   "away_team": "Hannover 96",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-01-30",
+   "match_id": "3890427",
+   "season": "2015/2016"
+  },
+  "3890431": {
+   "away_team": "Bayern Munich",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-02-06",
+   "match_id": "3890431",
+   "season": "2015/2016"
+  },
+  "3890444": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Darmstadt 98",
+   "match_date": "2016-02-13",
+   "match_id": "3890444",
+   "season": "2015/2016"
+  },
+  "3890456": {
+   "away_team": "Borussia Dortmund",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-02-21",
+   "match_id": "3890456",
+   "season": "2015/2016"
+  },
+  "3890463": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "FSV Mainz 05",
+   "match_date": "2016-02-28",
+   "match_id": "3890463",
+   "season": "2015/2016"
+  },
+  "3890472": {
+   "away_team": "Werder Bremen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-03-02",
+   "match_id": "3890472",
+   "season": "2015/2016"
+  },
+  "3890477": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Augsburg",
+   "match_date": "2016-03-05",
+   "match_id": "3890477",
+   "season": "2015/2016"
+  },
+  "3890492": {
+   "away_team": "Hamburger SV",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-03-13",
+   "match_id": "3890492",
+   "season": "2015/2016"
+  },
+  "3890502": {
+   "away_team": "Wolfsburg",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-04-01",
+   "match_id": "3890502",
+   "season": "2015/2016"
+  },
+  "3890519": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "FC K\u00f6ln",
+   "match_date": "2016-04-10",
+   "match_id": "3890519",
+   "season": "2015/2016"
+  },
+  "3890521": {
+   "away_team": "Eintracht Frankfurt",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-04-16",
+   "match_id": "3890521",
+   "season": "2015/2016"
+  },
+  "3890534": {
+   "away_team": "Bayer Leverkusen",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Schalke 04",
+   "match_date": "2016-04-23",
+   "match_id": "3890534",
+   "season": "2015/2016"
+  },
+  "3890540": {
+   "away_team": "Hertha Berlin",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-04-30",
+   "match_id": "3890540",
+   "season": "2015/2016"
+  },
+  "3890563": {
+   "away_team": "Ingolstadt",
+   "competition": "1. Bundesliga",
+   "country": "Germany",
+   "home_team": "Bayer Leverkusen",
+   "match_date": "2016-05-14",
+   "match_id": "3890563",
+   "season": "2015/2016"
+  },
+  "3900505": {
+   "away_team": "Guingamp",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Stade Malherbe Caen",
+   "match_date": "2015-11-07",
+   "match_id": "3900505",
+   "season": "2015/2016"
+  },
+  "3900509": {
+   "away_team": "Saint-\u00c9tienne",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Lyon",
+   "match_date": "2015-11-08",
+   "match_id": "3900509",
+   "season": "2015/2016"
+  },
+  "3900510": {
+   "away_team": "Lyon",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "OGC Nice",
+   "match_date": "2015-11-20",
+   "match_id": "3900510",
+   "season": "2015/2016"
+  },
+  "3900514": {
+   "away_team": "Toulouse",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Guingamp",
+   "match_date": "2015-11-21",
+   "match_id": "3900514",
+   "season": "2015/2016"
+  },
+  "3900519": {
+   "away_team": "Bordeaux",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Rennes",
+   "match_date": "2015-11-22",
+   "match_id": "3900519",
+   "season": "2015/2016"
+  },
+  "3900550": {
+   "away_team": "Stade Malherbe Caen",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Rennes",
+   "match_date": "2015-12-11",
+   "match_id": "3900550",
+   "season": "2015/2016"
+  },
+  "3900576": {
+   "away_team": "Bordeaux",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Montpellier",
+   "match_date": "2016-01-09",
+   "match_id": "3900576",
+   "season": "2015/2016"
+  },
+  "3900578": {
+   "away_team": "OGC Nice",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Lille",
+   "match_date": "2016-01-10",
+   "match_id": "3900578",
+   "season": "2015/2016"
+  },
+  "3900591": {
+   "away_team": "Angers",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Paris Saint-Germain",
+   "match_date": "2016-01-23",
+   "match_id": "3900591",
+   "season": "2015/2016"
+  },
+  "3900592": {
+   "away_team": "Stade Malherbe Caen",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Montpellier",
+   "match_date": "2016-01-23",
+   "match_id": "3900592",
+   "season": "2015/2016"
+  },
+  "3900604": {
+   "away_team": "AS Monaco",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Angers",
+   "match_date": "2016-01-30",
+   "match_id": "3900604",
+   "season": "2015/2016"
+  },
+  "3900611": {
+   "away_team": "Bastia",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "AS Monaco",
+   "match_date": "2016-02-02",
+   "match_id": "3900611",
+   "season": "2015/2016"
+  },
+  "3900614": {
+   "away_team": "Stade Malherbe Caen",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Lille",
+   "match_date": "2016-02-03",
+   "match_id": "3900614",
+   "season": "2015/2016"
+  },
+  "3901147": {
+   "away_team": "Gaz\u00e9lec Ajaccio",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Toulouse",
+   "match_date": "2016-02-20",
+   "match_id": "3901147",
+   "season": "2015/2016"
+  },
+  "3901167": {
+   "away_team": "Lorient",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Bastia",
+   "match_date": "2016-03-05",
+   "match_id": "3901167",
+   "season": "2015/2016"
+  },
+  "3901181": {
+   "away_team": "Lyon",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Rennes",
+   "match_date": "2016-03-13",
+   "match_id": "3901181",
+   "season": "2015/2016"
+  },
+  "3901192": {
+   "away_team": "Bastia",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Bordeaux",
+   "match_date": "2016-03-20",
+   "match_id": "3901192",
+   "season": "2015/2016"
+  },
+  "3901200": {
+   "away_team": "Stade Malherbe Caen",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Toulouse",
+   "match_date": "2016-04-02",
+   "match_id": "3901200",
+   "season": "2015/2016"
+  },
+  "3901208": {
+   "away_team": "Paris Saint-Germain",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Guingamp",
+   "match_date": "2016-04-09",
+   "match_id": "3901208",
+   "season": "2015/2016"
+  },
+  "3901219": {
+   "away_team": "Toulouse",
+   "competition": "Ligue 1",
+   "country": "France",
+   "home_team": "Lorient",
+   "match_date": "2016-04-16",
+   "match_id": "3901219",
+   "season": "2015/2016"
+  },
+  "7525": {
+   "away_team": "Saudi Arabia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Russia",
+   "match_date": "2018-06-14",
+   "match_id": "7525",
+   "season": "2018"
+  },
+  "7529": {
+   "away_team": "Nigeria",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Croatia",
+   "match_date": "2018-06-16",
+   "match_id": "7529",
+   "season": "2018"
+  },
+  "7530": {
+   "away_team": "Australia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "France",
+   "match_date": "2018-06-16",
+   "match_id": "7530",
+   "season": "2018"
+  },
+  "7531": {
+   "away_team": "Iceland",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Argentina",
+   "match_date": "2018-06-16",
+   "match_id": "7531",
+   "season": "2018"
+  },
+  "7532": {
+   "away_team": "Denmark",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Peru",
+   "match_date": "2018-06-16",
+   "match_id": "7532",
+   "season": "2018"
+  },
+  "7533": {
+   "away_team": "Switzerland",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Brazil",
+   "match_date": "2018-06-17",
+   "match_id": "7533",
+   "season": "2018"
+  },
+  "7534": {
+   "away_team": "Mexico",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Germany",
+   "match_date": "2018-06-17",
+   "match_id": "7534",
+   "season": "2018"
+  },
+  "7535": {
+   "away_team": "Serbia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Costa Rica",
+   "match_date": "2018-06-17",
+   "match_id": "7535",
+   "season": "2018"
+  },
+  "7536": {
+   "away_team": "Panama",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Belgium",
+   "match_date": "2018-06-18",
+   "match_id": "7536",
+   "season": "2018"
+  },
+  "7537": {
+   "away_team": "England",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Tunisia",
+   "match_date": "2018-06-18",
+   "match_id": "7537",
+   "season": "2018"
+  },
+  "7538": {
+   "away_team": "South Korea",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Sweden",
+   "match_date": "2018-06-18",
+   "match_id": "7538",
+   "season": "2018"
+  },
+  "7539": {
+   "away_team": "Senegal",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Poland",
+   "match_date": "2018-06-19",
+   "match_id": "7539",
+   "season": "2018"
+  },
+  "7540": {
+   "away_team": "Egypt",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Russia",
+   "match_date": "2018-06-19",
+   "match_id": "7540",
+   "season": "2018"
+  },
+  "7541": {
+   "away_team": "Japan",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Colombia",
+   "match_date": "2018-06-19",
+   "match_id": "7541",
+   "season": "2018"
+  },
+  "7542": {
+   "away_team": "Morocco",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Portugal",
+   "match_date": "2018-06-20",
+   "match_id": "7542",
+   "season": "2018"
+  },
+  "7543": {
+   "away_team": "Spain",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Iran",
+   "match_date": "2018-06-20",
+   "match_id": "7543",
+   "season": "2018"
+  },
+  "7544": {
+   "away_team": "Saudi Arabia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Uruguay",
+   "match_date": "2018-06-20",
+   "match_id": "7544",
+   "season": "2018"
+  },
+  "7545": {
+   "away_team": "Croatia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Argentina",
+   "match_date": "2018-06-21",
+   "match_id": "7545",
+   "season": "2018"
+  },
+  "7546": {
+   "away_team": "Peru",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "France",
+   "match_date": "2018-06-21",
+   "match_id": "7546",
+   "season": "2018"
+  },
+  "7547": {
+   "away_team": "Australia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Denmark",
+   "match_date": "2018-06-21",
+   "match_id": "7547",
+   "season": "2018"
+  },
+  "7548": {
+   "away_team": "Costa Rica",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Brazil",
+   "match_date": "2018-06-22",
+   "match_id": "7548",
+   "season": "2018"
+  },
+  "7549": {
+   "away_team": "Iceland",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Nigeria",
+   "match_date": "2018-06-22",
+   "match_id": "7549",
+   "season": "2018"
+  },
+  "7550": {
+   "away_team": "Switzerland",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Serbia",
+   "match_date": "2018-06-22",
+   "match_id": "7550",
+   "season": "2018"
+  },
+  "7551": {
+   "away_team": "Sweden",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Germany",
+   "match_date": "2018-06-23",
+   "match_id": "7551",
+   "season": "2018"
+  },
+  "7552": {
+   "away_team": "Tunisia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Belgium",
+   "match_date": "2018-06-23",
+   "match_id": "7552",
+   "season": "2018"
+  },
+  "7553": {
+   "away_team": "Mexico",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "South Korea",
+   "match_date": "2018-06-23",
+   "match_id": "7553",
+   "season": "2018"
+  },
+  "7554": {
+   "away_team": "Panama",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "England",
+   "match_date": "2018-06-24",
+   "match_id": "7554",
+   "season": "2018"
+  },
+  "7555": {
+   "away_team": "Colombia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Poland",
+   "match_date": "2018-06-24",
+   "match_id": "7555",
+   "season": "2018"
+  },
+  "7556": {
+   "away_team": "Senegal",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Japan",
+   "match_date": "2018-06-24",
+   "match_id": "7556",
+   "season": "2018"
+  },
+  "7557": {
+   "away_team": "Portugal",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Iran",
+   "match_date": "2018-06-25",
+   "match_id": "7557",
+   "season": "2018"
+  },
+  "7558": {
+   "away_team": "Russia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Uruguay",
+   "match_date": "2018-06-25",
+   "match_id": "7558",
+   "season": "2018"
+  },
+  "7559": {
+   "away_team": "Egypt",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Saudi Arabia",
+   "match_date": "2018-06-25",
+   "match_id": "7559",
+   "season": "2018"
+  },
+  "7560": {
+   "away_team": "Morocco",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Spain",
+   "match_date": "2018-06-25",
+   "match_id": "7560",
+   "season": "2018"
+  },
+  "7561": {
+   "away_team": "Croatia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Iceland",
+   "match_date": "2018-06-26",
+   "match_id": "7561",
+   "season": "2018"
+  },
+  "7562": {
+   "away_team": "Peru",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Australia",
+   "match_date": "2018-06-26",
+   "match_id": "7562",
+   "season": "2018"
+  },
+  "7563": {
+   "away_team": "France",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Denmark",
+   "match_date": "2018-06-26",
+   "match_id": "7563",
+   "season": "2018"
+  },
+  "7564": {
+   "away_team": "Argentina",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Nigeria",
+   "match_date": "2018-06-26",
+   "match_id": "7564",
+   "season": "2018"
+  },
+  "7565": {
+   "away_team": "Brazil",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Serbia",
+   "match_date": "2018-06-27",
+   "match_id": "7565",
+   "season": "2018"
+  },
+  "7566": {
+   "away_team": "Sweden",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Mexico",
+   "match_date": "2018-06-27",
+   "match_id": "7566",
+   "season": "2018"
+  },
+  "7567": {
+   "away_team": "Germany",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "South Korea",
+   "match_date": "2018-06-27",
+   "match_id": "7567",
+   "season": "2018"
+  },
+  "7568": {
+   "away_team": "Costa Rica",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Switzerland",
+   "match_date": "2018-06-27",
+   "match_id": "7568",
+   "season": "2018"
+  },
+  "7569": {
+   "away_team": "Tunisia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Panama",
+   "match_date": "2018-06-28",
+   "match_id": "7569",
+   "season": "2018"
+  },
+  "7570": {
+   "away_team": "Belgium",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "England",
+   "match_date": "2018-06-28",
+   "match_id": "7570",
+   "season": "2018"
+  },
+  "7571": {
+   "away_team": "Colombia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Senegal",
+   "match_date": "2018-06-28",
+   "match_id": "7571",
+   "season": "2018"
+  },
+  "7572": {
+   "away_team": "Poland",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Japan",
+   "match_date": "2018-06-28",
+   "match_id": "7572",
+   "season": "2018"
+  },
+  "7576": {
+   "away_team": "Spain",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Portugal",
+   "match_date": "2018-06-15",
+   "match_id": "7576",
+   "season": "2018"
+  },
+  "7577": {
+   "away_team": "Iran",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Morocco",
+   "match_date": "2018-06-15",
+   "match_id": "7577",
+   "season": "2018"
+  },
+  "7578": {
+   "away_team": "Uruguay",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Egypt",
+   "match_date": "2018-06-15",
+   "match_id": "7578",
+   "season": "2018"
+  },
+  "7579": {
+   "away_team": "Portugal",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Uruguay",
+   "match_date": "2018-06-30",
+   "match_id": "7579",
+   "season": "2018"
+  },
+  "7580": {
+   "away_team": "Argentina",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "France",
+   "match_date": "2018-06-30",
+   "match_id": "7580",
+   "season": "2018"
+  },
+  "7581": {
+   "away_team": "Denmark",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Croatia",
+   "match_date": "2018-07-01",
+   "match_id": "7581",
+   "season": "2018"
+  },
+  "7582": {
+   "away_team": "Russia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Spain",
+   "match_date": "2018-07-01",
+   "match_id": "7582",
+   "season": "2018"
+  },
+  "7583": {
+   "away_team": "Mexico",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Brazil",
+   "match_date": "2018-07-02",
+   "match_id": "7583",
+   "season": "2018"
+  },
+  "7584": {
+   "away_team": "Japan",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Belgium",
+   "match_date": "2018-07-02",
+   "match_id": "7584",
+   "season": "2018"
+  },
+  "7585": {
+   "away_team": "England",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Colombia",
+   "match_date": "2018-07-03",
+   "match_id": "7585",
+   "season": "2018"
+  },
+  "7586": {
+   "away_team": "Switzerland",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Sweden",
+   "match_date": "2018-07-03",
+   "match_id": "7586",
+   "season": "2018"
+  },
+  "8649": {
+   "away_team": "France",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Uruguay",
+   "match_date": "2018-07-06",
+   "match_id": "8649",
+   "season": "2018"
+  },
+  "8650": {
+   "away_team": "Belgium",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Brazil",
+   "match_date": "2018-07-06",
+   "match_id": "8650",
+   "season": "2018"
+  },
+  "8651": {
+   "away_team": "England",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Sweden",
+   "match_date": "2018-07-07",
+   "match_id": "8651",
+   "season": "2018"
+  },
+  "8652": {
+   "away_team": "Croatia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Russia",
+   "match_date": "2018-07-07",
+   "match_id": "8652",
+   "season": "2018"
+  },
+  "8655": {
+   "away_team": "Belgium",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "France",
+   "match_date": "2018-07-10",
+   "match_id": "8655",
+   "season": "2018"
+  },
+  "8656": {
+   "away_team": "England",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Croatia",
+   "match_date": "2018-07-11",
+   "match_id": "8656",
+   "season": "2018"
+  },
+  "8657": {
+   "away_team": "England",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "Belgium",
+   "match_date": "2018-07-14",
+   "match_id": "8657",
+   "season": "2018"
+  },
+  "8658": {
+   "away_team": "Croatia",
+   "competition": "FIFA World Cup",
+   "country": "International",
+   "home_team": "France",
+   "match_date": "2018-07-15",
+   "match_id": "8658",
+   "season": "2018"
+  },
+  "9575": {
+   "away_team": "Real Betis",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2017-08-20",
+   "match_id": "9575",
+   "season": "2017/2018"
+  },
+  "9581": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Deportivo Alav\u00e9s",
+   "match_date": "2017-08-26",
+   "match_id": "9581",
+   "season": "2017/2018"
+  },
+  "9602": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Getafe",
+   "match_date": "2017-09-16",
+   "match_id": "9602",
+   "season": "2017/2018"
+  },
+  "9620": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Girona",
+   "match_date": "2017-09-23",
+   "match_id": "9620",
+   "season": "2017/2018"
+  },
+  "9636": {
+   "away_team": "Las Palmas",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2017-10-01",
+   "match_id": "9636",
+   "season": "2017/2018"
+  },
+  "9642": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Atl\u00e9tico Madrid",
+   "match_date": "2017-10-14",
+   "match_id": "9642",
+   "season": "2017/2018"
+  },
+  "9650": {
+   "away_team": "M\u00e1laga",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2017-10-21",
+   "match_id": "9650",
+   "season": "2017/2018"
+  },
+  "9661": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Athletic Club",
+   "match_date": "2017-10-28",
+   "match_id": "9661",
+   "season": "2017/2018"
+  },
+  "9673": {
+   "away_team": "Sevilla",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2017-11-04",
+   "match_id": "9673",
+   "season": "2017/2018"
+  },
+  "9682": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Legan\u00e9s",
+   "match_date": "2017-11-18",
+   "match_id": "9682",
+   "season": "2017/2018"
+  },
+  "9695": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Valencia",
+   "match_date": "2017-11-26",
+   "match_id": "9695",
+   "season": "2017/2018"
+  },
+  "9717": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Villarreal",
+   "match_date": "2017-12-10",
+   "match_id": "9717",
+   "season": "2017/2018"
+  },
+  "9726": {
+   "away_team": "RC Deportivo La Coru\u00f1a",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2017-12-17",
+   "match_id": "9726",
+   "season": "2017/2018"
+  },
+  "9736": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Real Madrid",
+   "match_date": "2017-12-23",
+   "match_id": "9736",
+   "season": "2017/2018"
+  },
+  "9742": {
+   "away_team": "Levante UD",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-01-07",
+   "match_id": "9742",
+   "season": "2017/2018"
+  },
+  "9754": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Real Sociedad",
+   "match_date": "2018-01-14",
+   "match_id": "9754",
+   "season": "2017/2018"
+  },
+  "9765": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Real Betis",
+   "match_date": "2018-01-21",
+   "match_id": "9765",
+   "season": "2017/2018"
+  },
+  "9774": {
+   "away_team": "Deportivo Alav\u00e9s",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-01-28",
+   "match_id": "9774",
+   "season": "2017/2018"
+  },
+  "9783": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Espanyol",
+   "match_date": "2018-02-04",
+   "match_id": "9783",
+   "season": "2017/2018"
+  },
+  "9794": {
+   "away_team": "Getafe",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-02-11",
+   "match_id": "9794",
+   "season": "2017/2018"
+  },
+  "9799": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Eibar",
+   "match_date": "2018-02-17",
+   "match_id": "9799",
+   "season": "2017/2018"
+  },
+  "9811": {
+   "away_team": "Girona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-02-24",
+   "match_id": "9811",
+   "season": "2017/2018"
+  },
+  "9837": {
+   "away_team": "Atl\u00e9tico Madrid",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-03-04",
+   "match_id": "9837",
+   "season": "2017/2018"
+  },
+  "9855": {
+   "away_team": "Athletic Club",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-03-18",
+   "match_id": "9855",
+   "season": "2017/2018"
+  },
+  "9860": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Sevilla",
+   "match_date": "2018-03-31",
+   "match_id": "9860",
+   "season": "2017/2018"
+  },
+  "9880": {
+   "away_team": "Valencia",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-04-14",
+   "match_id": "9880",
+   "season": "2017/2018"
+  },
+  "9889": {
+   "away_team": "Barcelona",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Celta Vigo",
+   "match_date": "2018-04-17",
+   "match_id": "9889",
+   "season": "2017/2018"
+  },
+  "9924": {
+   "away_team": "Real Madrid",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-05-06",
+   "match_id": "9924",
+   "season": "2017/2018"
+  },
+  "9928": {
+   "away_team": "Villarreal",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-05-09",
+   "match_id": "9928",
+   "season": "2017/2018"
+  },
+  "9948": {
+   "away_team": "Real Sociedad",
+   "competition": "La Liga",
+   "country": "Spain",
+   "home_team": "Barcelona",
+   "match_date": "2018-05-20",
+   "match_id": "9948",
+   "season": "2017/2018"
+  }
+ },
+ "note": "Match metadata (competition, season, date, home/away team) for the StatsBomb open-data matches bundled in data/statsbomb_corpus. Fetched from the upstream open-data repository; used to label the elite reference population.",
+ "schema_version": 1,
+ "source": "https://github.com/statsbomb/open-data (data/matches/<competition_id>/<season_id>.json)"
+}

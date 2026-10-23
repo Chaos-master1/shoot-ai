@@ -232,6 +232,10 @@ class StatsBombMatch:
     match_id: str
     shots: list[StatsBombShot] = field(default_factory=list)
 
+    # Normalized per-team event stream (style metrics). Kept alongside the
+    # shots so one read of a corpus file serves both measurements.
+    team_events: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+
     # Aggregate reference values for cross-model comparison
     total_sb_xg: float = 0.0
     total_goals: int = 0
@@ -263,6 +267,7 @@ def load_statsbomb_match(path: str | Path) -> StatsBombMatch:
         if shot is not None:
             match.shots.append(shot)
 
+    match.team_events = normalize_statsbomb_events(raw)
     match.total_sb_xg = sum(s.statsbomb_xg for s in match.shots)
     match.total_goals = sum(1 for s in match.shots if s.is_goal)
     return match
@@ -338,6 +343,94 @@ def _parse_shot(ev: dict[str, Any], match_id: str) -> StatsBombShot | None:
         player_name=(ev.get("player") or {}).get("name", ""),
         team_name=(ev.get("team") or {}).get("name", ""),
     )
+
+
+# ── Style-profile event stream ──────────────────────────────────────────────
+#
+# The shot parser above answers "how good was that shot"; style metrics ask
+# "how did the team play". They need the same event categories on the corpus
+# side that the app stores on its own side, in Kawkab meters and
+# possession-relative frames (each team attacking toward x = 105).
+
+SB_STYLE_TYPES = {
+    "Pass": "pass",
+    "Carry": "carry",
+    "Pressure": "pressure",
+    "Interception": "interception",
+    "Duel": "duel",
+    "Ball Recovery": "recovery",
+    "Clearance": "clearance",
+    "Shot": "shot",
+    "Foul Committed": "foul",
+    # These two keep the corpus vocabulary identical to what the importer
+    # stores, so PPDA/turnover denominators count the same events on both
+    # sides ("50/50" is imported as a duel, bad behaviour as a foul).
+    "50/50": "duel",
+    "Bad Behaviour": "foul",
+}
+
+
+def _meters_or_none(loc: Any) -> tuple[float | None, float | None]:
+    if not isinstance(loc, (list, tuple)) or len(loc) < 2:
+        return None, None
+    try:
+        x_m, y_m = sb_to_meters(loc[:2])
+    except (TypeError, ValueError):
+        return None, None
+    return float(x_m), float(y_m)
+
+
+def normalize_statsbomb_events(raw: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Per-team normalized event stream for style metrics.
+
+    Mirrors the shape the stored-event adapter produces in
+    ``services/elite_benchmark_service.py``: type, start/end position in
+    Kawkab meters, pass completion, duel outcome. Events without a team
+    or without a mapped type are dropped, never guessed.
+    """
+    out: dict[str, list[dict[str, Any]]] = {}
+    for ev in raw:
+        if not isinstance(ev, dict):
+            continue
+        type_name = (ev.get("type") or {}).get("name", "")
+        event_type = SB_STYLE_TYPES.get(type_name)
+        if event_type is None:
+            continue
+        team = (ev.get("team") or {}).get("name") or ""
+        if not team:
+            continue
+
+        x, y = _meters_or_none(ev.get("location"))
+        end_x = end_y = None
+        completed: bool | None = None
+        won: bool | None = None
+
+        if event_type == "pass":
+            pass_data = ev.get("pass") or {}
+            end_x, end_y = _meters_or_none(pass_data.get("end_location"))
+            completed = pass_data.get("outcome") is None
+        elif event_type == "carry":
+            end_x, end_y = _meters_or_none((ev.get("carry") or {}).get("end_location"))
+        elif event_type == "interception":
+            outcome = ((ev.get("interception") or {}).get("outcome") or {}).get("name", "Won")
+            won = outcome == "Won"
+        elif event_type == "duel":
+            duel_data = ev.get("50_50") if type_name == "50/50" else ev.get("duel")
+            outcome = ((duel_data or {}).get("outcome") or {}).get("name", "")
+            won = outcome == "Won"
+
+        out.setdefault(team, []).append(
+            {
+                "type": event_type,
+                "x": x,
+                "y": y,
+                "end_x": end_x,
+                "end_y": end_y,
+                "completed": completed,
+                "won": won,
+            }
+        )
+    return out
 
 
 def _nearest_opponent_distance(

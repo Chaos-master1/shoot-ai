@@ -45,6 +45,10 @@ class SeasonAnalyticsHandler(BridgeHandlerBase):
 
             report: dict[str, Any] = {
                 "success": True,
+                # The season view gates on this flag before rendering any
+                # block; omitting it made every report look like a
+                # two-match failure.
+                "data_available": True,
                 "n_matches": len(matches),
                 "blocks": {},
             }
@@ -59,6 +63,7 @@ class SeasonAnalyticsHandler(BridgeHandlerBase):
             blocks["formation_trends"] = self._formation_trends_block(matches, all_events)
             blocks["discipline"] = self._discipline_block(matches, all_events)
             blocks["fixture_difficulty"] = self._fixture_difficulty_block(matches, all_events)
+            blocks["benchmark_trend"] = await self._benchmark_trend_block()
 
             return json.dumps(report)
         except Exception as e:
@@ -93,6 +98,46 @@ class SeasonAnalyticsHandler(BridgeHandlerBase):
                 break
             offset += 500
         return out
+
+    async def _benchmark_trend_block(self) -> dict[str, Any]:
+        """The season block measured against same-size elite blocks.
+
+        Delegates to the benchmark service so the season view and the
+        match card share one set of definitions; a failure becomes an
+        honest unavailable block, never an exception in the report.
+        """
+        from kawkab.services.elite_benchmark_service import EliteBenchmarkService
+
+        try:
+            result = await EliteBenchmarkService(self.storage_service).compare_season()
+        except Exception as exc:
+            return {"data_available": False, "reason": f"benchmark_trend: {exc}"}
+
+        if not result.get("data_available"):
+            return {
+                "data_available": False,
+                "reason": result.get("reason") or "no comparable block",
+                "team": result.get("team"),
+                "n_matches_stored": result.get("n_matches_stored"),
+                "population": result.get("population"),
+            }
+
+        keys = (
+            "team",
+            "n_matches",
+            "n_matches_stored",
+            "excluded_matches",
+            "minutes",
+            "metrics",
+            "trend",
+            "block",
+            "population",
+            "limitations",
+        )
+        return {
+            "data_available": True,
+            **{key: result[key] for key in keys if key in result},
+        }
 
     # ── blocks ──────────────────────────────────────────────────────────
 

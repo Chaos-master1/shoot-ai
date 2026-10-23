@@ -155,5 +155,22 @@
   "ebLim_block_not_season": "A block of N matches is a form snapshot, not a full season: the same squad can produce different blocks in different months.",
   "ebLim_matched_block_size": "The percentile compares your N-match average against N-match blocks drawn from the cohort, so it answers a stricter question than a single-match comparison.",
   "ebModelCheck": "Model check: Brier {b} on {n} shots (lower is better)",
-  "ebIntervalNote": "sampling band from the cohort size — not a range for the team"
+  "ebIntervalNote": "sampling band from the cohort size — not a range for the team",
+  "ebPlayersTitle": "Players vs same-position cohort",
+  "ebPlayer": "Player",
+  "ebPlayerPos": "Pos",
+  "ebPlayerMin": "Min",
+  "ebPlayerCohort": "vs {n} same-position player-matches (≥{m} min)",
+  "ebPlayerRanked": "ranked",
+  "ebPlayerNotBenchmarked": "not benchmarked",
+  "ebPlayerNoIdentity": "no player identities stored for this match",
+  "ebPlayerRowPopulation": "vs {n} {label} player-matches",
+  "ebPlayerBeats": "better than {p}% of {n} same-position player-matches",
+  "ebPlayerNote": "Percentiles compare player per-90 rates with same-position player-matches in the cohort; they are not a projection.",
+  "ebGoals90": "Goals / 90",
+  "ebPasses90": "Passes / 90",
+  "ebLim_player_minutes_floor": "A player needs 30 minutes for a per-90 percentile; shorter appearances are reported with their minutes instead of ranked.",
+  "ebLim_position_groups": "Players are compared only within their position group (GK/DEF/MID/FWD), never against the whole cohort.",
+  "ebLim_player_cohort_sample": "The player population is a sample of elite player-matches from the bundled StatsBomb cohort, not every elite appearance.",
+  "ebLim_player_in_sample": "The benchmark model is fitted on the same cohort, so cohort player xG is in-sample and a user's player is out-of-sample."
 }

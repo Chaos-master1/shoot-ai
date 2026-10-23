@@ -15,6 +15,7 @@ Pure data. No I/O, no imports from the services.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 # Groups the UI renders as sections. "output" is what a team produced;
@@ -176,6 +177,103 @@ METRIC_KEYS: tuple[str, ...] = tuple(m.key for m in METRICS)
 OUTPUT_KEYS: tuple[str, ...] = tuple(m.key for m in METRICS if m.group == OUTPUT)
 STYLE_KEYS: tuple[str, ...] = tuple(m.key for m in METRICS if m.group == STYLE)
 
+# ── Player-level contract ─────────────────────────────────────────────────
+# Same measurements, a different unit (player-match) and a different
+# population (same position group). The keys repeat the team keys where the
+# quantity is the same in kind; the definitions are separate because "the
+# team" and "the player" are not interchangeable in a percentile card.
+PLAYER_METRICS: tuple[MetricSpec, ...] = (
+    MetricSpec(
+        key="shots_per_90",
+        group=OUTPUT,
+        label="Shots / 90",
+        unit="per 90",
+        digits=1,
+        higher_is_better=True,
+        definition="Shots taken by the player, scaled to 90 minutes.",
+    ),
+    MetricSpec(
+        key="xg_per_90",
+        group=OUTPUT,
+        label="xG / 90",
+        unit="per 90",
+        digits=2,
+        higher_is_better=True,
+        definition=(
+            "Sum of the player's per-shot xG from the benchmark model "
+            "(camera-observable features only), scaled to 90 minutes."
+        ),
+    ),
+    MetricSpec(
+        key="goals_per_90",
+        group=OUTPUT,
+        label="Goals / 90",
+        unit="per 90",
+        digits=2,
+        higher_is_better=True,
+        definition="Goals scored by the player, scaled to 90 minutes.",
+    ),
+    MetricSpec(
+        key="passes_per_90",
+        group=STYLE,
+        label="Passes / 90",
+        unit="per 90",
+        digits=1,
+        higher_is_better=True,
+        definition="Passes attempted by the player, scaled to 90 minutes.",
+    ),
+    MetricSpec(
+        key="progressive_passes_per_90",
+        group=STYLE,
+        label="Progressive passes / 90",
+        unit="per 90",
+        digits=1,
+        higher_is_better=True,
+        definition=(
+            "The player's completed passes from the halfway line onward that "
+            "advance the ball 10 m or more toward goal, plus any pass into "
+            "the penalty area, per 90 minutes."
+        ),
+    ),
+    MetricSpec(
+        key="final_third_entries_per_90",
+        group=STYLE,
+        label="Final-third entries / 90",
+        unit="per 90",
+        digits=1,
+        higher_is_better=True,
+        definition=(
+            "The player's completed passes and carries that start outside "
+            "the final third and end inside it, per 90 minutes."
+        ),
+    ),
+    MetricSpec(
+        key="high_turnovers_per_90",
+        group=STYLE,
+        label="High turnovers / 90",
+        unit="per 90",
+        digits=1,
+        higher_is_better=True,
+        definition=(
+            "Possessions the player won back within 40 m of the opponent's "
+            "goal (interceptions, recoveries, won duels), per 90 minutes."
+        ),
+    ),
+    MetricSpec(
+        key="pass_completion_pct",
+        group=STYLE,
+        label="Pass completion",
+        unit="%",
+        digits=1,
+        higher_is_better=True,
+        definition="The player's completed passes divided by attempted passes.",
+    ),
+)
+
+PLAYER_KEYS: tuple[str, ...] = tuple(m.key for m in PLAYER_METRICS)
+PLAYER_OUTPUT_KEYS: tuple[str, ...] = tuple(m.key for m in PLAYER_METRICS if m.group == OUTPUT)
+PLAYER_STYLE_KEYS: tuple[str, ...] = tuple(m.key for m in PLAYER_METRICS if m.group == STYLE)
+
 #: Metrics a season block may average. Raw counts are excluded: averaging
 #: shots or goals across matches measures the fixture list, not the team —
 #: the per-90 form and the ratios are what carry over.
@@ -190,7 +288,7 @@ def spec(key: str) -> MetricSpec:
     return _BY_KEY[key]
 
 
-def definitions() -> dict[str, dict[str, object]]:
+def definitions(metrics: Sequence[MetricSpec] = METRICS) -> dict[str, dict[str, object]]:
     """The artifact's provenance block: every metric and what it means."""
     return {
         m.key: {
@@ -200,5 +298,10 @@ def definitions() -> dict[str, dict[str, object]]:
             "higher_is_better": m.higher_is_better,
             "definition": m.definition,
         }
-        for m in METRICS
+        for m in metrics
     }
+
+
+def player_definitions() -> dict[str, dict[str, object]]:
+    """The player artifact's provenance block."""
+    return definitions(PLAYER_METRICS)

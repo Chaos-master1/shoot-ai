@@ -504,6 +504,19 @@
         { key: 'pass_completion_pct', group: 'style', labelKey: 'ebCompletion', fallback: 'Pass completion', digits: 1 }
     ];
 
+    // Player rows use the player contract: same vocabulary as the team
+    // metrics, but every percentile is against same-position players.
+    var PLAYER_METRIC_ORDER = [
+        { key: 'shots_per_90', labelKey: 'ebShots90', fallback: 'Shots / 90', digits: 1 },
+        { key: 'xg_per_90', labelKey: 'ebXg90', fallback: 'xG / 90', digits: 2 },
+        { key: 'goals_per_90', labelKey: 'ebGoals90', fallback: 'Goals / 90', digits: 2 },
+        { key: 'passes_per_90', labelKey: 'ebPasses90', fallback: 'Passes / 90', digits: 1 },
+        { key: 'progressive_passes_per_90', labelKey: 'ebProgressive', fallback: 'Progressive passes / 90', digits: 1 },
+        { key: 'final_third_entries_per_90', labelKey: 'ebEntries', fallback: 'Final-third entries / 90', digits: 1 },
+        { key: 'high_turnovers_per_90', labelKey: 'ebHighTurnovers', fallback: 'High turnovers / 90', digits: 1 },
+        { key: 'pass_completion_pct', labelKey: 'ebCompletion', fallback: 'Pass completion', digits: 1 }
+    ];
+
     var BAND_LABELS = {
         top_decile: { key: 'ebBand_top_decile', fallback: 'top 10% of the cohort' },
         top_quartile: { key: 'ebBand_top_quartile', fallback: 'top 25% of the cohort' },
@@ -628,8 +641,102 @@
             html += '</div>';
         });
 
+        html += renderPlayerBenchmark(block.players);
         html += renderLimitations(block.limitations || []);
         return html;
+    }
+
+    // Player-level sibling of the team card. A player is compared with
+    // same-position player-matches in the cohort; a player without a
+    // position or without 30 minutes is shown with the reason instead of
+    // a rank that would not mean anything.
+    function renderPlayerBenchmark(block) {
+        if (!block) return '';
+        var title = escapeHtml(label('ebPlayersTitle', 'Players vs same-position cohort'));
+        if (!block.available) {
+            return '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">' +
+                '<strong>' + title + '</strong>' +
+                '<div class="hint" style="margin-top:4px">' +
+                escapeHtml(block.reason || label('ebPlayerNoIdentity', 'no player identities stored for this match')) +
+                '</div></div>';
+        }
+        var pop = block.population || {};
+        var definitions = block.definitions || {};
+        var html = '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">' +
+            '<strong>' + title + '</strong>' +
+            '<div class="hint" style="font-size:0.75rem">' +
+            escapeHtml(
+                label('ebPlayerCohort', 'vs {n} same-position player-matches (≥{m} min)')
+                    .replace('{n}', Number(pop.n_player_matches || 0).toLocaleString())
+                    .replace('{m}', String(pop.min_minutes || 30))
+            ) +
+            ' · ' + Number(block.n_benchmarked || 0) + ' ' +
+            escapeHtml(label('ebPlayerRanked', 'ranked')) +
+            '</div>';
+
+        html += '<div style="overflow-x:auto;margin-top:6px">' +
+            '<table style="width:100%;border-collapse:collapse;font-size:0.76rem">' +
+            '<thead><tr style="color:var(--text-muted);text-align:right">' +
+            '<th style="text-align:left">' + escapeHtml(label('ebPlayer', 'Player')) + '</th>' +
+            '<th>' + escapeHtml(label('ebPlayerPos', 'Pos')) + '</th>' +
+            '<th>' + escapeHtml(label('ebPlayerMin', 'Min')) + '</th>';
+        PLAYER_METRIC_ORDER.forEach(function(spec) {
+            html += '<th title="' + escapeHtml((definitions[spec.key] || {}).definition || '') + '">' +
+                escapeHtml(label(spec.labelKey, spec.fallback)) + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        (block.rows || []).forEach(function(player) {
+            var name = escapeHtml(String(player.name || '—'));
+            var pos = escapeHtml(String(player.position_group || player.position || '—'));
+            var mins = fmt(player.minutes, 0);
+            if (!player.benchmarked) {
+                html += '<tr style="border-top:1px solid var(--border)">' +
+                    '<td>' + name + '</td><td style="text-align:center">' + pos + '</td>' +
+                    '<td style="text-align:right">' + mins + '</td>' +
+                    '<td colspan="' + PLAYER_METRIC_ORDER.length + '" style="color:var(--text-muted)">' +
+                    escapeHtml(player.reason || label('ebPlayerNotBenchmarked', 'not benchmarked')) +
+                    '</td></tr>';
+                return;
+            }
+            var population = player.population || {};
+            var populationText = label('ebPlayerRowPopulation', 'vs {n} {label} player-matches')
+                .replace('{n}', Number(population.n || 0).toLocaleString())
+                .replace('{label}', String(population.label || ''));
+            html += '<tr style="border-top:1px solid var(--border)">' +
+                '<td><strong>' + name + '</strong>' +
+                '<div class="hint" style="font-size:0.68rem">' + escapeHtml(populationText) + '</div></td>' +
+                '<td style="text-align:center">' + pos + '</td>' +
+                '<td style="text-align:right">' + mins + '</td>';
+            PLAYER_METRIC_ORDER.forEach(function(spec) {
+                var metric = (player.metrics || {})[spec.key];
+                var definition = (definitions[spec.key] || {}).definition || '';
+                if (!metric || !metric.comparable || metric.percentile === null || metric.percentile === undefined) {
+                    var reason = metric ? metric.reason : label('ebNotAvailable', 'not available');
+                    html += '<td title="' + escapeHtml(definition + ' — ' + String(reason || '')) +
+                        '" style="text-align:right;color:var(--text-muted)">—</td>';
+                    return;
+                }
+                var titleText = definition + ' — ' + label(
+                    'ebPlayerBeats',
+                    'better than {p}% of {n} same-position player-matches'
+                ).replace('{p}', String(Math.round(metric.percentile)))
+                 .replace('{n}', Number((metric.population || {}).n || 0).toLocaleString());
+                html += '<td title="' + escapeHtml(titleText) + '" style="text-align:right">' +
+                    '<strong>' + fmt(metric.value, spec.digits) + '</strong> ' +
+                    '<span class="hint">p' + Math.round(metric.percentile) + '</span>' +
+                    '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        html += '<div class="hint" style="font-size:0.72rem;margin-top:4px">' +
+            escapeHtml(label(
+                'ebPlayerNote',
+                'Percentiles compare player per-90 rates with same-position player-matches in the cohort; they are not a projection.'
+            )) + '</div>';
+        html += renderLimitations(block.limitations || []);
+        return html + '</div>';
     }
 
     function summaryKv(obj, skip) {

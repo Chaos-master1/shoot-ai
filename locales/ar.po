@@ -484,3 +484,55 @@ msgstr "فحص النموذج: مؤشر برير {b} على {n} تسديدة (ا
 
 msgid "ebIntervalNote"
 msgstr "هامش أخذ العينات بحسب حجم المجموعة — ليس نطاقاً لقدرة الفريق"
+
+# Player benchmark (position-matched cohort)
+msgid "ebPlayersTitle"
+msgstr "اللاعبون مقابل مجموعة مرجعية بنفس المركز"
+
+msgid "ebPlayer"
+msgstr "اللاعب"
+
+msgid "ebPlayerPos"
+msgstr "المركز"
+
+msgid "ebPlayerMin"
+msgstr "الدقائق"
+
+msgid "ebPlayerCohort"
+msgstr "مقابل {n} مشاركة لاعب بنفس المركز (≥{m} دقيقة)"
+
+msgid "ebPlayerRanked"
+msgstr "مصنّف"
+
+msgid "ebPlayerNotBenchmarked"
+msgstr "غير مصنّف"
+
+msgid "ebPlayerNoIdentity"
+msgstr "لا توجد هويات لاعبين محفوظة لهذه المباراة"
+
+msgid "ebPlayerRowPopulation"
+msgstr "مقابل {n} مشاركة لاعب {label}"
+
+msgid "ebPlayerBeats"
+msgstr "أفضل من {p}% من {n} مشاركة لاعب بنفس المركز"
+
+msgid "ebPlayerNote"
+msgstr "المئينات تقارن معدلات اللاعب لكل 90 دقيقة بمشاركات لاعبين بنفس المركز في المجموعة؛ وهي ليست توقعاً."
+
+msgid "ebGoals90"
+msgstr "الأهداف / 90"
+
+msgid "ebPasses90"
+msgstr "التمريرات / 90"
+
+msgid "ebLim_player_minutes_floor"
+msgstr "يحتاج اللاعب إلى 30 دقيقة لمئين لكل 90 دقيقة؛ تظهر المشاركات الأقصر مع دقائقها بدلاً من تصنيفها."
+
+msgid "ebLim_position_groups"
+msgstr "تتم مقارنة اللاعبين فقط داخل مجموعتهم المركزية (حارس/دفاع/وسط/هجوم)، وليس مع المجموعة بأكملها."
+
+msgid "ebLim_player_cohort_sample"
+msgstr "مجموعة اللاعبين عينة من مشاركات لاعبين نخبويين من مجموعة StatsBomb المرفقة، وليست كل مشاركة نخبوية."
+
+msgid "ebLim_player_in_sample"
+msgstr "نموذج المعيار مُدرَّب على المجموعة نفسها، لذا أهداف لاعبي المجموعة داخلية العينة بينما لاعب المستخدم خارجها."

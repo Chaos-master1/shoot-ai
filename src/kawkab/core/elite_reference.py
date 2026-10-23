@@ -38,7 +38,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from kawkab.core.metric_contract import METRIC_KEYS as METRIC_KEYS
-from kawkab.core.metric_contract import METRICS
+from kawkab.core.metric_contract import METRICS, MetricSpec
 
 # ── The metric contract ────────────────────────────────────────────────────
 #
@@ -335,6 +335,9 @@ def population_stats(values: Sequence[float]) -> dict[str, float | int]:
 def compare_values(
     user_values: Mapping[str, float | None],
     population: Mapping[str, Sequence[float]],
+    *,
+    metrics: Sequence[MetricSpec] = METRICS,
+    missing_reason: str = "not available for this match",
 ) -> dict[str, dict[str, object]]:
     """Compare each metric against its population slice.
 
@@ -347,9 +350,12 @@ def compare_values(
     Direction comes from the contract: PPDA is the one metric where
     lower is better, so its percentile is computed on the inverted
     scale while the reported value and population stay on the real one.
+
+    ``metrics`` lets the player benchmark reuse this comparison with the
+    player contract; ``missing_reason`` names the unit being refused.
     """
     out: dict[str, dict[str, object]] = {}
-    for metric in METRICS:
+    for metric in metrics:
         key = metric.key
         value = user_values.get(key)
         reference = population.get(key) or []
@@ -361,7 +367,7 @@ def compare_values(
                 "band": None,
                 "population": population_stats(reference),
                 "comparable": False,
-                "reason": "not available for this match",
+                "reason": missing_reason,
             }
             continue
         if not reference:

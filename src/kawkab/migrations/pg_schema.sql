@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS players (
     shots               INTEGER DEFAULT 0,
     tackles             INTEGER DEFAULT 0,
     confidence          REAL DEFAULT 0,
+    external_id         TEXT DEFAULT '',
+    minutes_played      REAL DEFAULT 0,
     is_deleted          INTEGER DEFAULT 0,
     deleted_at          TIMESTAMPTZ,
     deleted_by          TEXT DEFAULT ''
@@ -768,6 +770,7 @@ CREATE INDEX IF NOT EXISTS idx_players_match ON players(match_id);
 CREATE INDEX IF NOT EXISTS idx_players_deleted ON players(is_deleted);
 CREATE INDEX IF NOT EXISTS idx_players_match_track ON players(match_id, track_id);
 CREATE INDEX IF NOT EXISTS idx_players_team ON players(team);
+CREATE INDEX IF NOT EXISTS idx_players_external_id ON players(external_id);
 
 -- player_profiles
 CREATE INDEX IF NOT EXISTS idx_profiles_team ON player_profiles(team);

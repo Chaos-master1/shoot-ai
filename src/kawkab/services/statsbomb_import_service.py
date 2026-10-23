@@ -31,6 +31,8 @@ from pathlib import Path
 from typing import Any
 
 from kawkab.core.validation.statsbomb_loader import (
+    extract_statsbomb_players,
+    infer_home_away,
     sb_to_meters,
     shot_deviation_angle,
     shot_distance_angle,
@@ -140,15 +142,7 @@ class StatsBombImportService:
         # Home team = first "Starting XI"/period-1 possession team heuristic:
         # SB doesn't label home/away in the events file itself; the first
         # event's `team` is conventionally the home side in open data.
-        first_team = (raw[0].get("team") or {}).get("name") or "Home"
-        second_team = next(
-            (
-                (e.get("team") or {}).get("name")
-                for e in raw
-                if (e.get("team") or {}).get("name") not in (None, first_team)
-            ),
-            "Away",
-        )
+        first_team, second_team = infer_home_away(raw)
         home = home_team or first_team
         away = away_team or second_team
         name = match_name or f"{home} vs {away} (StatsBomb import)"
@@ -160,10 +154,26 @@ class StatsBombImportService:
         if not match_id:
             raise RuntimeError("storage refused to create the match row")
 
-        # 2. Register players (stable synthetic track ids: hashed jersey)
-        player_ids: dict[tuple[str, str], int] = {}
-        seen: set[tuple[str, str]] = set()
-        imported_players = 0
+        # 2. Register players from the lineups, not from whoever happened
+        # to touch the ball first. Identity is StatsBomb's player id; the
+        # track id is a per-match ordinal (deterministic, collision-free).
+        squad = extract_statsbomb_players(raw, home=first_team, away=second_team)
+        track_by_player_id: dict[int, int] = {}
+        for track_id, player in enumerate(squad, start=1):
+            track_by_player_id[player.player_id] = track_id
+            await self.storage.save_player(
+                match_id,
+                {
+                    "track_id": track_id,
+                    "name": player.name,
+                    "team": player.side,
+                    "position": player.position,
+                    "jersey_number": player.jersey_number,
+                    "external_id": str(player.player_id),
+                    "minutes_played": player.minutes_played,
+                },
+            )
+        imported_players = len(squad)
 
         # 3. Events
         imported_events = 0
@@ -177,29 +187,9 @@ class StatsBombImportService:
             if type_name in _SKIPPED_TYPES:
                 continue
             team_name = (ev.get("team") or {}).get("name") or ""
-            team = "home" if team_name == home else "away"
+            team = "home" if team_name == first_team else "away"
 
-            player = ev.get("player") or {}
-            player_name = player.get("name", "")
-            if player_name:
-                key = (team_name, player_name)
-                if key not in seen:
-                    seen.add(key)
-                    track_id = self._stable_track_id(team_name, player_name)
-                    await self.storage.save_player(
-                        match_id,
-                        {
-                            "track_id": track_id,
-                            "name": player_name,
-                            "team": team,
-                            "position": self._sb_position_name(ev.get("position")),
-                            "jersey_number": None,
-                        },
-                    )
-                    player_ids[key] = track_id
-                    imported_players += 1
-
-            kawkab_event = self._convert_event(ev, team, player_ids)
+            kawkab_event = self._convert_event(ev, team)
             if kawkab_event is None:
                 skipped += 1
                 continue
@@ -208,7 +198,8 @@ class StatsBombImportService:
                 if kawkab_event["metadata"].get("is_goal"):
                     goals += 1
                 total_xg += kawkab_event["metadata"].get("xg", 0.0)
-            from_track = player_ids.get((team_name, player_name))
+            player_id = int((ev.get("player") or {}).get("id", 0) or 0)
+            from_track = track_by_player_id.get(player_id)
             if from_track is not None:
                 kawkab_event["from_track_id"] = from_track
             try:
@@ -253,46 +244,7 @@ class StatsBombImportService:
 
     # ── helpers ────────────────────────────────────────────────────────────
 
-    def _stable_track_id(self, team_name: str, player_name: str) -> int:
-        """Deterministic per-(team, player) track id in [1, 999]."""
-        return (abs(hash((team_name, player_name))) % 998) + 1
-
-    def _sb_position_name(self, position: dict | None) -> str:
-        name = (position or {}).get("name", "")
-        mapping = {
-            "Goalkeeper": "GK",
-            "Right Center Back": "CB",
-            "Left Center Back": "CB",
-            "Center Back": "CB",
-            "Right Back": "RB",
-            "Left Back": "LB",
-            "Right Wing Back": "RWB",
-            "Left Wing Back": "LWB",
-            "Defensive Midfield": "DM",
-            "Right Center Midfield": "CM",
-            "Left Center Midfield": "CM",
-            "Center Midfield": "CM",
-            "Right Midfield": "RM",
-            "Left Midfield": "LM",
-            "Right Wing": "RW",
-            "Left Wing": "LW",
-            "Center Attacking Midfield": "AM",
-            "Right Attacking Midfield": "AM",
-            "Left Attacking Midfield": "AM",
-            "Center Forward": "CF",
-            "Left Center Forward": "CF",
-            "Right Center Forward": "CF",
-            "Striker": "ST",
-            "Secondary Striker": "SS",
-        }
-        return mapping.get(name, "MID")
-
-    def _convert_event(
-        self,
-        ev: dict[str, Any],
-        team: str,
-        player_ids: dict[tuple[str, str], int],
-    ) -> dict[str, Any] | None:
+    def _convert_event(self, ev: dict[str, Any], team: str) -> dict[str, Any] | None:
         """One StatsBomb event -> one Kawkab event dict (or None to skip)."""
         type_name = ev.get("type", {}).get("name", "")
         kawkab_type = _SB_TYPE_MAP.get(type_name, type_name.lower() or None)

@@ -259,8 +259,18 @@ sections that matter: **Invariants** above (with the reason each exists) and
   committed elite cohort (PPDA, field tilt, progression, entries, high
   turnovers, completion), season blocks ranked against same-size blocks,
   percentile sampling bands, and the benchmark model's own error
-  published beside every comparison. Player-level matching is blocked on
-  event-level player identity. → `2026-10-23-elite-parity.md`
+  published beside every comparison. → `2026-10-23-elite-parity.md`
+- **2026-10-23 player benchmark (same parity plan, Pass 3)** — the
+  importer now registers every lineup player with real identity
+  (StatsBomb player id in `external_id`, mapped position, minutes from
+  Starting XI/substitution/red-card events), stored in the existing
+  `players` table (migration 034). A position-matched player cohort
+  (`elite_player_reference.json`, 6,972 player-matches across
+  GK/DEF/MID/FWD) is built by the same cohort builder from the same
+  model; each stored player is ranked per-90 against same-position
+  cohort players in the Pro Analytics elite-benchmark block, every row
+  naming its population, refusing a metric or a short/unpositioned
+  appearance with a reason instead of a zero.
 
 ## Known gaps (found, understood, deliberately not fixed this session — read before assuming any of these "just work")
 

@@ -551,8 +551,10 @@ class PostgresStorageAdapter:
             row = await conn.fetchrow(
                 """INSERT INTO players (match_id, track_id, jersey_number, name, team, position,
                        distance_covered_m, max_speed_kmh, avg_speed_kmh,
-                       passes_attempted, passes_completed, shots, tackles, confidence)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id""",
+                       passes_attempted, passes_completed, shots, tackles, confidence,
+                       external_id, minutes_played)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+                   RETURNING id""",
                 match_id,
                 player_data.get("track_id", 0),
                 player_data.get("jersey_number"),
@@ -567,6 +569,8 @@ class PostgresStorageAdapter:
                 player_data.get("shots", 0),
                 player_data.get("tackles", 0),
                 player_data.get("confidence", 0),
+                str(player_data.get("external_id") or ""),
+                player_data.get("minutes_played", 0.0),
             )
             return row["id"] if row else 0
 
@@ -588,14 +592,17 @@ class PostgresStorageAdapter:
                 p.get("passes_completed", 0),
                 p.get("shots", 0),
                 p.get("tackles", 0),
+                str(p.get("external_id") or ""),
+                p.get("minutes_played", 0.0),
             )
             for p in players
         ]
         await self.executemany(
             """INSERT INTO players (match_id, track_id, jersey_number, name, team, position,
                    distance_covered_m, max_speed_kmh, avg_speed_kmh,
-                   passes_attempted, passes_completed, shots, tackles)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                   passes_attempted, passes_completed, shots, tackles,
+                   external_id, minutes_played)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
                ON CONFLICT DO NOTHING""",
             params,
         )
@@ -607,7 +614,8 @@ class PostgresStorageAdapter:
         if not self._pool:
             raise StorageNotInitializedError("get_match_players")
         return await self.fetch(
-            """SELECT id, match_id, track_id, team, jersey_number, name, confidence
+            """SELECT id, match_id, track_id, team, jersey_number, name, position,
+                      external_id, minutes_played, confidence
                FROM players
                WHERE match_id = $1 AND (is_deleted IS NULL OR is_deleted=0)
                ORDER BY id LIMIT $2 OFFSET $3""",
@@ -2958,6 +2966,7 @@ class PostgresStorageAdapter:
         avg_speed_kmh REAL DEFAULT 0, passes_attempted INTEGER DEFAULT 0,
         passes_completed INTEGER DEFAULT 0, shots INTEGER DEFAULT 0, tackles INTEGER DEFAULT 0,
         confidence REAL DEFAULT 0,
+        external_id TEXT DEFAULT '', minutes_played REAL DEFAULT 0,
         is_deleted INTEGER DEFAULT 0, deleted_at TIMESTAMPTZ, deleted_by TEXT DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS events (

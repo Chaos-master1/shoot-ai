@@ -33,9 +33,13 @@ from kawkab.core.elite_reference import (  # noqa: E402
     shot_features,
     shot_xg,
 )
-from kawkab.core.metric_contract import METRICS, OUTPUT_KEYS, STYLE_KEYS  # noqa: E402
+from kawkab.core.metric_contract import METRICS, OUTPUT_KEYS, PLAYER_KEYS, STYLE_KEYS  # noqa: E402
+from kawkab.core.player_positions import POSITION_GROUP_ORDER, position_group  # noqa: E402
 
 ARTIFACT = Path(__file__).resolve().parents[2] / "src" / "kawkab" / "core" / "elite_reference.json"
+PLAYER_ARTIFACT = (
+    Path(__file__).resolve().parents[2] / "src" / "kawkab" / "core" / "elite_player_reference.json"
+)
 
 
 class TestPercentileRank:
@@ -352,3 +356,55 @@ class TestCommittedArtifact:
         features = shot_features(distance_m=12.0, angle_deg=15.0)
         value = shot_xg(model, features)
         assert 0.0 < value < 1.0
+
+
+@pytest.fixture(scope="module")
+def player_artifact():
+    assert PLAYER_ARTIFACT.exists(), f"player reference artifact missing at {PLAYER_ARTIFACT}"
+    return json.loads(PLAYER_ARTIFACT.read_text(encoding="utf-8"))
+
+
+class TestPlayerArtifact:
+    """The player cohort is the population a player percentile claims."""
+
+    def test_every_group_has_a_population(self, player_artifact):
+        population = player_artifact["population"]
+        assert population["unit"] == "player-match"
+        assert population["min_minutes"] == 30.0
+        assert population["n_player_matches"] == len(player_artifact["rows"])
+        assert population["n_players"] < population["n_player_matches"]
+        assert set(population["positions"]) == set(POSITION_GROUP_ORDER)
+        # enough peers for a stable percentile in every group
+        for group, count in population["positions"].items():
+            assert count >= 200, group
+        assert sum(population["positions"].values()) == population["n_player_matches"]
+
+    def test_rows_match_their_declared_position_group(self, player_artifact):
+        for row in player_artifact["rows"]:
+            assert row["position_group"] == position_group(row["position"]), row
+            assert row["minutes"] >= 30.0, row
+            assert row["player_id"] and row["player_name"] and row["team"]
+
+    def test_every_row_carries_every_player_metric(self, player_artifact):
+        assert set(player_artifact["definitions"]) == set(PLAYER_KEYS)
+        missing: dict[str, int] = {}
+        for row in player_artifact["rows"]:
+            for key in PLAYER_KEYS:
+                value = row["metrics"][key]
+                if value is None:
+                    # a player below the metric's event floor is left out of
+                    # that metric's population instead of being scored as 0
+                    missing[key] = missing.get(key, 0) + 1
+                else:
+                    assert isinstance(value, (int, float)), (key, row)
+            assert isinstance(row["shots"], int)
+            assert 0.0 <= row["xg"] <= row["shots"]
+        # refusal stays exceptional: a metric absent for most rows is a
+        # broken measurement, not a coverage floor
+        for key, count in missing.items():
+            assert count < len(player_artifact["rows"]) * 0.10, (key, count)
+
+    def test_the_population_is_the_same_model_as_the_team_benchmark(
+        self, player_artifact, artifact
+    ):
+        assert player_artifact["model"]["coefficients"] == artifact["model"]["coefficients"]

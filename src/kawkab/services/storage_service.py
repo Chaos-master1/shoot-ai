@@ -238,8 +238,9 @@ class StorageService(TrainingStorageMixin):
                 INSERT INTO players (
                     match_id, track_id, jersey_number, name, team, position,
                     distance_covered_m, max_speed_kmh, avg_speed_kmh,
-                    passes_attempted, passes_completed, shots, tackles
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    passes_attempted, passes_completed, shots, tackles,
+                    external_id, minutes_played
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     match_id,
@@ -255,6 +256,8 @@ class StorageService(TrainingStorageMixin):
                     player_data.get("passes_completed", 0),
                     player_data.get("shots", 0),
                     player_data.get("tackles", 0),
+                    str(player_data.get("external_id") or ""),
+                    player_data.get("minutes_played", 0.0),
                 ),
             )
             self._conn.commit()
@@ -1213,7 +1216,10 @@ class StorageService(TrainingStorageMixin):
             raise StorageNotInitializedError("get_match_players")
         cursor = self._conn.cursor()
         cursor.execute(
-            "SELECT id, match_id, track_id, team, jersey_number, name, confidence FROM players WHERE match_id = ? AND (is_deleted IS NULL OR is_deleted=0) ORDER BY id LIMIT ? OFFSET ?",
+            "SELECT id, match_id, track_id, team, jersey_number, name, position, "
+            "external_id, minutes_played, confidence FROM players "
+            "WHERE match_id = ? AND (is_deleted IS NULL OR is_deleted=0) "
+            "ORDER BY id LIMIT ? OFFSET ?",
             (match_id, limit, offset),
         )
         return [dict(row) for row in cursor.fetchall()]
@@ -1268,6 +1274,8 @@ class StorageService(TrainingStorageMixin):
                     p.get("passes_completed", 0),
                     p.get("shots", 0),
                     p.get("tackles", 0),
+                    str(p.get("external_id") or ""),
+                    p.get("minutes_played", 0.0),
                 )
                 for p in players
             ]
@@ -1275,8 +1283,9 @@ class StorageService(TrainingStorageMixin):
                 """
                 INSERT INTO players (match_id, track_id, jersey_number, name, team,
                     position, distance_covered_m, max_speed_kmh, avg_speed_kmh,
-                    passes_attempted, passes_completed, shots, tackles)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    passes_attempted, passes_completed, shots, tackles,
+                    external_id, minutes_played)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 params,
             )

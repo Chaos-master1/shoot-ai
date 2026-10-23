@@ -484,3 +484,55 @@ msgstr "Model check: Brier {b} on {n} shots (lower is better)"
 
 msgid "ebIntervalNote"
 msgstr "sampling band from the cohort size — not a range for the team"
+
+# Player benchmark (position-matched cohort)
+msgid "ebPlayersTitle"
+msgstr "Players vs same-position cohort"
+
+msgid "ebPlayer"
+msgstr "Player"
+
+msgid "ebPlayerPos"
+msgstr "Pos"
+
+msgid "ebPlayerMin"
+msgstr "Min"
+
+msgid "ebPlayerCohort"
+msgstr "vs {n} same-position player-matches (≥{m} min)"
+
+msgid "ebPlayerRanked"
+msgstr "ranked"
+
+msgid "ebPlayerNotBenchmarked"
+msgstr "not benchmarked"
+
+msgid "ebPlayerNoIdentity"
+msgstr "no player identities stored for this match"
+
+msgid "ebPlayerRowPopulation"
+msgstr "vs {n} {label} player-matches"
+
+msgid "ebPlayerBeats"
+msgstr "better than {p}% of {n} same-position player-matches"
+
+msgid "ebPlayerNote"
+msgstr "Percentiles compare player per-90 rates with same-position player-matches in the cohort; they are not a projection."
+
+msgid "ebGoals90"
+msgstr "Goals / 90"
+
+msgid "ebPasses90"
+msgstr "Passes / 90"
+
+msgid "ebLim_player_minutes_floor"
+msgstr "A player needs 30 minutes for a per-90 percentile; shorter appearances are reported with their minutes instead of ranked."
+
+msgid "ebLim_position_groups"
+msgstr "Players are compared only within their position group (GK/DEF/MID/FWD), never against the whole cohort."
+
+msgid "ebLim_player_cohort_sample"
+msgstr "The player population is a sample of elite player-matches from the bundled StatsBomb cohort, not every elite appearance."
+
+msgid "ebLim_player_in_sample"
+msgstr "The benchmark model is fitted on the same cohort, so cohort player xG is in-sample and a user's player is out-of-sample."

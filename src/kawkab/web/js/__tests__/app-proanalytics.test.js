@@ -81,12 +81,79 @@ describe('app-proanalytics.js — elite benchmark card', function () {
           }
         }
       ],
+      players: {
+        available: true,
+        n_benchmarked: 1,
+        population: {
+          label: 'StatsBomb elite cohort — player-matches',
+          unit: 'player-match',
+          n_player_matches: 6972,
+          n_players: 2272,
+          min_minutes: 30
+        },
+        definitions: {
+          shots_per_90: { definition: 'Shots taken by the player, scaled to 90 minutes.' },
+          xg_per_90: { definition: 'Sum of the player\u2019s per-shot xG, scaled to 90 minutes.' },
+          passes_per_90: { definition: 'Passes attempted by the player, scaled to 90 minutes.' },
+          pass_completion_pct: { definition: 'The player\u2019s completed passes divided by attempted passes.' }
+        },
+        rows: [
+          {
+            name: 'Cristiano Ronaldo dos Santos Aveiro',
+            team: 'Real Madrid',
+            side: 'home',
+            position: 'CF',
+            position_group: 'FWD',
+            minutes: 90,
+            benchmarked: true,
+            reason: null,
+            population: {
+              label: 'elite forwards (≥30 min)',
+              unit: 'player-match',
+              position_group: 'FWD',
+              n: 1570,
+              min_minutes: 30
+            },
+            metrics: {
+              shots_per_90: playerMetric(4.0, 91.0, 1570),
+              xg_per_90: playerMetric(0.54, 82.0, 1570),
+              goals_per_90: playerMetric(1.0, 96.0, 1570),
+              passes_per_90: playerMetric(35.0, 65.0, 1488),
+              progressive_passes_per_90: playerMetric(1.0, 15.0, 1488),
+              final_third_entries_per_90: playerMetric(4.0, 70.0, 1520),
+              high_turnovers_per_90: playerMetric(0.0, 30.0, 1400),
+              pass_completion_pct: playerMetric(80.0, 60.0, 1488)
+            }
+          },
+          {
+            name: 'Mohamed Salah',
+            team: 'Liverpool',
+            side: 'away',
+            position: 'RW',
+            position_group: 'FWD',
+            minutes: 29,
+            benchmarked: false,
+            reason: 'played 29 minutes — a per-90 percentile needs at least 30',
+            population: null,
+            metrics: {}
+          }
+        ],
+        limitations: [
+          { key: 'player_minutes_floor', text: 'A player needs 30 minutes for a per-90 percentile; shorter appearances are reported with their minutes instead of ranked.' }
+        ]
+      },
       limitations: [
         { key: 'single_match', text: 'One match is 90 minutes of football.' }
       ]
     };
     Object.keys(overrides || {}).forEach(function (k) { block[k] = overrides[k]; });
     return block;
+  }
+
+  function playerMetric(value, percentile, n) {
+    var out = metric(value, percentile, 'above_median', 0, 1);
+    out.population = { n: n, median: 0 };
+    return out;
   }
 
   function metric(value, percentile, band, median, digits) {
@@ -252,6 +319,46 @@ describe('app-proanalytics.js — elite benchmark card', function () {
     load();
     expect(content()).toContain('One match is 90 minutes of football.');
     expect(content()).toContain('cannot tell you');
+  });
+
+  test('renders measured player percentiles against the position population', function () {
+    load();
+    var text = content();
+    expect(text).toContain('Players vs same-position cohort');
+    expect(text).toContain('Cristiano Ronaldo dos Santos Aveiro');
+    expect(text).toContain('vs 6,972 same-position player-matches');
+    expect(text).toContain('p91');
+    expect(text).toContain('p82');
+    // every row names the population it was ranked against
+    expect(text).toContain('vs 1,570 elite forwards (≥30 min) player-matches');
+    expect(text).toContain('Passes / 90');
+  });
+
+  test('shows a reason instead of a percentile for a short appearance', function () {
+    load();
+    var text = content();
+    expect(text).toContain('Mohamed Salah');
+    expect(text).toContain('played 29 minutes');
+    expect(text).toContain('needs at least 30');
+  });
+
+  test('an unavailable player block reports why', function () {
+    report.blocks.elite_benchmark.players = {
+      available: false,
+      reason: 'no player identities stored for this match',
+      limitations: []
+    };
+    load();
+    var text = content();
+    expect(text).toContain('Players vs same-position cohort');
+    expect(text).toContain('no player identities stored');
+  });
+
+  test('escapes a player name instead of injecting it', function () {
+    report.blocks.elite_benchmark.players.rows[0].name = '<img src=x onerror=alert(1)>';
+    load();
+    expect(document.getElementById('proanalytics-content').querySelector('img')).toBeNull();
+    expect(content()).toContain('<img src=x onerror=alert(1)>');
   });
 
   test('escapes a team name instead of injecting it', function () {

@@ -132,6 +132,47 @@ class TestProAnalyticsReport:
         assert blocks["expected_pass"]["data_available"] is True
         assert blocks["scoreline"]["data_available"] is True
 
+    def test_player_block_ranks_an_imported_lineup(self, imported_match):
+        """A real import must surface real player percentiles: identity,
+        position-matched population, and refusals for short appearances."""
+        import asyncio
+
+        from kawkab.ui.bridge_handlers.bridge_pro_analytics import ProAnalyticsHandler
+
+        svc, match_id = imported_match
+        handler = ProAnalyticsHandler(bridge=None, services={"storage_service": svc})
+
+        async def _run():
+            return await handler.get_pro_analytics_report(match_id)
+
+        r = json.loads(asyncio.run(_run()))
+        block = r["blocks"]["elite_benchmark"]
+        assert block["data_available"] is True
+        players = block["players"]
+        assert players is not None
+        assert players["available"] is True
+        assert len(players["rows"]) >= 22
+        assert players["n_benchmarked"] >= 1
+
+        benchmarked = [row for row in players["rows"] if row["benchmarked"]]
+        refused = [row for row in players["rows"] if not row["benchmarked"]]
+        assert benchmarked and refused  # a real match has both
+        for row in benchmarked:
+            assert row["name"] and row["external_id"]
+            assert row["population"]["position_group"] in ("GK", "DEF", "MID", "FWD")
+            assert row["population"]["n"] > 0
+            assert row["metrics"]
+            for key, metric in row["metrics"].items():
+                if metric["percentile"] is None:
+                    assert metric["reason"], (row["name"], key)
+                else:
+                    assert 0.0 <= metric["percentile"] <= 100.0, (row["name"], key)
+        for row in refused:
+            assert row["reason"]
+            assert row["metrics"] == {}
+        assert players["population"]["n_player_matches"] > 0
+        assert players["limitations"]
+
     def test_tracking_blocks_honest_when_no_frames(self, imported_match):
         """OBV/off-ball must say WHY they're unavailable for an event-only
         import — never fabricate. The reason must mention tracking frames."""

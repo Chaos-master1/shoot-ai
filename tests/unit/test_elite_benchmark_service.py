@@ -30,15 +30,19 @@ from kawkab.services.elite_benchmark_service import EliteBenchmarkService  # noq
 class StubStorage:
     """Minimal storage surface the service uses."""
 
-    def __init__(self, match=None, events=None):
+    def __init__(self, match=None, events=None, players=None):
         self._match = match
         self._events = events or []
+        self._players = players
 
     async def get_match(self, match_id):
         return self._match
 
     async def get_match_events(self, match_id, limit=200, offset=0):
         return self._events[offset : offset + limit]
+
+    async def get_match_players(self, match_id, limit=100):
+        return (self._players or [])[:limit]
 
 
 def _shot(team, distance=12.0, angle=15.0, **extra):
@@ -77,6 +81,32 @@ def _action(team, event_type, x, y=34.0, won=None, ts=1.0):
     if won is not None:
         event["completed"] = won
     return event
+
+
+def _player_event(team, track_id, event_type, start, end=None, completed=True):
+    meta = {"start_x": start[0], "start_y": start[1]}
+    if end is not None:
+        meta.update({"end_x": end[0], "end_y": end[1]})
+    return {
+        "match_id": 1,
+        "event_type": event_type,
+        "timestamp": 1.0,
+        "team": team,
+        "from_track_id": track_id,
+        "completed": completed,
+        "metadata": json.dumps(meta),
+    }
+
+
+def _player(track_id, name, position, minutes, team="home", external_id="1"):
+    return {
+        "track_id": track_id,
+        "name": name,
+        "position": position,
+        "minutes_played": minutes,
+        "team": team,
+        "external_id": external_id,
+    }
 
 
 def _goal(team):
@@ -317,6 +347,95 @@ class TestCompareMatch:
         out = _run(EliteBenchmarkService(storage).compare_match(1))
         labels = {t["team"] for t in out["teams"]}
         assert labels == {"Real Madrid", "Liverpool"}
+
+
+class TestPlayerBenchmark:
+    """A player is ranked against same-position peers, or refused."""
+
+    def _service(self, players, events=None):
+        return EliteBenchmarkService(
+            StubStorage(
+                match=_match(score_home=1, score_away=0),
+                events=events or [_shot("home")],
+                players=players,
+            )
+        )
+
+    def test_player_identity_reaches_the_benchmark_and_is_percentiled(self):
+        events = [_shot("home")] + [
+            _player_event("home", 7, "pass", (30.0, 34.0), (60.0, 34.0)) for _ in range(15)
+        ]
+        service = self._service([_player(7, "Ada Striker", "CF", 90.0)], events=events)
+        out = _run(service.compare_match(1))
+        players = out["players"]
+        assert players["available"] is True
+        assert players["n_benchmarked"] == 1
+        row = players["rows"][0]
+        assert row["name"] == "Ada Striker"
+        assert row["position_group"] == "FWD"
+        assert row["benchmarked"] is True
+        assert row["population"]["position_group"] == "FWD"
+        assert row["population"]["n"] > 0
+        assert "forwards" in row["population"]["label"]
+        # measured metrics carry a percentile inside 0-100; refused ones a reason
+        for key, metric in row["metrics"].items():
+            if metric["percentile"] is not None:
+                assert 0.0 <= metric["percentile"] <= 100.0, key
+            else:
+                assert metric["reason"], key
+        assert players["population"]["positions"]["FWD"] == row["population"]["n"]
+        assert players["definitions"]
+
+    def test_the_position_group_selects_the_population(self):
+        events = [_shot("home")]
+        service = self._service(
+            [
+                _player(7, "Ada Striker", "CF", 90.0),
+                _player(4, "Bea Back", "CB", 90.0),
+            ],
+            events=events,
+        )
+        players = _run(service.compare_match(1))["players"]
+        by_name = {row["name"]: row for row in players["rows"]}
+        assert by_name["Ada Striker"]["population"]["position_group"] == "FWD"
+        assert by_name["Bea Back"]["population"]["position_group"] == "DEF"
+        assert by_name["Ada Striker"]["population"]["n"] != by_name["Bea Back"]["population"]["n"]
+
+    def test_a_short_appearance_is_refused_with_its_minutes(self):
+        service = self._service([_player(7, "Ada Striker", "CF", 29.0)])
+        players = _run(service.compare_match(1))["players"]
+        assert players["available"] is True
+        assert players["n_benchmarked"] == 0
+        row = players["rows"][0]
+        assert row["benchmarked"] is False
+        assert row["metrics"] == {}
+        assert "29" in row["reason"] and "30" in row["reason"]
+
+    def test_an_unknown_position_is_refused_not_guessed(self):
+        service = self._service([_player(7, "Ada Mystery", "XX", 90.0)])
+        players = _run(service.compare_match(1))["players"]
+        row = players["rows"][0]
+        assert row["benchmarked"] is False
+        assert "cohort position group" in row["reason"]
+
+    def test_a_stored_row_without_identity_is_refused(self):
+        service = self._service([_player(7, "", "CF", 90.0)])
+        players = _run(service.compare_match(1))["players"]
+        assert players["rows"][0]["benchmarked"] is False
+        assert "no player identity" in players["rows"][0]["reason"]
+
+    def test_a_match_without_players_reports_why(self):
+        service = self._service([])
+        players = _run(service.compare_match(1))["players"]
+        assert players["available"] is False
+        assert "no stored player identities" in players["reason"]
+
+    def test_player_limitations_travel_with_the_rows(self):
+        service = self._service([_player(7, "Ada Striker", "CF", 90.0)])
+        players = _run(service.compare_match(1))["players"]
+        assert players["limitations"]
+        texts = " ".join(item["text"] for item in players["limitations"])
+        assert "30 minutes" in texts and "in-sample" in texts
 
 
 class SeasonStorage:

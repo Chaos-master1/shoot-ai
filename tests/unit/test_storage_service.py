@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS players (
     passes_attempted INTEGER DEFAULT 0, passes_completed INTEGER DEFAULT 0,
     shots INTEGER DEFAULT 0, tackles INTEGER DEFAULT 0,
     confidence REAL DEFAULT 0.0,
+    external_id TEXT DEFAULT '', minutes_played REAL DEFAULT 0,
     is_deleted INTEGER DEFAULT 0,
     deleted_at TEXT,
     deleted_by TEXT

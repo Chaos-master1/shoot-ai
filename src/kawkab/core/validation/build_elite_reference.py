@@ -50,12 +50,15 @@ from kawkab.core.elite_reference import (
     shot_features,
     shot_xg,
 )
+from kawkab.core.player_positions import position_group
+from kawkab.core.player_profile import MIN_PLAYER_MINUTES, build_player_profile
 from kawkab.core.style_profile import build_profile
 from kawkab.core.validation.statsbomb_loader import load_statsbomb_match
 
 DEFAULT_CORPUS = Path("data/statsbomb_corpus")
 DEFAULT_INDEX = Path("data/elite_reference/statsbomb_match_index.json")
 DEFAULT_OUT = Path("src/kawkab/core/elite_reference.json")
+DEFAULT_PLAYER_OUT = Path("src/kawkab/core/elite_player_reference.json")
 
 SIDES = ("home", "away")
 
@@ -191,6 +194,49 @@ def _parse_corpus(
             for side in SIDES
         }
 
+        # Player rows are built while the events are still in memory, then
+        # reduced to per-player metric dicts so the 297-match build stays
+        # flat in memory. xG is added after the model is fitted.
+        events_by_player: dict[int, list[dict[str, Any]]] = {}
+        for events in events_by_side.values():
+            for event in events:
+                player_id = event.get("player_id")
+                if player_id:
+                    events_by_player.setdefault(int(player_id), []).append(event)
+
+        player_rows: list[dict[str, Any]] = []
+        for player in match.players:
+            if player.side not in SIDES:
+                continue
+            if player.minutes_played < MIN_PLAYER_MINUTES:
+                continue
+            group = position_group(player.position)
+            if not group:
+                continue
+            player_events = events_by_player.get(player.player_id, [])
+            profile = build_player_profile(player_events, player.minutes_played)
+            player_shots = [s for s in match.shots if s.player_id == player.player_id]
+            player_rows.append(
+                {
+                    "match_id": str(path.stem),
+                    "date": meta.get("match_date"),
+                    "competition": meta.get("competition"),
+                    "season": meta.get("season"),
+                    "team": home if player.side == "home" else away,
+                    "opponent": away if player.side == "home" else home,
+                    "side": player.side,
+                    "player_id": player.player_id,
+                    "player_name": player.name,
+                    "position": player.position,
+                    "position_group": group,
+                    "minutes": player.minutes_played,
+                    "shots": len(player_shots),
+                    "goals": sum(1 for s in player_shots if s.is_goal),
+                    "metrics": dict(profile["metrics"]),
+                    "shot_features": [_features_for_shot(s) for s in player_shots],
+                }
+            )
+
         shots: list[dict[str, Any]] = []
         for shot in match.shots:
             side = side_of.get(shot.team_name, "")
@@ -217,16 +263,17 @@ def _parse_corpus(
                 "shots": shots,
                 "profiles": {s: profiles[s]["metrics"] for s in SIDES},
                 "styles": profiles,
+                "player_rows": player_rows,
             }
         )
     return parsed, fit_shots, unmatched
 
 
-def build_reference(
+def build_references(
     corpus_dir: Path | str = DEFAULT_CORPUS,
     index_path: Path | str = DEFAULT_INDEX,
-) -> dict[str, Any]:
-    """Build the reference artifact dict from the corpus + match index."""
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build the team and player reference artifacts from the corpus."""
     corpus_dir = Path(corpus_dir)
     index_path = Path(index_path)
     raw_index = json.loads(index_path.read_text())
@@ -317,10 +364,11 @@ def build_reference(
     }
 
     model_card = _model_card(predictions, outcomes, statsbomb_xgs, team_match_deltas, n_penalties)
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds")
 
-    return {
+    team_artifact = {
         "schema_version": 2,
-        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "generated_at": generated_at,
         "generator": "kawkab.core.validation.build_elite_reference",
         "population": {
             "label": "StatsBomb elite cohort",
@@ -364,6 +412,84 @@ def build_reference(
         "model_card": model_card,
         "unmatched_matches": unmatched,
     }
+    return team_artifact, _player_artifact(parsed, model, team_artifact)
+
+
+def _player_artifact(
+    parsed: list[dict[str, Any]],
+    model: Any,
+    team_artifact: dict[str, Any],
+) -> dict[str, Any]:
+    """The position-matched player population, measured with the same model.
+
+    Only players with at least 30 minutes and a recognised position enter
+    the population. That is the comparison set: a user's 12-minute cameo is
+    refused rather than ranked against 90-minute performances, and a player
+    with an unknown position is never put in a group they might not belong
+    to.
+    """
+    player_rows: list[dict[str, Any]] = []
+    for record in parsed:
+        for raw_row in record.get("player_rows") or []:
+            row = dict(raw_row)
+            features = row.pop("shot_features", [])
+            minutes = float(row.get("minutes") or 0.0)
+            xg = sum(shot_xg(model, feature) for feature in features)
+            goals = int(row.get("goals") or 0)
+            shots = int(row.get("shots") or 0)
+            metrics = dict(row.get("metrics") or {})
+            metrics.update(
+                {
+                    "shots_per_90": round(per_90(shots, minutes), 3),
+                    "xg_per_90": round(per_90(xg, minutes), 4),
+                    "goals_per_90": round(per_90(goals, minutes), 3),
+                }
+            )
+            row["xg"] = round(xg, 4)
+            row["metrics"] = {
+                key: (None if value is None else round(float(value), 4))
+                for key, value in metrics.items()
+            }
+            player_rows.append(row)
+
+    player_rows.sort(key=lambda r: (str(r["match_id"]), int(r["player_id"])))
+    positions = Counter(r["position_group"] for r in player_rows)
+    dates = sorted(r["date"] for r in player_rows if r.get("date"))
+    n_shots = sum(int(r.get("shots") or 0) for r in player_rows)
+    team_population = team_artifact.get("population") or {}
+
+    return {
+        "schema_version": 1,
+        "generated_at": team_artifact.get("generated_at"),
+        "generator": "kawkab.core.validation.build_elite_reference",
+        "population": {
+            "label": "StatsBomb elite cohort — player-matches",
+            "unit": "player-match",
+            "n_matches": team_population.get("n_matches"),
+            "n_player_matches": len(player_rows),
+            "n_players": len({r["player_id"] for r in player_rows}),
+            "n_shots": n_shots,
+            "positions": dict(sorted(positions.items())),
+            "min_minutes": MIN_PLAYER_MINUTES,
+            "competitions": team_population.get("competitions") or [],
+            "seasons": team_population.get("seasons") or [],
+            "date_from": dates[0] if dates else None,
+            "date_to": dates[-1] if dates else None,
+            "source": team_population.get("source"),
+            "model": "kawkab-elite-reference-xg",
+        },
+        "definitions": metric_contract.player_definitions(),
+        "model": team_artifact.get("model") or {},
+        "rows": player_rows,
+    }
+
+
+def build_reference(
+    corpus_dir: Path | str = DEFAULT_CORPUS,
+    index_path: Path | str = DEFAULT_INDEX,
+) -> dict[str, Any]:
+    """Backwards-compatible entry point returning the team artifact only."""
+    return build_references(corpus_dir, index_path)[0]
 
 
 def _model_card(
@@ -443,23 +569,33 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--corpus", default=str(DEFAULT_CORPUS))
     parser.add_argument("--index", default=str(DEFAULT_INDEX))
     parser.add_argument("--out", default=str(DEFAULT_OUT))
+    parser.add_argument("--player-out", default=str(DEFAULT_PLAYER_OUT))
     args = parser.parse_args(argv)
 
-    artifact = build_reference(args.corpus, args.index)
+    artifact, player_artifact = build_references(args.corpus, args.index)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(artifact, indent=1, sort_keys=True))
+    player_out = Path(args.player_out)
+    player_out.parent.mkdir(parents=True, exist_ok=True)
+    player_out.write_text(json.dumps(player_artifact, indent=1, sort_keys=True))
     # The model card is published beside the population so its own error
     # can be read (and cited) without loading the 594-row artifact.
     card = {**artifact["model_card"], "generated_at": artifact["generated_at"]}
     out.with_name("model_card.json").write_text(json.dumps(card, indent=1, sort_keys=True))
     population = artifact["population"]
+    player_population = player_artifact["population"]
     print(
         f"wrote {out} — {population['n_matches']} matches, "
         f"{population['n_team_matches']} team-matches, "
         f"{population['n_teams']} teams, "
         f"{population['n_shots']} shots, "
         f"style coverage {population['style_availability']}"
+    )
+    print(
+        f"wrote {player_out} — {player_population['n_player_matches']} player-matches, "
+        f"{player_population['n_players']} players, "
+        f"positions {player_population['positions']}"
     )
     if artifact["unmatched_matches"]:
         print(f"WARNING: {len(artifact['unmatched_matches'])} matches had no index entry")

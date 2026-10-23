@@ -126,6 +126,7 @@ class ProAnalyticsHandler(BridgeHandlerBase):
             "data_available": True,
             "match_name": result.get("match_name"),
             "teams": result.get("teams"),
+            "players": result.get("players"),
             "population": result.get("population"),
             "limitations": result.get("limitations"),
         }

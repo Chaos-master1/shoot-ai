@@ -76,8 +76,54 @@ def _located(event: Mapping[str, Any]) -> bool:
     return -0.5 <= x <= PITCH_LENGTH_M + 0.5 and -0.5 <= y <= PITCH_WIDTH_M + 0.5
 
 
+def is_located(event: Mapping[str, Any]) -> bool:
+    """True when the event carries a usable position on the pitch."""
+    return _located(event)
+
+
 def _in_box(x: float, y: float) -> bool:
     return x >= BOX_X and abs(y - GOAL_CENTER_Y) <= BOX_HALF_WIDTH_M
+
+
+# ── Shared event predicates ──────────────────────────────────────────────
+# The team profile and the player profile must count the SAME passes, entries
+# and turnovers; these predicates are the one place those definitions live.
+
+
+def is_progressive_pass(event: Mapping[str, Any]) -> bool:
+    """A completed pass from halfway onward that gains 10 m, or reaches the box."""
+    if event.get("type") != "pass" or event.get("completed") is not True:
+        return False
+    if not _located(event):
+        return False
+    end_x = event.get("end_x")
+    end_y = event.get("end_y")
+    if not isinstance(end_x, (int, float)) or not isinstance(end_y, (int, float)):
+        return False
+    return _in_box(end_x, end_y) or (
+        event["x"] >= HALFWAY_X and end_x - event["x"] >= PROGRESSIVE_DISTANCE_M
+    )
+
+
+def is_final_third_entry(event: Mapping[str, Any]) -> bool:
+    """A completed pass or any carry that crosses into the final third."""
+    if event.get("type") not in ("pass", "carry") or not _located(event):
+        return False
+    end_x = event.get("end_x")
+    if not isinstance(end_x, (int, float)):
+        return False
+    if event.get("type") == "pass" and event.get("completed") is not True:
+        return False
+    return event["x"] < FINAL_THIRD_X <= end_x
+
+
+def is_high_turnover(event: Mapping[str, Any]) -> bool:
+    """A possession won back within 40 m of the opponent's goal."""
+    if event.get("type") not in TURNOVER_ACTIONS or not _located(event):
+        return False
+    if event["x"] < HIGH_TURNOVER_X:
+        return False
+    return event.get("type") != "duel" or event.get("won") is True
 
 
 def _coverage(n: int, minimum: int, unit: str) -> dict[str, Any]:
@@ -148,18 +194,7 @@ def _progressive_passes(own: Sequence[Mapping[str, Any]]):
     if not _pass_outcomes_known(passes):
         known = sum(1 for e in passes if e.get("completed") is not None)
         return _unavailable("passes with a recorded outcome", known, len(passes))
-    count = 0
-    for e in passes:
-        end_x = e.get("end_x")
-        end_y = e.get("end_y")
-        if e.get("completed") is not True:
-            continue
-        if not isinstance(end_x, (int, float)) or not isinstance(end_y, (int, float)):
-            continue
-        if _in_box(end_x, end_y) or (
-            e["x"] >= HALFWAY_X and end_x - e["x"] >= PROGRESSIVE_DISTANCE_M
-        ):
-            count += 1
+    count = sum(1 for e in passes if is_progressive_pass(e))
     return count, _coverage(len(passes), MIN_LOCATED_PASSES, "located passes")
 
 
@@ -167,15 +202,7 @@ def _final_third_entries(own: Sequence[Mapping[str, Any]]):
     candidates = [e for e in own if e.get("type") in ("pass", "carry") and _located(e)]
     if len(candidates) < MIN_LOCATED_ENTRIES:
         return _unavailable("located passes and carries", len(candidates), MIN_LOCATED_ENTRIES)
-    count = 0
-    for e in candidates:
-        end_x = e.get("end_x")
-        if not isinstance(end_x, (int, float)):
-            continue
-        if e.get("type") == "pass" and e.get("completed") is not True:
-            continue
-        if e["x"] < FINAL_THIRD_X <= end_x:
-            count += 1
+    count = sum(1 for e in candidates if is_final_third_entry(e))
     return count, _coverage(len(candidates), MIN_LOCATED_ENTRIES, "located passes and carries")
 
 
@@ -183,11 +210,7 @@ def _high_turnovers(own: Sequence[Mapping[str, Any]]):
     actions = [e for e in own if e.get("type") in TURNOVER_ACTIONS and _located(e)]
     if len(actions) < MIN_LOCATED_DEFENSIVE:
         return _unavailable("located defensive actions", len(actions), MIN_LOCATED_DEFENSIVE)
-    count = sum(
-        1
-        for e in actions
-        if e["x"] >= HIGH_TURNOVER_X and (e.get("type") != "duel" or e.get("won") is True)
-    )
+    count = sum(1 for e in actions if is_high_turnover(e))
     return count, _coverage(len(actions), MIN_LOCATED_DEFENSIVE, "located defensive actions")
 
 

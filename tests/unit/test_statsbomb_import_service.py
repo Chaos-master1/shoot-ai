@@ -146,6 +146,45 @@ class TestImportMatch:
         assert len(teams) == 2  # both squads present
 
     @pytest.mark.asyncio
+    async def test_players_carry_identity_position_and_minutes(self, storage, sample_file):
+        """The player benchmark needs identity, position and minutes, not a
+        track id invented from whoever touched the ball first."""
+        from kawkab.core.player_positions import POSITION_GROUPS
+        from kawkab.services.statsbomb_import_service import StatsBombImportService
+
+        svc = StatsBombImportService(storage)
+        summary = await svc.import_match(sample_file)
+        players = await storage.get_match_players(summary["match_id"])
+
+        assert summary["players_registered"] == len(players) >= 22
+        assert {p["team"] for p in players} == {"home", "away"}
+        assert len({p["external_id"] for p in players}) == len(players)
+        for player in players:
+            assert player["name"], player
+            assert player["external_id"], player
+            # every StatsBomb position must map, or be explicitly unknown
+            assert player["position"] in POSITION_GROUPS or player["position"] == ""
+            assert player["minutes_played"] >= 0
+        assert any(p["minutes_played"] >= 90 for p in players)
+        assert any(p["minutes_played"] < 90 for p in players)
+
+    @pytest.mark.asyncio
+    async def test_events_point_at_the_registered_player(self, storage, sample_file):
+        """from_track_id must resolve to a stored player row, or the player
+        benchmark would measure somebody else's events."""
+        from kawkab.services.statsbomb_import_service import StatsBombImportService
+
+        svc = StatsBombImportService(storage)
+        summary = await svc.import_match(sample_file)
+        players = await storage.get_match_players(summary["match_id"])
+        track_ids = {p["track_id"] for p in players}
+        events = await fetch_all_events(storage, summary["match_id"])
+        attributed = [e for e in events if e.get("from_track_id") is not None]
+
+        assert len(attributed) > 100
+        assert {e["from_track_id"] for e in attributed} <= track_ids
+
+    @pytest.mark.asyncio
     async def test_reimport_creates_new_match(self, storage, sample_file):
         """Importing twice must not corrupt anything — new match row each time."""
         from kawkab.services.statsbomb_import_service import StatsBombImportService

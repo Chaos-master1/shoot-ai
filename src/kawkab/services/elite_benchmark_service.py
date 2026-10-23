@@ -47,12 +47,27 @@ from kawkab.core.elite_reference import (
     shot_features,
     shot_xg,
 )
-from kawkab.core.metric_contract import OUTPUT_KEYS, SEASON_KEYS, STYLE_KEYS
+from kawkab.core.metric_contract import (
+    OUTPUT_KEYS,
+    PLAYER_KEYS,
+    PLAYER_METRICS,
+    SEASON_KEYS,
+    STYLE_KEYS,
+)
+from kawkab.core.player_positions import POSITION_GROUP_LABELS, position_group
+from kawkab.core.player_profile import (
+    MIN_PLAYER_MINUTES,
+    build_player_profile,
+    player_unavailable_reason,
+)
 from kawkab.core.style_profile import build_profile, unavailable_reason
 
 logger = logging.getLogger(__name__)
 
 REFERENCE_PATH = Path(__file__).resolve().parent.parent / "core" / "elite_reference.json"
+PLAYER_REFERENCE_PATH = (
+    Path(__file__).resolve().parent.parent / "core" / "elite_player_reference.json"
+)
 
 # A single match is 90 minutes of football. The cohort is a sample of
 # elite matches, not a league table, and the caveats travel with the
@@ -92,6 +107,37 @@ LIMITATIONS: tuple[dict[str, str], ...] = (
 )
 
 
+PLAYER_LIMITATIONS: tuple[dict[str, str], ...] = (
+    {
+        "key": "player_minutes_floor",
+        "text": (
+            "A player needs 30 minutes for a per-90 percentile; shorter "
+            "appearances are reported with their minutes instead of ranked."
+        ),
+    },
+    {
+        "key": "position_groups",
+        "text": (
+            "Players are compared only within their position group "
+            "(GK/DEF/MID/FWD), never against the whole cohort."
+        ),
+    },
+    {
+        "key": "player_cohort_sample",
+        "text": (
+            "The player population is a sample of elite player-matches from "
+            "the bundled StatsBomb cohort, not every elite appearance."
+        ),
+    },
+    {
+        "key": "player_in_sample",
+        "text": (
+            "The benchmark model is fitted on the same cohort, so cohort "
+            "player xG is in-sample and a user's player is out-of-sample."
+        ),
+    },
+)
+
 # Season blocks keep the population caveats and drop the one that no
 # longer applies (a block is more than one match), replacing it with the
 # two the block comparison introduces.
@@ -127,12 +173,20 @@ class EliteBenchmarkService:
         self,
         storage_service: Any,
         reference_path: Path | str | None = None,
+        player_reference_path: Path | str | None = None,
     ) -> None:
         self._storage = storage_service
         self._reference_path = Path(reference_path) if reference_path else REFERENCE_PATH
+        self._player_reference_path = (
+            Path(player_reference_path) if player_reference_path else PLAYER_REFERENCE_PATH
+        )
         self._artifact: dict[str, Any] | None = None
+        self._player_artifact: dict[str, Any] | None = None
+        self._player_loaded = False
         self._model: Any = None
         self._population: dict[str, list[float]] = {}
+        self._player_population: dict[str, dict[str, list[float]]] = {}
+        self._player_group_counts: dict[str, int] = {}
 
     # ── reference population ────────────────────────────────────────
 
@@ -159,6 +213,35 @@ class EliteBenchmarkService:
             self._population = population
             self._artifact = artifact
         return self._artifact
+
+    def _load_player_reference(self) -> dict[str, Any] | None:
+        """Load the position-matched player population, or None if absent.
+
+        The team model is loaded first so both artifacts are measured with
+        the same coefficients; the player artifact's own model block is
+        provenance, not a second model.
+        """
+        if not self._player_loaded:
+            self._player_loaded = True
+            if self._player_reference_path.exists():
+                artifact = json.loads(self._player_reference_path.read_text())
+                population: dict[str, dict[str, list[float]]] = {}
+                counts: dict[str, int] = {}
+                for row in artifact.get("rows") or []:
+                    group = str(row.get("position_group") or "")
+                    if not group:
+                        continue
+                    counts[group] = counts.get(group, 0) + 1
+                    metrics = row.get("metrics") or {}
+                    bucket = population.setdefault(group, {key: [] for key in PLAYER_KEYS})
+                    for key in PLAYER_KEYS:
+                        value = metrics.get(key)
+                        if isinstance(value, (int, float)) and not isinstance(value, bool):
+                            bucket.setdefault(key, []).append(float(value))
+                self._player_artifact = artifact
+                self._player_population = population
+                self._player_group_counts = counts
+        return self._player_artifact
 
     def population_summary(self) -> dict[str, Any]:
         """The population description the UI shows next to every number."""
@@ -304,6 +387,10 @@ class EliteBenchmarkService:
             "end_y": coordinate("end_y"),
             "completed": completed if event_type == "pass" else None,
             "won": completed if event_type == "duel" else None,
+            "from_track_id": event.get("from_track_id"),
+            "is_goal": metadata.get("is_goal")
+            if isinstance(metadata.get("is_goal"), bool)
+            else None,
         }
 
     def _style_by_side(
@@ -425,6 +512,229 @@ class EliteBenchmarkService:
             return int(home), int(away)
         return None, None
 
+    # ── player benchmark ────────────────────────────────────────────
+
+    def _player_values(
+        self, events: list[dict[str, Any]], minutes: float
+    ) -> tuple[
+        dict[str, float | None],
+        dict[str, Any],
+        float | None,
+        int | None,
+        str | None,
+        str | None,
+    ]:
+        """One player's output + style values, with explicit refusal reasons.
+
+        The style metrics reuse ``build_player_profile`` (the same
+        predicates as the team profile); xG uses the same benchmark model
+        as every other side of the comparison. A shot missing its position
+        voids xG for the player instead of silently understating it.
+        """
+        normalized = [
+            value
+            for value in (self._normalize_stored_event(e) for e in events)
+            if value is not None
+        ]
+        profile = build_player_profile(normalized, minutes)
+        values: dict[str, float | None] = dict(profile["metrics"])
+
+        shot_events = [e for e in events if e.get("event_type") == "shot"]
+        features: list[dict[str, Any]] = []
+        missing = 0
+        goals_known = True
+        goals = 0
+        for event in shot_events:
+            metadata = event.get("metadata") or {}
+            feature = self._shot_features(metadata)
+            if feature is None:
+                missing += 1
+            else:
+                features.append(feature)
+            if isinstance(metadata.get("is_goal"), bool):
+                goals += 1 if metadata["is_goal"] else 0
+            else:
+                goals_known = False
+
+        xg: float | None = None
+        xg_reason: str | None = None
+        if missing:
+            xg_reason = (
+                f"{missing} of {len(shot_events)} shots lack the position features the model needs"
+            )
+        else:
+            xg = sum(shot_xg(self._model, feature) for feature in features)
+        goals_value = goals if goals_known else None
+        goals_reason = None if goals_known else "this match does not record shot outcomes"
+
+        values["shots_per_90"] = per_90(len(shot_events), minutes)
+        values["xg_per_90"] = per_90(xg, minutes) if xg is not None else None
+        values["goals_per_90"] = per_90(goals_value, minutes) if goals_value is not None else None
+        return values, profile, xg, goals_value, xg_reason, goals_reason
+
+    @staticmethod
+    def _player_population_payload(artifact: dict[str, Any]) -> dict[str, Any]:
+        population = artifact.get("population") or {}
+        return {
+            "label": population.get("label"),
+            "unit": population.get("unit"),
+            "n_player_matches": population.get("n_player_matches"),
+            "n_players": population.get("n_players"),
+            "positions": population.get("positions") or {},
+            "min_minutes": population.get("min_minutes", MIN_PLAYER_MINUTES),
+            "source": population.get("source"),
+        }
+
+    async def _compare_players(
+        self,
+        events: list[dict[str, Any]],
+        match: dict[str, Any],
+        match_id: int,
+    ) -> dict[str, Any]:
+        """Rank every stored player against same-position cohort players."""
+        artifact = self._load_player_reference()
+        if artifact is None:
+            return {
+                "available": False,
+                "reason": (
+                    "the player reference population is not built — rebuild "
+                    "core/elite_player_reference.json"
+                ),
+                "limitations": list(PLAYER_LIMITATIONS),
+            }
+
+        getter = getattr(self._storage, "get_match_players", None)
+        if not callable(getter):
+            return {
+                "available": False,
+                "reason": "storage does not expose player identity for this match",
+                "limitations": list(PLAYER_LIMITATIONS),
+            }
+        try:
+            players = await getter(match_id, limit=100)
+        except Exception as exc:  # storage errors become an honest block
+            logger.warning("player benchmark could not read players: %s", exc)
+            return {
+                "available": False,
+                "reason": "player identity could not be read from storage",
+                "limitations": list(PLAYER_LIMITATIONS),
+            }
+        if not players:
+            return {
+                "available": False,
+                "reason": "this match has no stored player identities",
+                "limitations": list(PLAYER_LIMITATIONS),
+            }
+
+        self._load_reference()  # the model must exist before xG is computed
+        rows: list[dict[str, Any]] = []
+        for raw_player in players:
+            player = dict(raw_player)
+            track_id = player.get("track_id")
+            try:
+                track_id = int(track_id) if track_id is not None else None
+            except (TypeError, ValueError):
+                track_id = None
+            side = str(player.get("team") or "")
+            position = str(player.get("position") or "")
+            group = position_group(position)
+            name = str(player.get("name") or "")
+            minutes = float(player.get("minutes_played") or 0.0)
+            team = (
+                match.get("home_team")
+                if side == "home"
+                else match.get("away_team")
+                if side == "away"
+                else str(player.get("team") or "")
+            )
+            row: dict[str, Any] = {
+                "name": name,
+                "team": team,
+                "side": side,
+                "position": position,
+                "position_group": group,
+                "minutes": round(minutes, 1),
+                "external_id": player.get("external_id") or "",
+                "benchmarked": False,
+                "reason": None,
+                "population": None,
+                "metrics": {},
+                "xg": None,
+                "goals": None,
+            }
+
+            if not name or track_id is None:
+                row["reason"] = "no player identity is stored for this row"
+            elif group is None:
+                row["reason"] = (
+                    f"position '{position or 'unknown'}' does not map to a cohort position group"
+                )
+            elif minutes < MIN_PLAYER_MINUTES:
+                row["reason"] = (
+                    f"played {minutes:g} minutes — a per-90 percentile needs "
+                    f"at least {MIN_PLAYER_MINUTES:g}"
+                )
+            else:
+                player_events = [e for e in events if e.get("from_track_id") == track_id]
+                values, profile, xg, goals, xg_reason, goals_reason = self._player_values(
+                    player_events, minutes
+                )
+                population = self._player_population.get(group) or {}
+                comparisons = compare_values(
+                    values,
+                    population,
+                    metrics=PLAYER_METRICS,
+                    missing_reason="not measurable for this player",
+                )
+                for key in PLAYER_KEYS:
+                    metric = comparisons[key]
+                    if metric["value"] is not None:
+                        continue
+                    if key == "xg_per_90" and xg_reason:
+                        metric["reason"] = xg_reason
+                    elif key == "goals_per_90" and goals_reason:
+                        metric["reason"] = goals_reason
+                    elif key in (profile.get("coverage") or {}):
+                        metric["reason"] = player_unavailable_reason(key, profile)
+
+                group_count = self._player_group_counts.get(group, 0)
+                row.update(
+                    {
+                        "benchmarked": True,
+                        "xg": round(xg, 3) if xg is not None else None,
+                        "goals": goals,
+                        "metrics": comparisons,
+                        "population": {
+                            "label": (
+                                "elite "
+                                f"{POSITION_GROUP_LABELS.get(group, group)} "
+                                f"(≥{MIN_PLAYER_MINUTES:g} min)"
+                            ),
+                            "unit": "player-match",
+                            "position_group": group,
+                            "n": group_count,
+                            "min_minutes": MIN_PLAYER_MINUTES,
+                        },
+                    }
+                )
+            rows.append(row)
+
+        rows.sort(
+            key=lambda r: (
+                not r["benchmarked"],
+                -float(r.get("minutes") or 0.0),
+                str(r.get("name") or ""),
+            )
+        )
+        return {
+            "available": True,
+            "rows": rows,
+            "n_benchmarked": sum(1 for r in rows if r["benchmarked"]),
+            "population": self._player_population_payload(artifact),
+            "definitions": artifact.get("definitions") or {},
+            "limitations": list(PLAYER_LIMITATIONS),
+        }
+
     async def compare_match(self, match_id: int) -> dict[str, Any]:
         """Benchmark one stored match against the elite cohort."""
         self._load_reference()
@@ -522,6 +832,15 @@ class EliteBenchmarkService:
             )
 
         teams.sort(key=lambda t: (t["side"] != "home", t["team"]))
+        try:
+            players = await self._compare_players(events, match, match_id)
+        except Exception as exc:  # a player block must not break the team card
+            logger.warning("player benchmark failed: %s", exc)
+            players = {
+                "available": False,
+                "reason": "the player benchmark could not be computed for this match",
+                "limitations": list(PLAYER_LIMITATIONS),
+            }
         return {
             "success": True,
             "data_available": True,
@@ -529,6 +848,7 @@ class EliteBenchmarkService:
             "match_name": match.get("name"),
             "match_date": match.get("match_date"),
             "teams": teams,
+            "players": players,
             "population": self.population_summary(),
             "limitations": list(LIMITATIONS),
         }

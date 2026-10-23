@@ -51,7 +51,7 @@
    "predicted": 0.76
   }
  ],
- "generated_at": "2026-10-23T07:50:31+00:00",
+ "generated_at": "2026-10-23T08:27:19+00:00",
  "log_loss": 0.27535,
  "mae_vs_statsbomb_xg": 0.03948,
  "model": "kawkab-elite-reference-xg",

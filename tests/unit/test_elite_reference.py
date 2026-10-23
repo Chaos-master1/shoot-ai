@@ -71,9 +71,7 @@ class TestBlockPercentile:
 
     def test_block_size_one_matches_the_single_rank(self):
         out = block_percentile(60, self.POPULATION, 1)
-        assert out["percentile"] == pytest.approx(
-            percentile_rank(60, self.POPULATION)
-        )
+        assert out["percentile"] == pytest.approx(percentile_rank(60, self.POPULATION))
         assert out["block_distribution"]["n_draws"] == 0
 
     def test_same_size_blocks_rank_an_average_more_strictly(self):

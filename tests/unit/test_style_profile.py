@@ -205,14 +205,23 @@ class TestLoaderStream:
             assert events
             for event in events[:50]:
                 assert event["type"] in {
-                    "pass", "carry", "pressure", "interception", "duel",
-                    "recovery", "clearance", "shot", "foul",
+                    "pass",
+                    "carry",
+                    "pressure",
+                    "interception",
+                    "duel",
+                    "recovery",
+                    "clearance",
+                    "shot",
+                    "foul",
                 }
                 if event["x"] is not None:
                     assert 0.0 <= event["x"] <= 105.5
                     assert 0.0 <= event["y"] <= 68.5
         passes_seen = [
-            event for events in match.team_events.values() for event in events
+            event
+            for events in match.team_events.values()
+            for event in events
             if event["type"] == "pass"
         ]
         assert passes_seen
@@ -222,8 +231,12 @@ class TestLoaderStream:
         stream = normalize_statsbomb_events(
             [
                 {"type": {"name": "Starting XI"}, "team": {"name": "A"}},
-                {"type": {"name": "Pass"}, "team": {"name": "A"},
-                 "location": [60.0, 40.0], "pass": {"end_location": [80.0, 40.0]}},
+                {
+                    "type": {"name": "Pass"},
+                    "team": {"name": "A"},
+                    "location": [60.0, 40.0],
+                    "pass": {"end_location": [80.0, 40.0]},
+                },
             ]
         )
         assert list(stream) == ["A"]

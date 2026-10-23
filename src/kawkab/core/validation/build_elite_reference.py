@@ -69,9 +69,7 @@ def _normalize_team(name: str) -> str:
     return _NAME_NOISE.sub("", (name or "").lower())
 
 
-def _side_for_team_names(
-    team_names: set[str], home: str, away: str
-) -> dict[str, str]:
+def _side_for_team_names(team_names: set[str], home: str, away: str) -> dict[str, str]:
     """Map each team name seen in the events onto "home" / "away".
 
     Exact name match first, then a normalized match, then the
@@ -247,10 +245,7 @@ def build_reference(
     statsbomb_xgs: list[float] = []
     team_match_deltas: list[float] = []
     for record in parsed:
-        buckets = {
-            side: {"shots": 0, "xg": 0.0, "goals": 0, "sb_xg": 0.0}
-            for side in SIDES
-        }
+        buckets = {side: {"shots": 0, "xg": 0.0, "goals": 0, "sb_xg": 0.0} for side in SIDES}
         for shot in record["shots"]:
             bucket = buckets[shot["side"]]
             bucket["shots"] += 1
@@ -294,9 +289,7 @@ def build_reference(
                 }
             )
 
-    per_match = {
-        record["match_id"]: record["meta"] for record in parsed
-    }
+    per_match = {record["match_id"]: record["meta"] for record in parsed}
     competitions = Counter(meta.get("competition") for meta in per_match.values())
     competition_rows = []
     for name, count in sorted(competitions.items(), key=lambda kv: (-kv[1], kv[0] or "")):
@@ -351,8 +344,7 @@ def build_reference(
         "model": {
             "model": "kawkab-elite-reference-xg",
             "coefficients_source": (
-                "fitted on the bundled elite cohort with the benchmark "
-                "feature set only"
+                "fitted on the bundled elite cohort with the benchmark feature set only"
             ),
             "features": list(BENCHMARK_FEATURES),
             "excluded_features": list(EXCLUDED_FEATURES),
@@ -360,9 +352,7 @@ def build_reference(
             "goal_rate": round(coefficients.get("_goal_rate", 0.0), 5),
             "n_penalties_excluded": n_penalties,
             "coefficients": {
-                k: round(float(v), 8)
-                for k, v in coefficients.items()
-                if not k.startswith("_")
+                k: round(float(v), 8) for k, v in coefficients.items() if not k.startswith("_")
             },
             "note": (
                 "Both the reference cohort and the user's match are measured "
@@ -399,11 +389,14 @@ def _model_card(
 
     eps = 1e-6
     brier = sum((p - y) ** 2 for p, y in zip(predictions, outcomes, strict=True)) / n
-    log_loss = -sum(
-        y * math.log(min(max(p, eps), 1 - eps))
-        + (1 - y) * math.log(max(1 - min(max(p, eps), 1 - eps), eps))
-        for p, y in zip(predictions, outcomes, strict=True)
-    ) / n
+    log_loss = (
+        -sum(
+            y * math.log(min(max(p, eps), 1 - eps))
+            + (1 - y) * math.log(max(1 - min(max(p, eps), 1 - eps), eps))
+            for p, y in zip(predictions, outcomes, strict=True)
+        )
+        / n
+    )
     mae = sum(abs(p - s) for p, s in zip(predictions, statsbomb_xgs, strict=True)) / n
 
     calibration = []
@@ -433,9 +426,7 @@ def _model_card(
         "brier": round(brier, 5),
         "log_loss": round(log_loss, 5),
         "mae_vs_statsbomb_xg": round(mae, 5),
-        "team_match_xg_mae": round(
-            sum(team_match_deltas) / len(team_match_deltas), 4
-        )
+        "team_match_xg_mae": round(sum(team_match_deltas) / len(team_match_deltas), 4)
         if team_match_deltas
         else None,
         "calibration": calibration,
@@ -461,9 +452,7 @@ def main(argv: list[str] | None = None) -> int:
     # The model card is published beside the population so its own error
     # can be read (and cited) without loading the 594-row artifact.
     card = {**artifact["model_card"], "generated_at": artifact["generated_at"]}
-    out.with_name("model_card.json").write_text(
-        json.dumps(card, indent=1, sort_keys=True)
-    )
+    out.with_name("model_card.json").write_text(json.dumps(card, indent=1, sort_keys=True))
     population = artifact["population"]
     print(
         f"wrote {out} — {population['n_matches']} matches, "

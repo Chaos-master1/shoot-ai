@@ -167,6 +167,7 @@ def is_finite_number(value: Any) -> bool:
     """True for real numbers only (NaN/inf are not measurements)."""
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
+
 # ``METRIC_KEYS`` is re-exported from ``metric_contract`` (one owner for
 # the metric list, its order and its definitions). ``goals`` is in the
 # population but is only comparable when the user's match actually
@@ -276,9 +277,7 @@ def block_percentile(
     }
 
 
-def percentile_interval(
-    percentile: float, sample_size: int, z: float = 1.96
-) -> list[float] | None:
+def percentile_interval(percentile: float, sample_size: int, z: float = 1.96) -> list[float] | None:
     """A 95% sampling band around a percentile, from its own share.
 
     A percentile is an estimate of the share of a population a value is
@@ -379,9 +378,7 @@ def compare_values(
         if metric.higher_is_better:
             percentile = percentile_rank(float(value), reference)
         else:
-            percentile = percentile_rank(
-                -float(value), [-float(v) for v in reference]
-            )
+            percentile = percentile_rank(-float(value), [-float(v) for v in reference])
         out[key] = {
             "value": value,
             "percentile": percentile,

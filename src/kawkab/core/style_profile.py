@@ -90,11 +90,11 @@ def _unavailable(unit: str, n: int, minimum: int) -> tuple[None, dict[str, Any]]
 
 def _ppda(own: Sequence[Mapping[str, Any]], opponent: Sequence[Mapping[str, Any]]):
     their_build = [
-        e for e in opponent
-        if e.get("type") == "pass" and _located(e) and e["x"] < PRESS_ZONE_X
+        e for e in opponent if e.get("type") == "pass" and _located(e) and e["x"] < PRESS_ZONE_X
     ]
     our_press = [
-        e for e in own
+        e
+        for e in own
         if e.get("type") in DEFENSIVE_ACTIONS and _located(e) and e["x"] < PRESS_ZONE_X
     ]
     if len(our_press) < MIN_DEFENSIVE_ACTIONS:
@@ -164,14 +164,9 @@ def _progressive_passes(own: Sequence[Mapping[str, Any]]):
 
 
 def _final_third_entries(own: Sequence[Mapping[str, Any]]):
-    candidates = [
-        e for e in own
-        if e.get("type") in ("pass", "carry") and _located(e)
-    ]
+    candidates = [e for e in own if e.get("type") in ("pass", "carry") and _located(e)]
     if len(candidates) < MIN_LOCATED_ENTRIES:
-        return _unavailable(
-            "located passes and carries", len(candidates), MIN_LOCATED_ENTRIES
-        )
+        return _unavailable("located passes and carries", len(candidates), MIN_LOCATED_ENTRIES)
     count = 0
     for e in candidates:
         end_x = e.get("end_x")
@@ -181,44 +176,30 @@ def _final_third_entries(own: Sequence[Mapping[str, Any]]):
             continue
         if e["x"] < FINAL_THIRD_X <= end_x:
             count += 1
-    return count, _coverage(
-        len(candidates), MIN_LOCATED_ENTRIES, "located passes and carries"
-    )
+    return count, _coverage(len(candidates), MIN_LOCATED_ENTRIES, "located passes and carries")
 
 
 def _high_turnovers(own: Sequence[Mapping[str, Any]]):
-    actions = [
-        e for e in own
-        if e.get("type") in TURNOVER_ACTIONS and _located(e)
-    ]
+    actions = [e for e in own if e.get("type") in TURNOVER_ACTIONS and _located(e)]
     if len(actions) < MIN_LOCATED_DEFENSIVE:
-        return _unavailable(
-            "located defensive actions", len(actions), MIN_LOCATED_DEFENSIVE
-        )
+        return _unavailable("located defensive actions", len(actions), MIN_LOCATED_DEFENSIVE)
     count = sum(
         1
         for e in actions
-        if e["x"] >= HIGH_TURNOVER_X
-        and (e.get("type") != "duel" or e.get("won") is True)
+        if e["x"] >= HIGH_TURNOVER_X and (e.get("type") != "duel" or e.get("won") is True)
     )
-    return count, _coverage(
-        len(actions), MIN_LOCATED_DEFENSIVE, "located defensive actions"
-    )
+    return count, _coverage(len(actions), MIN_LOCATED_DEFENSIVE, "located defensive actions")
 
 
 def _pass_completion(own: Sequence[Mapping[str, Any]]):
     passes = [e for e in own if e.get("type") == "pass" and _located(e)]
     known = [e for e in passes if e.get("completed") is not None]
     if len(known) < MIN_LOCATED_PASSES:
-        return _unavailable(
-            "passes with a recorded outcome", len(known), MIN_LOCATED_PASSES
-        )
+        return _unavailable("passes with a recorded outcome", len(known), MIN_LOCATED_PASSES)
     if len(known) != len(passes):
         # A partial completion rate would understate or overstate the
         # team; report the missing outcomes instead of guessing.
-        return _unavailable(
-            "passes with a recorded outcome", len(known), len(passes)
-        )
+        return _unavailable("passes with a recorded outcome", len(known), len(passes))
     completed = sum(1 for e in known if e["completed"] is True)
     return 100.0 * completed / len(known), _coverage(
         len(known), MIN_LOCATED_PASSES, "passes with a recorded outcome"

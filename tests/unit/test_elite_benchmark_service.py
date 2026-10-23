@@ -372,9 +372,7 @@ def _season_fixture(shots=(10, 12, 8, 10), missing_xg=False, no_shot_match=None)
 class TestCompareSeason:
     def test_a_block_needs_at_least_three_matches(self):
         matches, events = _season_fixture(shots=(10, 12))
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season()
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season())
         assert out["data_available"] is False
         assert "at least 3" in out["reason"]
 
@@ -386,9 +384,7 @@ class TestCompareSeason:
             _season_match(4, "2026-01-04", home="B"),
         ]
         events = {i: [_shot("home")] for i in (1, 2, 3, 4)}
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season()
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season())
         assert out["team"] == "A"
         assert out["n_matches"] == 3
         assert out["n_matches_stored"] == 3
@@ -396,9 +392,7 @@ class TestCompareSeason:
     def test_block_metrics_are_pooled_and_ranked_against_same_size_blocks(self):
         matches, events = _season_fixture()
         storage = SeasonStorage(matches, events)
-        out = _run(
-            EliteBenchmarkService(storage).compare_season(draws=200)
-        )
+        out = _run(EliteBenchmarkService(storage).compare_season(draws=200))
         assert out["data_available"] is True
         assert out["team"] == "Test Utd"
         assert out["n_matches"] == 4
@@ -418,18 +412,14 @@ class TestCompareSeason:
 
     def test_style_metrics_are_unavailable_without_events(self):
         matches, events = _season_fixture()
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100)
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100))
         ppda = out["metrics"]["ppda"]
         assert ppda["comparable"] is False
         assert "not every match" in ppda["reason"]
 
     def test_the_trend_splits_the_block_in_half(self):
         matches, events = _season_fixture()
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100)
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100))
         trend = out["trend"]
         assert trend["available"] is True
         assert trend["split"] == "first 2 vs last 2 matches"
@@ -438,25 +428,19 @@ class TestCompareSeason:
 
     def test_a_three_match_block_reports_no_trend(self):
         matches, events = _season_fixture(shots=(10, 12, 8))
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100)
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100))
         assert out["trend"]["available"] is False
         assert "at least 4" in out["trend"]["reason"]
 
     def test_matches_without_shot_events_are_excluded_and_counted(self):
         matches, events = _season_fixture(no_shot_match=2)
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100)
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100))
         assert out["n_matches"] == 3
         assert out["excluded_matches"] == [2]
 
     def test_xg_is_refused_when_one_match_lacks_positions(self):
         matches, events = _season_fixture(missing_xg=True)
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100)
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100))
         xg = out["metrics"]["xg_per_90"]
         assert xg["comparable"] is False
         assert "position" in xg["reason"]
@@ -464,9 +448,7 @@ class TestCompareSeason:
 
     def test_season_limitations_replace_the_single_match_caveat(self):
         matches, events = _season_fixture()
-        out = _run(
-            EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100)
-        )
+        out = _run(EliteBenchmarkService(SeasonStorage(matches, events)).compare_season(draws=100))
         keys = [limitation["key"] for limitation in out["limitations"]]
         assert "single_match" not in keys
         assert "block_not_season" in keys

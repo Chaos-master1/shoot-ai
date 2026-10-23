@@ -68,8 +68,7 @@ METRICS: tuple[MetricSpec, ...] = (
         digits=2,
         higher_is_better=True,
         definition=(
-            "Sum of per-shot xG from the benchmark model "
-            "(camera-observable features only)."
+            "Sum of per-shot xG from the benchmark model (camera-observable features only)."
         ),
     ),
     MetricSpec(

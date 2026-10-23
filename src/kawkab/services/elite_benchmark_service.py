@@ -488,9 +488,7 @@ class EliteBenchmarkService:
                 "xg": xg_value,
                 "xg_per_90": per_90(xg_value, minutes) if xg_value is not None else None,
                 "goals": float(goals_value) if goals_value is not None else None,
-                "goals_per_90": (
-                    per_90(goals_value, minutes) if goals_value is not None else None
-                ),
+                "goals_per_90": (per_90(goals_value, minutes) if goals_value is not None else None),
             }
             for key in STYLE_KEYS:
                 user_values[key] = style_values.get(key)
@@ -574,10 +572,7 @@ class EliteBenchmarkService:
             return sum(float(v) for v in values) / len(values)
         if minutes <= 0:
             return None
-        return (
-            sum(float(v) * row["minutes"] for v, row in zip(values, rows, strict=True))
-            / minutes
-        )
+        return sum(float(v) * row["minutes"] for v, row in zip(values, rows, strict=True)) / minutes
 
     def _block_metric(
         self, key: str, value: float, block_size: int, draws: int, seed: int
@@ -643,16 +638,13 @@ class EliteBenchmarkService:
             return self._season_unavailable("no stored matches")
         if len(matches) < min_matches:
             return self._season_unavailable(
-                f"a season block needs at least {min_matches} stored matches "
-                f"(found {len(matches)})"
+                f"a season block needs at least {min_matches} stored matches (found {len(matches)})"
             )
 
         team = team or self._modal_home_team(matches)
         if not team:
             return self._season_unavailable("stored matches carry no team names")
-        selected = [
-            match for match in matches if str(match.get("home_team") or "") == team
-        ]
+        selected = [match for match in matches if str(match.get("home_team") or "") == team]
         if len(selected) < min_matches:
             return self._season_unavailable(
                 f"only {len(selected)} stored match(es) for {team} — a block needs "
@@ -744,7 +736,10 @@ class EliteBenchmarkService:
             else:
                 metrics[key] = self._block_metric(key, float(value), n, draws, seed)
 
-        trend: dict[str, Any] = {"available": False, "reason": "a trend needs at least 4 matches in the block"}
+        trend: dict[str, Any] = {
+            "available": False,
+            "reason": "a trend needs at least 4 matches in the block",
+        }
         if n >= 4:
             ordered = sorted(rows, key=lambda r: (str(r["match_date"] or ""), r["match_id"]))
             half = n // 2

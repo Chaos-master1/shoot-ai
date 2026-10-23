@@ -16,7 +16,14 @@ PITCH_WIDTH = GAME.PITCH_WIDTH_M
 NUM_ZONES = 5
 ZONE_WIDTH = PITCH_LENGTH / NUM_ZONES
 ZONE_HEIGHT = PITCH_WIDTH / NUM_ZONES
-RECOVERY_EVENT_TYPES = {"interception", "tackle", "loose_ball", "goal_kick", "clearance"}
+RECOVERY_EVENT_TYPES = {
+    "interception",
+    "tackle",
+    "loose_ball",
+    "goal_kick",
+    "clearance",
+    "ball_recovery",
+}
 
 
 def _to_zone(x: float, y: float) -> tuple[int, int]:

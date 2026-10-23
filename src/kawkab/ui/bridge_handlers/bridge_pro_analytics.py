@@ -98,10 +98,37 @@ class ProAnalyticsHandler(BridgeHandlerBase):
             blocks["influence_map"] = self._influence_map_block(frames)
             blocks["lineup_optimizer"] = self._lineup_optimizer_block(match_id)
 
+            # ── Contextualisation: this match against an elite population ──
+            blocks["elite_benchmark"] = await self._elite_benchmark_block(match_id)
+
             return json.dumps(report)
         except Exception as e:
             logger.error(f"get_pro_analytics_report failed: {e}")
             return json.dumps({"error": ErrorSanitizer.sanitize_error(e)})
+
+    async def _elite_benchmark_block(self, match_id: int) -> dict[str, Any]:
+        """The elite-benchmark block (delegates to the service)."""
+        from kawkab.services.elite_benchmark_service import EliteBenchmarkService
+
+        try:
+            service = EliteBenchmarkService(self.storage_service)
+            result = await service.compare_match(match_id)
+        except Exception as exc:
+            return {"data_available": False, "reason": f"elite_benchmark: {exc}"}
+        if not result.get("data_available"):
+            return {
+                "data_available": False,
+                "reason": result.get("reason") or "no comparable data for this match",
+                "population": result.get("population"),
+                "limitations": result.get("limitations"),
+            }
+        return {
+            "data_available": True,
+            "match_name": result.get("match_name"),
+            "teams": result.get("teams"),
+            "population": result.get("population"),
+            "limitations": result.get("limitations"),
+        }
 
     # ── data plumbing ─────────────────────────────────────────────────
 

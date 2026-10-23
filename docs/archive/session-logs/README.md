@@ -18,3 +18,4 @@ the narrative "what was fixed" history moved here.
 | [2026-09-16-commit-integrity-xg-angles.md](2026-09-16-commit-integrity-xg-angles.md) | Broken-HEAD repair, xG angle-convention fix, first real tracking benchmark |
 | [2026-09-16-elite-implementation.md](2026-09-16-elite-implementation.md) | The 16-item "make it elite" pass (whiteboard, onboarding, bridge fix, release pipeline) |
 | [2026-09-16-prerelease-audit.md](2026-09-16-prerelease-audit.md) | Full-codebase pre-release audit (4 real defects fixed) |
+| [2026-10-23-elite-parity.md](2026-10-23-elite-parity.md) | Style benchmark, season blocks, percentile uncertainty, published model error |

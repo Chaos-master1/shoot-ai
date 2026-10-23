@@ -359,3 +359,128 @@ msgstr "rule not found"
 
 msgid "mwState_no_declared_metric"
 msgstr "no declared metric"
+# Elite benchmark (elite reference population)
+msgid "ebTitle"
+msgstr "Elite Benchmark"
+
+msgid "ebReference"
+msgstr "Reference population"
+
+msgid "ebTeamMatches"
+msgstr "elite team-matches"
+
+msgid "ebMatches"
+msgstr "matches"
+
+msgid "ebTeams"
+msgstr "teams"
+
+msgid "ebShots"
+msgstr "Shots"
+
+msgid "ebShots90"
+msgstr "Shots / 90"
+
+msgid "ebXg"
+msgstr "xG"
+
+msgid "ebXg90"
+msgstr "xG / 90"
+
+msgid "ebGoals"
+msgstr "Goals"
+
+
+msgid "ebBeatsShare"
+msgstr "better than {n}% of the cohort"
+
+msgid "ebEliteMedian"
+msgstr "cohort median"
+
+msgid "ebNotAvailable"
+msgstr "not available"
+
+msgid "ebLimits"
+msgstr "What this comparison cannot tell you"
+
+msgid "ebBand_top_decile"
+msgstr "top 10% of the cohort"
+
+msgid "ebBand_top_quartile"
+msgstr "top 25% of the cohort"
+
+msgid "ebBand_above_median"
+msgstr "above the cohort median"
+
+msgid "ebBand_lower_half"
+msgstr "lower half of the cohort"
+
+msgid "ebBand_bottom_quartile"
+msgstr "bottom 25% of the cohort"
+
+msgid "ebBand_bottom_decile"
+msgstr "bottom 10% of the cohort"
+
+msgid "ebLim_single_match"
+msgstr "One match is 90 minutes of football — read the percentile as a single performance, not a season's worth of form."
+
+msgid "ebLim_sample_not_league"
+msgstr "The reference is a sample of elite matches, not every elite match, and it is not a league average."
+
+msgid "ebLim_reduced_feature_model"
+msgstr "Benchmark xG comes from a model fitted on this cohort with camera-observable features only; it is not the app's headline xG."
+
+msgid "ebLim_in_sample_cohort"
+msgstr "The benchmark model is fitted on the cohort it measures, so cohort values are in-sample and a user's shots are out-of-sample."
+
+
+msgid "ebGroupOutput"
+msgstr "Output"
+
+msgid "ebGroupStyle"
+msgstr "Style"
+
+msgid "ebPpda"
+msgstr "PPDA"
+
+msgid "ebFieldTilt"
+msgstr "Field tilt"
+
+msgid "ebProgressive"
+msgstr "Progressive passes / 90"
+
+msgid "ebEntries"
+msgstr "Final-third entries / 90"
+
+msgid "ebHighTurnovers"
+msgstr "High turnovers / 90"
+
+msgid "ebCompletion"
+msgstr "Pass completion"
+
+msgid "sbTitle"
+msgstr "Season Benchmark"
+
+msgid "sbMatches"
+msgstr "matches"
+
+msgid "sbMinutes"
+msgstr "minutes"
+
+msgid "sbMatchedNote"
+msgstr "percentiles compare your {n}-match block against {n}-match blocks drawn from the cohort"
+
+msgid "sbTrend"
+msgstr "Trend across the block"
+
+msgid "ebLim_block_not_season"
+msgstr "A block of N matches is a form snapshot, not a full season: the same squad can produce different blocks in different months."
+
+msgid "ebLim_matched_block_size"
+msgstr "The percentile compares your N-match average against N-match blocks drawn from the cohort, so it answers a stricter question than a single-match comparison."
+
+msgid "ebModelCheck"
+msgstr "Model check: Brier {b} on {n} shots (lower is better)"
+
+msgid "ebIntervalNote"
+msgstr "sampling band from the cohort size — not a range for the team"

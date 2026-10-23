@@ -1,0 +1,62 @@
+{
+ "available": true,
+ "brier": 0.07838,
+ "calibration": [
+  {
+   "bin": "0-10%",
+   "n": 5066,
+   "observed": 0.0418,
+   "predicted": 0.0449
+  },
+  {
+   "bin": "10-20%",
+   "n": 1421,
+   "observed": 0.1414,
+   "predicted": 0.1415
+  },
+  {
+   "bin": "20-30%",
+   "n": 504,
+   "observed": 0.25,
+   "predicted": 0.244
+  },
+  {
+   "bin": "30-40%",
+   "n": 234,
+   "observed": 0.3504,
+   "predicted": 0.3424
+  },
+  {
+   "bin": "40-50%",
+   "n": 86,
+   "observed": 0.5233,
+   "predicted": 0.4457
+  },
+  {
+   "bin": "50-60%",
+   "n": 35,
+   "observed": 0.6571,
+   "predicted": 0.543
+  },
+  {
+   "bin": "60-70%",
+   "n": 8,
+   "observed": 0.875,
+   "predicted": 0.635
+  },
+  {
+   "bin": "70-80%",
+   "n": 164,
+   "observed": 0.6829,
+   "predicted": 0.76
+  }
+ ],
+ "generated_at": "2026-10-23T07:50:31+00:00",
+ "log_loss": 0.27535,
+ "mae_vs_statsbomb_xg": 0.03948,
+ "model": "kawkab-elite-reference-xg",
+ "n_penalties": 164,
+ "n_shots": 7518,
+ "note": "In-sample: the model is fitted on this cohort and scored on the same shots. The numbers state how closely it reproduces StatsBomb's xG, not how it will score a new match.",
+ "team_match_xg_mae": 0.2172
+}

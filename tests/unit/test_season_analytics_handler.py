@@ -50,7 +50,12 @@ class TestSeasonProReport:
         r = json.loads(asyncio.run(handler.get_season_pro_report()))
         assert r["success"] is True
         assert r["n_matches"] == 3
-        assert set(r["blocks"].keys()) == {"formation_trends", "discipline", "fixture_difficulty"}
+        assert set(r["blocks"].keys()) == {
+            "benchmark_trend",
+            "formation_trends",
+            "discipline",
+            "fixture_difficulty",
+        }
         for name, block in r["blocks"].items():
             assert isinstance(block.get("data_available"), bool), name
             if not block["data_available"]:
@@ -67,6 +72,18 @@ class TestSeasonProReport:
         block = r["blocks"]["fixture_difficulty"]
         assert block["data_available"] is True
         assert block["n_fixtures"] == 3
+
+    def test_benchmark_trend_is_honest_about_a_mixed_match_list(self, multi_match_store):
+        """Three different home teams cannot make a block for one club."""
+        from kawkab.ui.bridge_handlers.bridge_season_analytics import SeasonAnalyticsHandler
+
+        svc, _ = multi_match_store
+        handler = SeasonAnalyticsHandler(bridge=None, services={"storage_service": svc})
+        r = json.loads(asyncio.run(handler.get_season_pro_report()))
+        block = r["blocks"]["benchmark_trend"]
+        assert block["data_available"] is False
+        assert "at least 3" in block["reason"]
+        assert block["population"]["n_team_matches"] == 594
 
     def test_formation_trends_honest_method_label(self, multi_match_store):
         """When shapes ARE approximated, the method label must say so —

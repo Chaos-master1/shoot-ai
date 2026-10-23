@@ -27,7 +27,7 @@ $env:PYTHONPATH="src"; python -m kawkab
 # or explicitly:
 $env:PYTHONPATH="src"; python -m kawkab gui
 
-# Full unit suite (5,164 tests as of 2026-09-16, 0 failures)
+# Full unit suite (5,555 tests as of 2026-10-23, 0 failures)
 $env:PYTHONPATH="src"; python -m pytest tests/unit/ -q
 
 # Lint / types (installed as of 2026-07-30 -- see "Correct commands" note below)
@@ -214,6 +214,17 @@ src/kawkab/
   mostly the same annotation-completeness category) — the real bugs mypy
   is good at (`name-defined`, `attr-defined` on nonexistent methods) surface
   either way. See Known Gaps for the current count and how to use it.
+- **A benchmark metric has exactly one definition owner.**
+  `core/metric_contract.py` holds the key/label/unit/direction/definition;
+  `core/style_profile.py` computes them; the cohort builder,
+  `services/elite_benchmark_service.py` and the JS card all read the
+  contract instead of keeping copies. If the two sides of a comparison
+  are defined even slightly differently, the percentile compares
+  different quantities and nothing downstream can detect it. The same
+  rule covers the importer: `Ball Recovery` must stay `ball_recovery`,
+  not be aliased onto `interception`. An unmeasurable metric returns a
+  reason, never a zero, and `percentile_interval` states how precisely
+  the cohort size pins a rank — it is not a range for the team.
 
 ## Session history (where the "what was fixed" logs went)
 
@@ -244,6 +255,12 @@ sections that matter: **Invariants** above (with the reason each exists) and
   fix, sha256-pinned model manifest, gated release pipeline); and a
   full-codebase pre-release audit (4 real defects). → the three
   `2026-09-16-*.md` logs
+- **2026-10-23 competitor parity** — style benchmarking against a
+  committed elite cohort (PPDA, field tilt, progression, entries, high
+  turnovers, completion), season blocks ranked against same-size blocks,
+  percentile sampling bands, and the benchmark model's own error
+  published beside every comparison. Player-level matching is blocked on
+  event-level player identity. → `2026-10-23-elite-parity.md`
 
 ## Known gaps (found, understood, deliberately not fixed this session — read before assuming any of these "just work")
 

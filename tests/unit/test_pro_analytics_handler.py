@@ -45,6 +45,7 @@ ALL_BLOCKS = [
     "scoreline",
     "velocity",
     "influence_map",
+    "elite_benchmark",
     "lineup_optimizer",
 ]
 
